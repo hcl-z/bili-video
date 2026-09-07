@@ -1,0 +1,109 @@
+src/server/ports/repo.ts
+  s_abc690da395c45::t_c3cc9307cce0cc 105
+  s_abc690da395c45::t_27fea2260bc1fa 99-102
+  s_abc690da395c45::t_5bb46ce06a1cd7 94-98,103-104,106-122
+  s_abc690da395c45::t_055de5aa7494a1 123-125
+src/web/pages/subs.tsx
+  s_abc690da395c45::t_8e4b63dab4893d 1-4,6-26,28-45,47-83,87-245
+config.example.yaml
+  s_abc690da395c45::t_2f3663a83839ad 37-39
+  s_abc690da395c45::t_5cbc97433447a0 33-36,40-41
+src/server/build-server.ts
+  s_abc690da395c45::t_6b4e124b5448b4 48-55,57-58,63
+  s_abc690da395c45::t_2f8496b7711a93 56
+  s_abc690da395c45::t_326815ddff6bb7 7
+  s_abc690da395c45::t_70c0103f1f341d 98-104
+  s_abc690da395c45::t_ce43b624098c46 37
+src/shared/contract/config.ts
+  s_abc690da395c45::t_7db0f73ac67593 78-79
+  s_abc690da395c45::t_50a4de4c156250 72-77,80-83
+src/server/ports/index.ts
+  s_abc690da395c45::t_e81aa4c7afcb0f 25
+  s_abc690da395c45::t_8e7c90bcc37fe6 45,55-56
+  s_abc690da395c45::t_029ed399473936 73-74
+  s_abc690da395c45::t_1ee7052ebc63fd 3-9
+src/server/http/app.ts
+  s_abc690da395c45::t_68e05434de1296 7,12,21-22
+  s_abc690da395c45::t_cb3b25110c25b1 38
+test/support/harness.ts
+  s_abc690da395c45::t_52d56b94940d75 84-86
+test/migrations.test.ts
+  s_abc690da395c45::t_d5edfcd6f699e2 14
+README.md
+  s_abc690da395c45::t_50e087d7465cde 86-93,100-102
+  s_abc690da395c45::t_99b977616a863e 50-52
+  s_abc690da395c45::t_4c10cf60220960 94-99
+  s_abc690da395c45::t_35664b29465a0d 49
+src/server/http/routes/subscriptions.ts
+  s_abc690da395c45::t_96b476487f6b16 27,31-34
+  s_abc690da395c45::t_a9be24b4cefdff 41
+  s_abc690da395c45::t_3540d9fc3ed265 1-26,28-30,35-40,42-57,60-61,63-103
+  s_abc690da395c45::t_2e6333adf608ab 58-59,62
+src/server/domain/subscription.ts
+  s_abc690da395c45::t_d272282d3be360 1-47
+src/shared/contract/api.ts
+  s_abc690da395c45::t_5f6e6af470b61a 70-98
+  s_abc690da395c45::t_11cfed953be0d3 3
+src/server/infra/db/migrations.ts
+  s_abc690da395c45::t_43f5e289a778ee 154-172,176
+src/server/app/subscriptions.ts
+  s_abc690da395c45::t_eb3fa1cb741b37 175-181,183,191
+  s_abc690da395c45::t_d4de1f06aa40fe 80
+  s_abc690da395c45::t_8d051752fae9df 15-21
+  s_abc690da395c45::t_20d4c58075840b 59-62
+  s_abc690da395c45::t_b0a999ad128242 1-14,22-58,63-79,81-142,146-174,182,184-190,192-200
+  s_abc690da395c45::t_e19f20df05a7f6 143-145
+src/server/infra/bili/profile.ts
+  s_abc690da395c45::t_95c3876e4caaed 1-44
+src/server/main.ts
+  s_abc690da395c45::t_4c741fd5b27f81 68,73-74
+src/web/lib/api.ts
+  s_abc690da395c45::t_479143f89b9c74 68-90
+  s_abc690da395c45::t_1f48f3dcc2b442 2-10
+src/server/domain/bili-error.ts
+  s_abc690da395c45::t_8346bf2957791f 87-93
+src/web/lib/query.ts
+  s_abc690da395c45::t_51f77f96678c38 27-28
+src/server/ports/bili.ts
+  s_abc690da395c45::t_cdace9b607e1cb 48-62
+src/server/wiring.ts
+  s_abc690da395c45::t_74937630de6824 156,159-168
+  s_abc690da395c45::t_c5bd5a222f4537 15-16
+  s_abc690da395c45::t_d5432ae93f6fbe 23
+  s_abc690da395c45::t_98f61a6027795a 28
+  s_abc690da395c45::t_777b18ca3284d7 72-75
+  s_abc690da395c45::t_30b86b5a0f0f21 179-180
+src/server/infra/db/repo-write-audit.ts
+  s_abc690da395c45::t_895f8af938809f 3
+  s_abc690da395c45::t_641582a3383af4 1-2,4-24,26-50
+  s_abc690da395c45::t_0cba6ddeb54c02 25
+test/subscriptions.test.ts
+  s_abc690da395c45::t_e481d2708997cf 176-219
+  s_abc690da395c45::t_85fd81ce5ba600 1-159,164-175,220
+  s_abc690da395c45::t_9e4d9ba003f069 160-163
+src/server/infra/bili/relations.ts
+  s_abc690da395c45::t_a2af96ef120405 58-59
+  s_abc690da395c45::t_abbfcf747d689b 174
+  s_abc690da395c45::t_22365fc0a5b351 3-4
+  s_abc690da395c45::t_f03a77dd8ac8ec 149-153
+  s_abc690da395c45::t_57ecdd05465724 1-2,5-25,33-57,60-75,86-96,117-119,121-148,154-173,175-183
+  s_abc690da395c45::t_724fe5b66f1e39 26-32
+  s_abc690da395c45::t_d7e7ee2d03b409 76-85
+  s_abc690da395c45::t_7ee942260c4914 97-116,120
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.43-trip",
+  "base_commit_sha": "04641763ef733c8bb0531edcd10aaa2694f01579",
+  "prompts": {},
+  "sessions": {
+    "s_abc690da395c45": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "647309db-d279-406d-8284-62f4394affab",
+        "model": "claude-opus-5"
+      },
+      "human_author": "hcl-z <1401859664@qq.com>"
+    }
+  }
+}
