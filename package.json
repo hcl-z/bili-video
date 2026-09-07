@@ -1,0 +1,67 @@
+{
+  "name": "bili-video",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "B 站动态/视频监听 + 推送 + AI 总结（单用户，本地常驻）",
+  "license": "ISC",
+  "packageManager": "pnpm@10.33.2",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "concurrently -n server,web -c cyan,magenta \"pnpm dev:server\" \"pnpm dev:web\"",
+    "dev:server": "node --watch --env-file-if-exists=.env src/server/main.ts",
+    "dev:web": "vite",
+    "start": "node src/server/main.ts",
+    "build": "pnpm build:server && pnpm build:web",
+    "build:server": "tsc -b tsconfig.server.json",
+    "build:web": "vite build",
+    "typecheck": "tsc -b tsconfig.shared.json tsconfig.server.json tsconfig.web.json",
+    "test": "node --test \"test/**/*.test.ts\"",
+    "prototype": "node -e \"import('node:child_process').then(({execSync})=>execSync('open prototype/workbench-prototype.html?variant=B'))\""
+  },
+  "imports": {
+    "#shared/*": "./src/shared/*"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@tailwindcss/oxide",
+      "esbuild"
+    ]
+  },
+  "dependencies": {
+    "@hono/node-server": "1.14.4",
+    "croner": "9.0.0",
+    "gpt-tokenizer": "3.0.1",
+    "hono": "4.9.10",
+    "pino": "9.7.0",
+    "pino-roll": "3.1.0",
+    "qrcode-terminal": "0.12.0",
+    "yaml": "2.8.1",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.1.13",
+    "@tanstack/react-query": "5.90.2",
+    "@types/node": "24.5.2",
+    "@types/react": "19.1.13",
+    "@types/react-dom": "19.1.9",
+    "@vitejs/plugin-react": "5.0.3",
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "concurrently": "9.2.1",
+    "lucide-react": "0.544.0",
+    "pino-pretty": "13.1.1",
+    "radix-ui": "1.6.7",
+    "react": "19.1.1",
+    "react-dom": "19.1.1",
+    "react-router-dom": "7.9.1",
+    "sonner": "2.0.8",
+    "tailwind-merge": "3.3.1",
+    "tailwindcss": "4.1.13",
+    "tw-animate-css": "1.4.0",
+    "typescript": "5.9.2",
+    "vite": "7.1.7"
+  }
+}

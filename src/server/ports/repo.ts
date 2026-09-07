@@ -1,0 +1,106 @@
+import type { FilterRule, RuleKind, Subscription } from '#shared/contract/subscription.ts'
+import type { Update, UpdateWithRaw } from '#shared/contract/update.ts'
+import type { DeliveryKind, DeliveryStatus, JobStage, SummaryJob } from '#shared/contract/job.ts'
+import type { Summary } from '#shared/contract/summary.ts'
+import type { NotifyChannel } from './notifier.ts'
+
+/**
+ * 8 个窄仓储，不是一个 Store 门面。门面会让 poll-once 在类型上拿到它不该碰的
+ * SummaryRepo；窄接口的成本只是多几行类型声明。
+ *
+ * 全部同步 —— node:sqlite 是同步 API，包成 Promise 只会假装有异步边界。
+ */
+
+export interface SubscriptionRepo {
+  list(): Subscription[]
+  get(uid: string): Subscription | null
+  upsert(sub: Omit<Subscription, 'followedAt'> & { followedAt?: number | null }): void
+  remove(uid: string): void
+  markFollowed(uid: string, at: number): void
+}
+
+export interface FilterRuleRepo {
+  list(): FilterRule[]
+  /** 'global' + 该 uid 两个 scope 的规则，实现 inherit-or-override。 */
+  listEffective(uid: string): FilterRule[]
+  add(rule: { scope: string; kind: RuleKind; pattern: string; enabled: boolean }): FilterRule
+  setEnabled(id: number, enabled: boolean): void
+  remove(id: number): void
+}
+
+/**
+ * 锚点覆盖每一个订阅，哪怕推送开关关着也照常推进 —— 否则关掉开关再打开会炸出一堆积压旧动态。
+ * 参考实现只有内存 Map，重启即丢，这是它的缺陷。
+ */
+export interface AnchorRepo {
+  get(uid: string): number | null
+  getAll(): Map<string, number>
+  /** 只单调推进：传入的值不大于现值时忽略。 */
+  advance(uid: string, pubTs: number, at: number): void
+}
+
+export interface UpdateRepo {
+  /** 已存在的 dynId 直接跳过，重复轮询不会重复入库。 */
+  insertMany(updates: UpdateWithRaw[]): { inserted: string[]; skipped: string[] }
+  get(dynId: string): Update | null
+  list(q: { uid?: string; includeFiltered?: boolean; limit: number; before?: number }): Update[]
+  /** 按**发布时间**数，不是入库时间 —— 24h 补推窗口与溢出阈值判的是「这段时间里发了多少」。 */
+  countSince(ts: number): number
+}
+
+export interface JobRepo {
+  enqueue(job: { bvid: string; updateId: string; at: number }): SummaryJob
+  get(id: number): SummaryJob | null
+  getByBvid(bvid: string): SummaryJob | null
+  /** 取一条 pending 置为 running（单进程内加锁即可，不需要 SKIP LOCKED）。 */
+  claimNext(at: number): SummaryJob | null
+  setStage(id: number, stage: JobStage, at: number): void
+  finish(id: number, outcome: { ok: true } | { ok: false; error: string }, at: number): void
+  /** 启动时把崩在中途的 running 重置为 pending 续跑。 */
+  resetRunning(at: number): number
+  list(q: { status?: SummaryJob['status']; limit: number }): SummaryJob[]
+}
+
+export interface SummaryRepo {
+  get(bvid: string): Summary | null
+  /** transcript 单独传：它可能有几万字，不值得塞进到处传递的 Summary 里。 */
+  upsert(summary: Summary, transcript?: string | null): void
+  list(q: { limit: number; before?: number }): Summary[]
+}
+
+export interface DeliveryRepo {
+  /** 唯一索引 (update_id, channel, kind)：重复投递直接被库挡掉，返回 false。 */
+  claim(d: { updateId: string; channel: NotifyChannel; kind: DeliveryKind; at: number }): boolean
+  settle(
+    d: { updateId: string; channel: NotifyChannel; kind: DeliveryKind },
+    outcome: { status: DeliveryStatus; error: string | null },
+    at: number,
+  ): void
+  listForUpdate(updateId: string): DeliveryRecord[]
+  recent(limit: number): DeliveryRecord[]
+}
+
+export interface DeliveryRecord {
+  id: number
+  updateId: string
+  channel: NotifyChannel
+  kind: DeliveryKind
+  status: DeliveryStatus
+  attempts: number
+  error: string | null
+  at: number
+}
+
+/** 只记账不拦截。分段总结一次视频会调多次，逐次记才算得准。 */
+export interface LlmCallRepo {
+  record(call: {
+    bvid: string | null
+    stage: string
+    model: string
+    inTokens: number
+    outTokens: number
+    ms: number
+    at: number
+  }): void
+  usageSince(ts: number): { calls: number; inTokens: number; outTokens: number }
+}

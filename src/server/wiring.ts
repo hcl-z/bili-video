@@ -1,0 +1,100 @@
+import { join } from 'node:path'
+import type { DatabaseSync } from 'node:sqlite'
+
+import { seedConfigIfEmpty } from './config/load.ts'
+import { SqliteConfigStore } from './config/store.ts'
+import { migrate } from './infra/db/migrations.ts'
+import { SqliteDeliveryRepo, SqliteLlmCallRepo } from './infra/db/repo-delivery.ts'
+import { SqliteAnchorRepo, SqliteUpdateRepo } from './infra/db/repo-feed.ts'
+import { SqliteJobRepo, SqliteSummaryRepo } from './infra/db/repo-summary.ts'
+import { SqliteFilterRuleRepo, SqliteSubscriptionRepo } from './infra/db/repo-subscriptions.ts'
+import { openDatabase } from './infra/db/sqlite.ts'
+import { loadMasterKey } from './infra/secret/key-manager.ts'
+import { SqliteSecretStore } from './infra/secret/store.ts'
+import type { Clock } from './ports/clock.ts'
+import type { ConfigStore } from './ports/config-store.ts'
+import type { EventBus } from './ports/event-bus.ts'
+import type { Logger } from './ports/logger.ts'
+import type { Repos } from './ports/index.ts'
+
+/**
+ * 真实的持久化内核：SQLite + migrations + 8 个仓储 + secret-box + 配置。
+ *
+ * 它在测试里也是**真的**（临时目录里的真库、真加密），只有进程边界外的东西才换假件。
+ * 拆出这个函数是为了让 main.ts 和测试用同一段装配代码 —— 否则测的就不是生产那套接线了。
+ */
+export interface CoreOptions {
+  dataDir: string
+  clock: Clock
+  logger: Logger
+  events: EventBus
+  /** 首次启动的种子 YAML；null 表示不 seed（全用 schema 默认值）。 */
+  seedFile?: string | null
+  dbFile?: string
+  masterKeyPath?: string
+  /** 有 passphrase 就用它派生，不落 key 文件（容器里常这么干）。 */
+  masterKeyPassphrase?: string | undefined
+}
+
+export interface Core {
+  db: DatabaseSync
+  repos: Repos
+  secrets: SqliteSecretStore
+  config: ConfigStore
+  close(): void
+}
+
+export function openCore(opts: CoreOptions): Core {
+  const { dataDir, clock, logger } = opts
+  const now = () => clock.now()
+
+  const db = openDatabase(opts.dbFile ?? join(dataDir, 'app.db'))
+  const applied = migrate(db, clock.now())
+  if (applied.length > 0) logger.info({ versions: applied }, '数据库迁移已应用')
+
+  const master = loadMasterKey({
+    path: opts.masterKeyPath ?? join(dataDir, 'master.key'),
+    passphrase: opts.masterKeyPassphrase,
+  })
+  const secrets = new SqliteSecretStore(db, master.key, now)
+
+  // 新生成的 key + 库里已有密文 = key 丢了。继续跑只会在第一次解密时炸得莫名其妙，
+  // 所以在这里停下来，把「怎么恢复」说清楚。
+  if (master.created && secrets.countStored() > 0) {
+    db.close()
+    throw new Error(
+      'master key 文件不存在，但数据库里已有加密内容。刚生成的新 key 解不开它们。\n' +
+        '要么从备份恢复 master.key，要么清空 secrets 与 cookies 两张表后重新登录、重填 apiKey。',
+    )
+  }
+  if (master.created) {
+    logger.warn(
+      { source: master.source },
+      '已生成新的 master key。它加密了所有 cookie 与 apiKey —— 丢了就全部不可恢复，请立刻纳入备份。',
+    )
+  }
+
+  const seededFrom = seedConfigIfEmpty(db, opts.seedFile ?? null, clock.now(), logger)
+  const config = new SqliteConfigStore(db, now, seededFrom)
+
+  const repos: Repos = {
+    subscriptions: new SqliteSubscriptionRepo(db, now),
+    rules: new SqliteFilterRuleRepo(db, now),
+    anchors: new SqliteAnchorRepo(db),
+    updates: new SqliteUpdateRepo(db),
+    jobs: new SqliteJobRepo(db),
+    summaries: new SqliteSummaryRepo(db),
+    deliveries: new SqliteDeliveryRepo(db),
+    llmCalls: new SqliteLlmCallRepo(db),
+  }
+
+  return {
+    db,
+    repos,
+    secrets,
+    config,
+    close() {
+      db.close()
+    },
+  }
+}

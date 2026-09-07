@@ -1,0 +1,22 @@
+# deps & build output
+node_modules/
+dist/
+*.tsbuildinfo
+
+# 运行时数据。data/master.key 丢失后所有已加密的 cookie 与 apiKey 一次性不可恢复，
+# 它必须进你的备份清单（见 README「备份清单」）。
+data/master.key
+data/app.db
+data/app.db-shm
+data/app.db-wal
+data/audio/
+data/summaries/
+data/logs/
+
+# 本地环境
+.env
+.env.local
+.DS_Store
+
+# 工作草稿（票、临时产物）
+.scratch/

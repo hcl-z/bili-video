@@ -1,0 +1,68 @@
+# 首次启动的种子文件。
+#
+# 一旦启动过一次，配置的唯一真相就是数据库里的 app_config 表 —— 之后改这个文件不会有任何效果，
+# 请在工作台页面上改。想重新 seed 只能清空 app_config 表（见 README）。
+#
+# 缺省的字段会用 schema 里的默认值补齐，所以这里只需要写你要改的那些。
+
+server:
+  # 只听回环地址。改成 0.0.0.0 等于放弃「无登录系统」这个前提，别改。
+  host: 127.0.0.1
+  port: 8788
+
+poll:
+  enabled: true
+  # 秒位错到 :30，避开全网客户端堆在整分的流量尖峰。
+  cron: '30 */2 * * * *'
+
+filter:
+  quietHours:
+    enabled: false
+    start: '23:30'
+    end: '07:30'
+  # 手写正则的执行超时，防 ReDoS 把轮询卡死。
+  regexTimeoutMs: 100
+
+ai:
+  # 关掉后只推送不总结，AI 成本归零。
+  enabled: true
+  # OpenAI 兼容即可。apiKey 不在这里 —— 它加密存 secrets 表，在 AI 配置页填。
+  baseURL: ''
+  model: ''
+  temperature: 0.3
+  chunk:
+    # 全文超过这个 token 数才分段总结，否则整篇一次过。
+    thresholdTokens: 12000
+    sizeTokens: 8000
+    overlapTokens: 400
+  llmConcurrency: 2
+
+asr:
+  # 容器里拿不到 Metal，必须改成 openai-compat，启动校验会断言这条。
+  provider: mlx-whisper
+  model: mlx-community/whisper-large-v3-turbo
+  language: zh
+  concurrency: 1
+
+notify:
+  wxpusher:
+    enabled: false
+    uids: []
+  ntfy:
+    enabled: false
+    server: https://ntfy.sh
+    topic: ''
+
+catchup:
+  # 睡眠/停机唤醒后补推的时间窗，更老的只入库不推。
+  windowHours: 24
+  # 窗口内积压超过这个条数就只发一条汇总，不逐条轰炸。
+  overflowThreshold: 20
+
+health:
+  enabled: true
+  cron: '0 */30 * * * *'
+
+log:
+  level: info
+  retentionDays: 7

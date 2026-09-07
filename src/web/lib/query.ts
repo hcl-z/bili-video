@@ -1,0 +1,27 @@
+import { QueryClient } from '@tanstack/react-query'
+
+import { ApiError } from './api'
+
+/**
+ * 单用户、本地服务：没有网络抖动，也没有多端并发。
+ * 所以关掉窗口聚焦重取（每次切回浏览器都打一串请求太吵），只在明确失效时重取。
+ * 真正需要「实时」的地方走 SSE（/events），不靠轮询。
+ */
+export const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000,
+      refetchOnWindowFocus: false,
+      retry: (count, err) => {
+        // 4xx 是我们自己传错了参数，重试多少次都一样。
+        if (err instanceof ApiError && err.status < 500) return false
+        return count < 2
+      },
+    },
+  },
+})
+
+export const keys = {
+  health: ['health'] as const,
+  config: ['config'] as const,
+}

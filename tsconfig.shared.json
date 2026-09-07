@@ -1,0 +1,16 @@
+{
+  // 前后端共享层。types: [] 且 lib 不含 DOM —— 这里既拿不到 node 也拿不到浏览器全局，
+  // 想在 shared 里写 process.env 或 document 会当场编译不过。
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "lib": ["ES2023"],
+    "types": [],
+    "rootDir": "src/shared",
+    "outDir": "dist/shared",
+    "rewriteRelativeImportExtensions": true
+  },
+  "include": ["src/shared/**/*.ts"]
+}

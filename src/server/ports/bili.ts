@@ -1,0 +1,80 @@
+import type { DynamicType } from '#shared/contract/update.ts'
+import type { Cue } from '#shared/contract/summary.ts'
+import type { Result } from '#shared/contract/failure.ts'
+
+/**
+ * B 站 API 拆成四个窄接口。写接口的风控比读严得多，拆开才能给它单独限流和审计 ——
+ * 也让轮询这条路径**在类型上就拿不到写能力**。
+ */
+
+/** 只读。聚合流 + 心跳，一轮一个请求。 */
+export interface BiliReader {
+  fetchFeed(opts?: { offset?: string | null }): Promise<Result<FeedPage>>
+  /** feed/all/update 心跳：有没有新内容，比拉全量便宜。 */
+  hasUpdate(sinceTs: number): Promise<Result<boolean>>
+}
+
+export interface FeedPage {
+  items: ParsedDynamic[]
+  hasMore: boolean
+  offset: string | null
+}
+
+/**
+ * 已由 infra 解析并校验过的一条动态（zod 在 infra 边界跑完，穿过来就是确定类型）。
+ * raw 留着是为了事后核对 parser —— 五类 payload 的精确形状是本设计里的未验证项之一。
+ */
+export interface ParsedDynamic {
+  dynId: string
+  uid: string
+  uname: string
+  face: string | null
+  type: DynamicType
+  pubTs: number
+  title: string | null
+  text: string | null
+  cover: string | null
+  bvid: string | null
+  url: string
+  raw: unknown
+}
+
+/** 唯一的写接口。自动关注前先批量查关系，只对缺失的补写。 */
+export interface BiliRelationWriter {
+  getRelations(uids: string[]): Promise<Result<Map<string, boolean>>>
+  follow(uid: string): Promise<Result<void>>
+}
+
+export interface BiliAuth {
+  /** 返回二维码内容与轮询用的 key；不落任何密码。 */
+  startQrLogin(): Promise<Result<QrLogin>>
+  pollQrLogin(qrcodeKey: string): Promise<Result<QrLoginState>>
+  /** cookie/info → correspond/1 → cookie/refresh → confirm/refresh 那条链。 */
+  refreshCookies(): Promise<Result<void>>
+  status(): Promise<Result<AuthStatus>>
+}
+
+export interface QrLogin {
+  qrcodeKey: string
+  url: string
+}
+
+export type QrLoginState =
+  | { state: 'pending' }
+  | { state: 'scanned' }
+  | { state: 'expired' }
+  | { state: 'confirmed'; uid: string; uname: string }
+
+export interface AuthStatus {
+  loggedIn: boolean
+  uid: string | null
+  uname: string | null
+  /** cookie 到期时间（epoch ms），拿不到就是 null。 */
+  expiresAt: number | null
+  needsRefresh: boolean
+}
+
+/** 字幕免登录只会返回空数组，必须带 SESSDATA。 */
+export interface SubtitleFetcher {
+  fetch(bvid: string): Promise<Result<Cue[] | null>>
+}
