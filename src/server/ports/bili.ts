@@ -45,6 +45,21 @@ export interface BiliRelationWriter {
   follow(uid: string): Promise<Result<void>>
 }
 
+/**
+ * UP 主名片（昵称 + 头像）。spec 列了四个窄接口，这是第五个 —— 独立出来的理由：
+ * 它是个读操作，塞进 `BiliRelationWriter` 会让「订阅页查个昵称」顺带拿到写能力，
+ * 而塞进 `BiliReader` 又会让轮询那条路径多认识一个跟聚合流无关的接口。
+ */
+export interface BiliProfile {
+  fetchCard(uid: string): Promise<Result<UpCard>>
+}
+
+export interface UpCard {
+  uid: string
+  name: string
+  face: string | null
+}
+
 export interface BiliAuth {
   /** 返回二维码内容与轮询用的 key；不落任何密码。 */
   startQrLogin(): Promise<Result<QrLogin>>

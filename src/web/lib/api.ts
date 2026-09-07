@@ -1,5 +1,13 @@
 import type { AppConfig, ConfigSection } from '#shared/contract/config.ts'
-import type { ConfigResponse, ErrorResponse, HealthResponse } from '#shared/contract/api.ts'
+import type {
+  ConfigResponse,
+  ErrorResponse,
+  HealthResponse,
+  PatchSubscriptionRequest,
+  SubscriptionResult,
+  SubscriptionsResponse,
+  SystemResponse,
+} from '#shared/contract/api.ts'
 
 /**
  * 数据层：所有请求走这一个函数，因此「怎么报错」只有一种写法。
@@ -57,4 +65,27 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify(patch),
     }),
+
+  system: () => request<SystemResponse>('/system'),
+
+  subs: () => request<SubscriptionsResponse>('/subscriptions'),
+
+  // input 是用户粘进来的原文（uid / 链接 / 一整段分享文本），uid 的识别在后端。
+  addSub: (input: string) =>
+    request<SubscriptionResult>('/subscriptions', {
+      method: 'POST',
+      body: JSON.stringify({ input }),
+    }),
+
+  patchSub: (uid: string, patch: PatchSubscriptionRequest) =>
+    request<SubscriptionResult>(`/subscriptions/${uid}`, {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
+    }),
+
+  removeSub: (uid: string) =>
+    request<SubscriptionsResponse>(`/subscriptions/${uid}`, { method: 'DELETE' }),
+
+  followSub: (uid: string) =>
+    request<SubscriptionResult>(`/subscriptions/${uid}/follow`, { method: 'POST' }),
 }

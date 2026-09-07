@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { AppConfigSchema } from './config.ts'
+import { SubscriptionSchema } from './subscription.ts'
 
 /**
  * 每个 /api 端点的 req/res schema。前端从 z.infer 拿类型，
@@ -65,6 +66,35 @@ export const SystemResponseSchema = z.object({
   now: z.number().int(),
 })
 export type SystemResponse = z.infer<typeof SystemResponseSchema>
+
+export const SubscriptionsResponseSchema = z.object({
+  subs: z.array(SubscriptionSchema),
+})
+export type SubscriptionsResponse = z.infer<typeof SubscriptionsResponseSchema>
+
+/** 用户粘进来的原文：uid、`UID:123`、空间页链接、或者一整段分享文本。 */
+export const AddSubscriptionRequestSchema = z.object({
+  input: z.string().min(1),
+})
+export type AddSubscriptionRequest = z.infer<typeof AddSubscriptionRequestSchema>
+
+/**
+ * 订阅成功但关注没成功是常态（写接口最容易撞风控），所以这两层分开回：
+ * sub 是已经落库的结果，notice 是「还差一步」的人话，页面照原样显示。
+ */
+export const SubscriptionResultSchema = z.object({
+  sub: SubscriptionSchema,
+  notice: z.string().nullable(),
+})
+export type SubscriptionResult = z.infer<typeof SubscriptionResultSchema>
+
+/** 三个开关，缺省表示不改。 */
+export const PatchSubscriptionRequestSchema = z.object({
+  enableDynamic: z.boolean().optional(),
+  enableVideo: z.boolean().optional(),
+  enableAi: z.boolean().optional(),
+})
+export type PatchSubscriptionRequest = z.infer<typeof PatchSubscriptionRequestSchema>
 
 export const ErrorResponseSchema = z.object({
   error: z.object({

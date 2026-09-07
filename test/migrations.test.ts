@@ -11,6 +11,7 @@ import { openDatabase } from '../src/server/infra/db/sqlite.ts'
 const EXPECTED_TABLES = [
   'anchors',
   'app_config',
+  'bili_write_calls',
   'cookies',
   'deliveries',
   'filter_rules',

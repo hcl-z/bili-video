@@ -4,10 +4,12 @@ import { Hono } from 'hono'
 import { serveStatic } from '@hono/node-server/serve-static'
 
 import type { AuthLifecycle } from '../app/auth-lifecycle.ts'
+import type { SubscriptionService } from '../app/subscriptions.ts'
 import type { Ports } from '../ports/index.ts'
 import { errorBody, makeErrorHandler } from './errors.ts'
 import { configRoutes } from './routes/config.ts'
 import { healthRoutes } from './routes/health.ts'
+import { subscriptionRoutes } from './routes/subscriptions.ts'
 import { systemRoutes } from './routes/system.ts'
 
 export interface HttpOptions {
@@ -16,6 +18,8 @@ export interface HttpOptions {
   webRoot: string | null
   /** app 层的登录态服务。null = 这个进程没装 B 站适配器。 */
   auth: AuthLifecycle | null
+  /** 订阅服务。仓储永远在，所以它不会是 null —— 关注适配器缺席只影响「关不上」。 */
+  subs: SubscriptionService
 }
 
 /**
@@ -31,6 +35,7 @@ export function createHttpApp(ports: Ports, opts: HttpOptions): Hono {
   api.route('/health', healthRoutes(ports, opts.startedAt))
   api.route('/system', systemRoutes(ports, opts.startedAt, opts.auth))
   api.route('/config', configRoutes(ports))
+  api.route('/subscriptions', subscriptionRoutes(opts.subs))
   // /api 下没命中的一律结构化 404，绝不落到静态资源的 index.html 上去。
   api.all('*', (c) => c.json(errorBody('not-found', `没有这个端点：${c.req.path}`), 404))
   app.route('/api', api)

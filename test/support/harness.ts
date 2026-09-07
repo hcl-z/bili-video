@@ -81,7 +81,9 @@ export async function createHarness(opts: HarnessOptions = {}): Promise<Harness>
       notifiers: [notifier],
       biliAuth: core.biliAuth,
       biliReader: null,
-      biliRelations: null,
+      // 关注与名片都是真适配器，只有 fetch 是假的 —— 限流和审计因此也是真在跑。
+      biliRelations: core.biliRelations,
+      biliProfile: core.biliProfile,
       subtitles: null,
       asr: null,
       llm: null,

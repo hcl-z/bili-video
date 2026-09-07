@@ -65,12 +65,13 @@ const ports: Ports = {
   repos: core.repos,
   state: core.state,
   cookies: core.cookies,
-  // 后面几票逐个把 null 换成真适配器（读接口、关注、字幕、ASR、LLM、下载器、通知渠道）。
+  // 后面几票逐个把 null 换成真适配器（读接口、字幕、ASR、LLM、下载器、通知渠道）。
   external: {
     notifiers: [],
     biliAuth: core.biliAuth,
     biliReader: null,
-    biliRelations: null,
+    biliRelations: core.biliRelations,
+    biliProfile: core.biliProfile,
     subtitles: null,
     asr: null,
     llm: null,

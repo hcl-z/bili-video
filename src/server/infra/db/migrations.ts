@@ -151,9 +151,29 @@ CREATE TABLE runtime_state (
 );
 `
 
+/**
+ * 写接口调用审计。全系统只有「自动关注」一个写操作，它的风控比读严得多，
+ * 所以它每一次调用都留痕：既是事后核对「到底发了几个写请求」的依据，
+ * 也是限流本身的状态 —— 频次从这张表数出来，于是重启不会把额度清零。
+ */
+const BILI_WRITE_CALLS = `
+CREATE TABLE bili_write_calls (
+  id      INTEGER PRIMARY KEY AUTOINCREMENT,
+  at      INTEGER NOT NULL,
+  api     TEXT NOT NULL,
+  target  TEXT,
+  ok      INTEGER NOT NULL,
+  kind    TEXT,
+  code    INTEGER,
+  message TEXT
+);
+CREATE INDEX idx_bili_write_calls_at ON bili_write_calls(at DESC);
+`
+
 export const MIGRATIONS: Migration[] = [
   { version: 1, name: 'init', sql: INIT },
   { version: 2, name: 'runtime_state', sql: RUNTIME_STATE },
+  { version: 3, name: 'bili_write_calls', sql: BILI_WRITE_CALLS },
 ]
 
 /**

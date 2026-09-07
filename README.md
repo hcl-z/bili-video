@@ -46,10 +46,10 @@ SESSDATA、cookies、AI apiKey 都用它派生的密钥加密落库（AES-256-GC
 ```
 src/shared/contract/   前后端共享的 zod schema 与类型
 src/server/
-  ports/               端口（接口）：Clock / Logger / EventBus / 8 个仓储 / B站 / ASR / LLM / Notifier …
-  domain/              纯逻辑，零 IO：B站错误码分类、登录态决策
-  app/                 编排：登录生命周期（扫码 → 续期 → 失效）
-  infra/               适配器：SQLite、secret-box、事件总线、真时钟、B站（签名/登录/续期）
+  ports/               端口（接口）：Clock / Logger / EventBus / 9 个仓储 / B站 / ASR / LLM / Notifier …
+  domain/              纯逻辑，零 IO：B站错误码分类、登录态决策、uid 识别与关系判定
+  app/                 编排：登录生命周期（扫码 → 续期 → 失效）、订阅与自动关注
+  infra/               适配器：SQLite、secret-box、事件总线、真时钟、B站（签名/登录/续期/关注）
   config/              YAML seed → DB，DB 为真相 + 热重载
   http/                Hono 装配与路由
   build-server.ts      ★ 组装根：buildServer(ports)，唯一 new 具体实现的地方
@@ -82,6 +82,23 @@ test/
 
 这些常量按版本会变，抄的时候记一下来源。原先的社区文档仓库（`bilibili-API-collect`）
 已于 2026-01-28 被 B 站要求下架，现在只能从浏览器里自己抠。
+
+## 自动关注为什么这么小心
+
+新增订阅时会自动关注 UP —— 这是整个服务唯一的写接口，也是唯一有封号风险的地方。**用小号。**
+
+三条约束：
+
+- **先批量查关系再写**：`relation/relations` 一次查 50 个，已关注的（含悄悄关注）一个写请求都不发。
+- **写请求不自动重放**：读接口撞风控会清签名 key 重试一次，写接口不会 —— 重试一次就是关注两次，审计也对不上账。
+- **独立限流 + 审计**：`bili.write.minIntervalMs` / `maxPerHour` 只管写接口，写请求还排成一条队
+  （限流读的是审计表，并发调用不串起来就会各自读到「额度没用过」）。额度从 `bili_write_calls`
+  表数出来（不是内存计数器），所以重启不会白送一轮额度，每次调用的成败也留痕。
+
+小号一旦在 `relation/modify` 上开始吃 -352，把 `bili.write.autoFollow` 改成 false ——
+订阅照样能加，只是不再自动关注。这是唯一一个「先止血再排查」的开关。
+
+关注失败不会回滚订阅：订阅照样在，列表里多一个「重试关注」。写接口撞风控是常态，不是异常。
 
 ## 为什么没有登录系统
 

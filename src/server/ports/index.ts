@@ -1,6 +1,12 @@
 import type { Asr } from './asr.ts'
 import type { AudioDownloader } from './audio.ts'
-import type { BiliAuth, BiliReader, BiliRelationWriter, SubtitleFetcher } from './bili.ts'
+import type {
+  BiliAuth,
+  BiliProfile,
+  BiliReader,
+  BiliRelationWriter,
+  SubtitleFetcher,
+} from './bili.ts'
 import type { Clock } from './clock.ts'
 import type { ConfigStore } from './config-store.ts'
 import type { EventBus } from './event-bus.ts'
@@ -16,6 +22,7 @@ import type {
   SubscriptionRepo,
   SummaryRepo,
   UpdateRepo,
+  WriteAuditRepo,
 } from './repo.ts'
 import type { CookieJar } from './cookie-jar.ts'
 import type { SecretStore } from './secret-store.ts'
@@ -35,7 +42,7 @@ export type * from './notifier.ts'
 export type * from './repo.ts'
 export type * from './secret-store.ts'
 
-/** 8 个窄仓储打成一包只是为了少写 8 个构造参数；它们仍然是 8 个独立接口。 */
+/** 窄仓储打成一包只是为了少写一串构造参数；它们仍然是各自独立的接口。 */
 export interface Repos {
   subscriptions: SubscriptionRepo
   rules: FilterRuleRepo
@@ -45,6 +52,8 @@ export interface Repos {
   summaries: SummaryRepo
   deliveries: DeliveryRepo
   llmCalls: LlmCallRepo
+  /** 写接口的账本。只有「自动关注」往里写，读接口一条都不进。 */
+  writeAudit: WriteAuditRepo
 }
 
 /**
@@ -61,6 +70,8 @@ export interface ExternalPorts {
   biliAuth: BiliAuth | null
   biliReader: BiliReader | null
   biliRelations: BiliRelationWriter | null
+  /** UP 主名片（昵称、头像）。订阅页要显示它们。 */
+  biliProfile: BiliProfile | null
   subtitles: SubtitleFetcher | null
   asr: Asr | null
   llm: Llm | null

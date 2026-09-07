@@ -91,6 +91,38 @@ export interface DeliveryRecord {
   at: number
 }
 
+/**
+ * 写接口调用审计。和读接口彻底分开记：写接口的风控严得多，
+ * 混在一起数就没法回答「这一小时到底发了几个写请求」。
+ *
+ * 它同时是限流的状态来源 —— 额度从这张表数出来，重启不会白送一轮额度。
+ *
+ * spec 的仓储清单只列了 8 个，这是第 9 个。理由是 spec 自己要求
+ * `BiliRelationWriter`「单独限流与审计」，而审计要跨重启就得有张表；
+ * 挂到别的仓储上会让「这一小时发了几个写请求」变成一句 SQL 猜谜。
+ */
+export interface WriteAuditRepo {
+  record(call: NewWriteCall): void
+  countSince(ts: number): number
+  /** 最近一次写调用的时刻，用来卡最小间隔。null = 从来没写过。 */
+  lastAt(): number | null
+  recent(limit: number): WriteCallRecord[]
+}
+
+export interface WriteCallRecord {
+  id: number
+  at: number
+  api: string
+  target: string | null
+  ok: boolean
+  kind: string | null
+  code: number | null
+  message: string | null
+}
+
+/** 待写入的一笔。id 是库给的，别处不许自己编。 */
+export type NewWriteCall = Omit<WriteCallRecord, 'id'>
+
 /** 只记账不拦截。分段总结一次视频会调多次，逐次记才算得准。 */
 export interface LlmCallRepo {
   record(call: {

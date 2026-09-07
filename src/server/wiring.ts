@@ -12,17 +12,20 @@ import {
 import { SqliteCookieJar, type Cipher } from './infra/bili/cookie-jar.ts'
 import { BiliHttp } from './infra/bili/http-client.ts'
 import { BiliAuthClient } from './infra/bili/login.ts'
+import { BiliProfileClient } from './infra/bili/profile.ts'
+import { BiliRelationsClient } from './infra/bili/relations.ts'
 import { migrate } from './infra/db/migrations.ts'
 import { SqliteStateRepo } from './infra/db/repo-state.ts'
 import { SqliteDeliveryRepo, SqliteLlmCallRepo } from './infra/db/repo-delivery.ts'
 import { SqliteAnchorRepo, SqliteUpdateRepo } from './infra/db/repo-feed.ts'
 import { SqliteJobRepo, SqliteSummaryRepo } from './infra/db/repo-summary.ts'
 import { SqliteFilterRuleRepo, SqliteSubscriptionRepo } from './infra/db/repo-subscriptions.ts'
+import { SqliteWriteAuditRepo } from './infra/db/repo-write-audit.ts'
 import { openDatabase } from './infra/db/sqlite.ts'
 import { loadMasterKey } from './infra/secret/key-manager.ts'
 import { open, parseBox, seal } from './infra/secret/secret-box.ts'
 import { SqliteSecretStore } from './infra/secret/store.ts'
-import type { BiliAuth } from './ports/bili.ts'
+import type { BiliAuth, BiliProfile, BiliRelationWriter } from './ports/bili.ts'
 import type { Clock } from './ports/clock.ts'
 import type { ConfigStore } from './ports/config-store.ts'
 import type { CookieJar } from './ports/cookie-jar.ts'
@@ -66,6 +69,10 @@ export interface Core {
   identity: BrowserIdentity
   /** 扫码登录与 cookie 续期的适配器。 */
   biliAuth: BiliAuth
+  /** 唯一的写接口：查关系 + 关注。限流与审计都在它内部。 */
+  biliRelations: BiliRelationWriter
+  /** UP 主名片查询。 */
+  biliProfile: BiliProfile
   close(): void
 }
 
@@ -146,7 +153,19 @@ export function openCore(opts: CoreOptions): Core {
     summaries: new SqliteSummaryRepo(db),
     deliveries: new SqliteDeliveryRepo(db),
     llmCalls: new SqliteLlmCallRepo(db),
+    writeAudit: new SqliteWriteAuditRepo(db),
   }
+
+  const biliRelations = new BiliRelationsClient({
+    http,
+    cookies,
+    clock,
+    logger,
+    audit: repos.writeAudit,
+    // 用时读：页面上改完限流参数，下一次关注就按新的来。
+    limits: () => config.getSection('bili').write,
+  })
+  const biliProfile = new BiliProfileClient(http)
 
   return {
     db,
@@ -157,6 +176,8 @@ export function openCore(opts: CoreOptions): Core {
     state,
     identity,
     biliAuth,
+    biliRelations,
+    biliProfile,
     close() {
       db.close()
     },

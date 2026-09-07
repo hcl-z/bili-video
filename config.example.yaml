@@ -30,6 +30,15 @@ bili:
   # cookie 续期链里 correspond/1 用的 RSA 公钥（PEM，含 BEGIN/END 行）。
   # 留空 = 不做自动续期，cookie 到期只能重新扫码。
   correspondPublicKeyPem: ''
+  # 写接口（全系统只有「自动关注」一个）的独立限流，和读接口的轮询节奏无关。
+  # 写接口的风控比读严得多，而 3–5 个订阅一次就加完了，所以给得很保守。
+  # 额度是从审计表 bili_write_calls 里数出来的，重启不会白送一轮。
+  write:
+    # 刹车。改成 false 就一个写请求都不发了：订阅照样能加，关注得自己去 B 站点。
+    # 小号一旦在 relation/modify 上开始吃 -352，先关这个再排查。
+    autoFollow: true
+    minIntervalMs: 3000
+    maxPerHour: 20
 
 filter:
   quietHours:

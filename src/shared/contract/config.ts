@@ -69,6 +69,18 @@ export const BiliConfigSchema = z.object({
     .default({}),
   /** cookie 续期链里 `correspond/1` 用的 RSA 公钥（PEM）。空 = 不做自动续期，到期只能重新扫码。 */
   correspondPublicKeyPem: z.string().default(''),
+  /**
+   * 写接口（只有「自动关注」）的独立限流。和读接口的轮询节奏完全无关 ——
+   * 写接口的风控严得多，3–5 个订阅一次加完就没事了，所以给得很保守。
+   */
+  write: z
+    .object({
+      /** 刹车。关掉后订阅照样能加，只是不再自动关注，得自己去 B 站点关注。 */
+      autoFollow: z.boolean().default(true),
+      minIntervalMs: z.number().int().min(0).max(60_000).default(3_000),
+      maxPerHour: z.number().int().min(1).max(200).default(20),
+    })
+    .default({}),
 })
 
 export const AiConfigSchema = z.object({

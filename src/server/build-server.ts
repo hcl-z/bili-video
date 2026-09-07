@@ -4,6 +4,7 @@ import { serve, type ServerType } from '@hono/node-server'
 import type { Hono } from 'hono'
 
 import { AuthLifecycle } from './app/auth-lifecycle.ts'
+import { SubscriptionService } from './app/subscriptions.ts'
 import { createHttpApp } from './http/app.ts'
 import { renderQr } from './infra/bili/qr-terminal.ts'
 import type { Ports } from './ports/index.ts'
@@ -33,6 +34,7 @@ export interface Server {
 /** 组装出来的 app 层服务。null = 依赖的适配器还没接上。 */
 export interface Services {
   auth: AuthLifecycle | null
+  subs: SubscriptionService
 }
 
 export interface BuildOptions {
@@ -43,11 +45,22 @@ export interface BuildOptions {
 
 export function buildServer(ports: Ports, opts: BuildOptions = {}): Server {
   const startedAt = ports.clock.now()
-  const services: Services = { auth: makeAuthLifecycle(ports, opts) }
+  const services: Services = {
+    auth: makeAuthLifecycle(ports, opts),
+    subs: new SubscriptionService({
+      subs: ports.repos.subscriptions,
+      clock: ports.clock,
+      logger: ports.logger,
+      relations: ports.external.biliRelations,
+      profile: ports.external.biliProfile,
+      autoFollow: () => ports.config.getSection('bili').write.autoFollow,
+    }),
+  }
   const app = createHttpApp(ports, {
     startedAt,
     webRoot: opts.webRoot ?? null,
     auth: services.auth,
+    subs: services.subs,
   })
 
   let listening: ServerType | null = null
@@ -81,6 +94,13 @@ export function buildServer(ports: Ports, opts: BuildOptions = {}): Server {
         if (checked.ok && checked.value.action === 'relogin') {
           ports.logger.info({ reason: checked.value.reason }, '需要扫码登录')
           await auth.loginByQr()
+        }
+        // 登录上了才补关注：没登录时查关系必然失败，白打一串请求。
+        if (auth.snapshot().state === 'logged-in') {
+          const synced = await services.subs.syncFollows()
+          if (synced.followed > 0 || synced.notice !== null) {
+            ports.logger.info(synced, '启动期补关注')
+          }
         }
       } catch (err) {
         ports.logger.error({ err: String(err) }, '启动期核对登录态出错')

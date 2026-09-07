@@ -84,6 +84,14 @@ export function fatalFailure(message: string): Failure {
 }
 
 /**
+ * 本地就能判定的「没登录」（比如缺 bili_jct）。走 `make` 而不是手写字面量：
+ * `retryAfterMs` 只有 RETRY_AFTER_MS 一个真相，手抄一份就会和表分头漂移。
+ */
+export function authLostFailure(message: string): Failure {
+  return make('auth-lost', null, message)
+}
+
+/**
  * 抛出来的**配置/用法**错误 → fatal。和 classifyThrown 分开是有意的：
  * 签名密钥没配、PEM 不合法这类问题重试一万次结果一样，算 transient 只会让它无声地转圈。
  */
