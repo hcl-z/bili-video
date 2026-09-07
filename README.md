@@ -47,14 +47,16 @@ SESSDATA、cookies、AI apiKey 都用它派生的密钥加密落库（AES-256-GC
 src/shared/contract/   前后端共享的 zod schema 与类型
 src/server/
   ports/               端口（接口）：Clock / Logger / EventBus / 8 个仓储 / B站 / ASR / LLM / Notifier …
-  infra/               适配器：SQLite、secret-box、事件总线、真时钟
+  domain/              纯逻辑，零 IO：B站错误码分类、登录态决策
+  app/                 编排：登录生命周期（扫码 → 续期 → 失效）
+  infra/               适配器：SQLite、secret-box、事件总线、真时钟、B站（签名/登录/续期）
   config/              YAML seed → DB，DB 为真相 + 热重载
   http/                Hono 装配与路由
   build-server.ts      ★ 组装根：buildServer(ports)，唯一 new 具体实现的地方
   main.ts              薄入口：构造真实 infra，交给 buildServer
 src/web/               Vite + React + Tailwind v4 + shadcn/ui
 test/
-  fakes/               可控时钟、记录型 logger、记录型通知器
+  fakes/               可控时钟、记录型 logger、记录型通知器、假 fetch（出网的唯一假件）
   support/harness.ts   主测试缝：真 SQLite + 真加密 + 假外部 I/O
 ```
 
@@ -63,6 +65,23 @@ test/
 
 三份 tsconfig 把类型隔开：`server` 拿不到 DOM 类型，`web` 拿不到 node 类型，`shared` 两者都拿不到。
 写错了 `pnpm typecheck` 会直接报 `Cannot find name 'HTMLElement'` / `Cannot find name 'process'`。
+
+## B 站的三个常量要自己填
+
+扫码登录、读接口不需要额外配置，但下面两件事需要 —— 它们依赖 B 站 web 端 JS 里的几个公开常量，
+本仓库不内置：
+
+| 要做的事 | 需要的配置 |
+| --- | --- |
+| WBI 签名（大部分读接口） | `bili.wbiMixinTable`（64 项的重排下标） |
+| 风控后重取 `bili_ticket` | `bili.ticket.keyId` / `bili.ticket.hmacKey` |
+| cookie 自动续期 | `bili.correspondPublicKeyPem`（`correspond/1` 的 RSA 公钥） |
+
+算法都实现好并有单测，缺的只是常量。留空不会静默出错：需要它们的调用会带着「缺哪一项」直接失败，
+而不是发一个签错的请求换回 `-352`（那会被当成风控白等一轮退避）。续期留空就是「到期得重新扫码」。
+
+这些常量按版本会变，抄的时候记一下来源。原先的社区文档仓库（`bilibili-API-collect`）
+已于 2026-01-28 被 B 站要求下架，现在只能从浏览器里自己抠。
 
 ## 为什么没有登录系统
 

@@ -16,6 +16,7 @@ const EXPECTED_TABLES = [
   'filter_rules',
   'llm_calls',
   'migrations',
+  'runtime_state',
   'secrets',
   'subscriptions',
   'summaries',

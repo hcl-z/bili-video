@@ -41,6 +41,36 @@ export const ChunkConfigSchema = z.object({
   overlapTokens: z.number().int().min(0).default(400),
 })
 
+/**
+ * WBI 签名的 64 位混淆表：把 `imgKey + subKey` 的 64 个字符按这张表重排，取前 32 位当密钥。
+ *
+ * 留空 = 未配置。需要 WBI 的接口会明确报错并说清缺什么，而不是发一个签名错的请求
+ * 换回 -352 —— 那会被当成风控，白白触发退避。
+ */
+const MixinTableSchema = z
+  .array(z.number().int().min(0).max(63))
+  .refine((a) => a.length === 0 || a.length === 64, '混淆表必须正好 64 项，或留空表示未配置')
+  .refine((a) => a.length === 0 || new Set(a).size === a.length, '混淆表里有重复下标')
+  .default([])
+
+export const BiliConfigSchema = z.object({
+  /** 提前多少天开始续 cookie。B 站的 SESSDATA 是月级有效期。 */
+  refreshThresholdDays: z.number().int().min(1).max(60).default(15),
+  wbiMixinTable: MixinTableSchema,
+  /**
+   * `bili_ticket` 的签名参数。空 = 未配置，风控重试链里「重取 ticket」那一步会跳过并说明原因。
+   * 这些是 B 站 web 端 JS 里的公开常量，不是密钥，所以放配置而不是 secrets。
+   */
+  ticket: z
+    .object({
+      keyId: z.string().default(''),
+      hmacKey: z.string().default(''),
+    })
+    .default({}),
+  /** cookie 续期链里 `correspond/1` 用的 RSA 公钥（PEM）。空 = 不做自动续期，到期只能重新扫码。 */
+  correspondPublicKeyPem: z.string().default(''),
+})
+
 export const AiConfigSchema = z.object({
   /** 总开关。关掉后只推送不总结，AI 成本归零。 */
   enabled: z.boolean().default(true),
@@ -98,6 +128,7 @@ export const LogConfigSchema = z.object({
 export const AppConfigSchema = z.object({
   server: ServerConfigSchema.default({}),
   poll: PollConfigSchema.default({}),
+  bili: BiliConfigSchema.default({}),
   filter: FilterConfigSchema.default({}),
   ai: AiConfigSchema.default({}),
   asr: AsrConfigSchema.default({}),
@@ -114,6 +145,7 @@ export type ConfigSection = keyof AppConfig
 export const CONFIG_SECTIONS = {
   server: ServerConfigSchema,
   poll: PollConfigSchema,
+  bili: BiliConfigSchema,
   filter: FilterConfigSchema,
   ai: AiConfigSchema,
   asr: AsrConfigSchema,

@@ -138,7 +138,23 @@ CREATE TABLE deliveries (
 CREATE INDEX idx_deliveries_at ON deliveries(at DESC);
 `
 
-export const MIGRATIONS: Migration[] = [{ version: 1, name: 'init', sql: INIT }]
+/**
+ * 派生运行态。不是用户配置（那在 app_config，页面上能改），而是系统自己攒出来、
+ * 重启要接着用的东西：浏览器身份就是第一个 —— 换一个 UA 等于在同一个 cookie 会话里
+ * 换了台电脑，那正是风控在找的信号。
+ */
+const RUNTIME_STATE = `
+CREATE TABLE runtime_state (
+  key        TEXT PRIMARY KEY,
+  value_json TEXT NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+`
+
+export const MIGRATIONS: Migration[] = [
+  { version: 1, name: 'init', sql: INIT },
+  { version: 2, name: 'runtime_state', sql: RUNTIME_STATE },
+]
 
 /**
  * 幂等：已应用的版本跳过。每个版本一个事务，中途失败不会留半张表。

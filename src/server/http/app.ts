@@ -3,15 +3,19 @@ import process from 'node:process'
 import { Hono } from 'hono'
 import { serveStatic } from '@hono/node-server/serve-static'
 
+import type { AuthLifecycle } from '../app/auth-lifecycle.ts'
 import type { Ports } from '../ports/index.ts'
 import { errorBody, makeErrorHandler } from './errors.ts'
 import { configRoutes } from './routes/config.ts'
 import { healthRoutes } from './routes/health.ts'
+import { systemRoutes } from './routes/system.ts'
 
 export interface HttpOptions {
   startedAt: number
   /** 生产模式下托管 vite build 的产物；dev 期由 Vite 自己伺服，传 null。 */
   webRoot: string | null
+  /** app 层的登录态服务。null = 这个进程没装 B 站适配器。 */
+  auth: AuthLifecycle | null
 }
 
 /**
@@ -25,6 +29,7 @@ export function createHttpApp(ports: Ports, opts: HttpOptions): Hono {
 
   const api = new Hono()
   api.route('/health', healthRoutes(ports, opts.startedAt))
+  api.route('/system', systemRoutes(ports, opts.startedAt, opts.auth))
   api.route('/config', configRoutes(ports))
   // /api 下没命中的一律结构化 404，绝不落到静态资源的 index.html 上去。
   api.all('*', (c) => c.json(errorBody('not-found', `没有这个端点：${c.req.path}`), 404))

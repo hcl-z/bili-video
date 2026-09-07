@@ -6,6 +6,7 @@ import { buildServer, type Server } from '../../src/server/build-server.ts'
 import { openCore, type Core } from '../../src/server/wiring.ts'
 import { InMemoryEventBus } from '../../src/server/infra/event-bus/in-memory.ts'
 import type { Ports } from '../../src/server/ports/index.ts'
+import { FakeFetch } from '../fakes/bili-fetch.ts'
 import { FakeClock } from '../fakes/clock.ts'
 import { CollectingLogger } from '../fakes/logger.ts'
 import { RecordingNotifier } from '../fakes/notifier.ts'
@@ -24,6 +25,10 @@ export interface Harness {
   logger: CollectingLogger
   notifier: RecordingNotifier
   events: InMemoryEventBus
+  /** 出网的唯一假件。给它打桩就等于「B 站这么回」。 */
+  fetch: FakeFetch
+  /** 终端二维码的落点，断言「码有没有给出去」。 */
+  qrs: string[]
   dataDir: string
   /** 用同一个 dataDir 重新装配一遍，用来测「重启后……」这类行为。 */
   restart(): Promise<Harness>
@@ -38,15 +43,20 @@ export interface HarnessOptions {
   startAt?: number
   /** 托管前端产物的目录；默认不挂静态资源。 */
   webRoot?: string
+  /** 复用同一个 FakeFetch（restart 场景要保留打过的桩）。 */
+  fetch?: FakeFetch
+  /** restart 内部用：把临时目录的所有权交给新实例，免得跑完一屋子 tmp 目录没人收。 */
+  ownsDataDir?: boolean
 }
 
 export async function createHarness(opts: HarnessOptions = {}): Promise<Harness> {
   const dataDir = opts.dataDir ?? mkdtempSync(join(tmpdir(), 'bili-video-test-'))
-  const owned = opts.dataDir === undefined
+  const owned = opts.ownsDataDir ?? opts.dataDir === undefined
   const clock = new FakeClock(opts.startAt)
   const logger = new CollectingLogger()
   const events = new InMemoryEventBus()
   const notifier = new RecordingNotifier()
+  const fetch = opts.fetch ?? new FakeFetch()
 
   const core = openCore({
     dataDir,
@@ -54,6 +64,7 @@ export async function createHarness(opts: HarnessOptions = {}): Promise<Harness>
     logger,
     events,
     seedFile: opts.seedFile === undefined ? 'config.example.yaml' : opts.seedFile,
+    fetch: fetch.fetch,
   })
 
   const ports: Ports = {
@@ -64,13 +75,29 @@ export async function createHarness(opts: HarnessOptions = {}): Promise<Harness>
     config: core.config,
     secrets: core.secrets,
     repos: core.repos,
-    external: { notifiers: [notifier], bili: null, asr: null, llm: null, audio: null },
+    state: core.state,
+    cookies: core.cookies,
+    external: {
+      notifiers: [notifier],
+      biliAuth: core.biliAuth,
+      biliReader: null,
+      biliRelations: null,
+      subtitles: null,
+      asr: null,
+      llm: null,
+      audio: null,
+    },
   }
 
   // 端口 0 = 让内核分配。测试不该去抢 8788，也不该因为本机正好起着服务而失败。
   core.config.setSection('server', { ...core.config.getSection('server'), port: 0 })
 
-  const server = buildServer(ports, { webRoot: opts.webRoot ?? null })
+  const qrs: string[] = []
+  const server = buildServer(ports, {
+    webRoot: opts.webRoot ?? null,
+    // 不往 stdout 写：测试输出里塞一张二维码没人看得下去。
+    showQr: (_art, url) => qrs.push(url),
+  })
 
   const harness: Harness = {
     server,
@@ -80,11 +107,14 @@ export async function createHarness(opts: HarnessOptions = {}): Promise<Harness>
     logger,
     notifier,
     events,
+    fetch,
+    qrs,
     dataDir,
     async restart() {
       await server.stop()
       core.close()
-      return createHarness({ ...opts, dataDir })
+      // 带上同一个 FakeFetch：重启后打过的桩还在，否则「重启后登录态还在」没法测。
+      return createHarness({ ...opts, dataDir, fetch, ownsDataDir: owned })
     },
     async close() {
       await server.stop()

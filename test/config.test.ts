@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { describe, it } from 'node:test'
 
 import { CONFIG_SECTION_NAMES } from '#shared/contract/config.ts'
@@ -50,7 +50,8 @@ describe('配置', () => {
       assert.equal(second.core.config.seededFrom(), null, '第二次启动没有 seed')
     } finally {
       await second.close()
-      rmSync(file, { force: true })
+      // 连目录一起收掉，否则每跑一次测试就在 tmp 里留一个空壳。
+      rmSync(dirname(file), { recursive: true, force: true })
     }
   })
 

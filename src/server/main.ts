@@ -63,8 +63,19 @@ const ports: Ports = {
   config: core.config,
   secrets: core.secrets,
   repos: core.repos,
-  // 后面几票逐个把 null 换成真适配器（B 站、ASR、LLM、下载器、通知渠道）。
-  external: { notifiers: [], bili: null, asr: null, llm: null, audio: null },
+  state: core.state,
+  cookies: core.cookies,
+  // 后面几票逐个把 null 换成真适配器（读接口、关注、字幕、ASR、LLM、下载器、通知渠道）。
+  external: {
+    notifiers: [],
+    biliAuth: core.biliAuth,
+    biliReader: null,
+    biliRelations: null,
+    subtitles: null,
+    asr: null,
+    llm: null,
+    audio: null,
+  },
 }
 
 // 只在构建产物存在时挂静态资源：`pnpm dev` 时前端由 Vite 自己伺服。
@@ -73,6 +84,8 @@ const server = buildServer(ports, {
 })
 
 await server.start()
+// 不 await：扫码要等人，工作台不该为此推迟到能打开。bootstrap 自己不抛。
+void server.bootstrap()
 
 let closing = false
 async function shutdown(signal: string): Promise<void> {

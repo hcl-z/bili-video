@@ -3,18 +3,32 @@ import type { DatabaseSync } from 'node:sqlite'
 
 import { seedConfigIfEmpty } from './config/load.ts'
 import { SqliteConfigStore } from './config/store.ts'
+import {
+  createBrowserIdentity,
+  parseIdentity,
+  serializeIdentity,
+  type BrowserIdentity,
+} from './infra/bili/browser-identity.ts'
+import { SqliteCookieJar, type Cipher } from './infra/bili/cookie-jar.ts'
+import { BiliHttp } from './infra/bili/http-client.ts'
+import { BiliAuthClient } from './infra/bili/login.ts'
 import { migrate } from './infra/db/migrations.ts'
+import { SqliteStateRepo } from './infra/db/repo-state.ts'
 import { SqliteDeliveryRepo, SqliteLlmCallRepo } from './infra/db/repo-delivery.ts'
 import { SqliteAnchorRepo, SqliteUpdateRepo } from './infra/db/repo-feed.ts'
 import { SqliteJobRepo, SqliteSummaryRepo } from './infra/db/repo-summary.ts'
 import { SqliteFilterRuleRepo, SqliteSubscriptionRepo } from './infra/db/repo-subscriptions.ts'
 import { openDatabase } from './infra/db/sqlite.ts'
 import { loadMasterKey } from './infra/secret/key-manager.ts'
+import { open, parseBox, seal } from './infra/secret/secret-box.ts'
 import { SqliteSecretStore } from './infra/secret/store.ts'
+import type { BiliAuth } from './ports/bili.ts'
 import type { Clock } from './ports/clock.ts'
 import type { ConfigStore } from './ports/config-store.ts'
+import type { CookieJar } from './ports/cookie-jar.ts'
 import type { EventBus } from './ports/event-bus.ts'
 import type { Logger } from './ports/logger.ts'
+import type { StateRepo } from './ports/state.ts'
 import type { Repos } from './ports/index.ts'
 
 /**
@@ -34,6 +48,11 @@ export interface CoreOptions {
   masterKeyPath?: string
   /** 有 passphrase 就用它派生，不落 key 文件（容器里常这么干）。 */
   masterKeyPassphrase?: string | undefined
+  /**
+   * 出网用的 fetch。**这是唯一的进程边界假件注入点** —— 测试换掉它，
+   * 于是 cookie 加解密、身份、签名、错误分类全都是真的在跑。
+   */
+  fetch?: typeof fetch
 }
 
 export interface Core {
@@ -41,6 +60,12 @@ export interface Core {
   repos: Repos
   secrets: SqliteSecretStore
   config: ConfigStore
+  cookies: CookieJar
+  state: StateRepo
+  /** 本实例的浏览器身份。第一次启动时生成并存下来，之后每次启动读回同一份。 */
+  identity: BrowserIdentity
+  /** 扫码登录与 cookie 续期的适配器。 */
+  biliAuth: BiliAuth
   close(): void
 }
 
@@ -77,6 +102,41 @@ export function openCore(opts: CoreOptions): Core {
   const seededFrom = seedConfigIfEmpty(db, opts.seedFile ?? null, clock.now(), logger)
   const config = new SqliteConfigStore(db, now, seededFrom)
 
+  // cookie 和 SESSDATA 一样敏感（SESSDATA 本身就是其中一条），走同一套 secret-box。
+  const cipher: Cipher = {
+    seal: (plaintext) => JSON.stringify(seal(plaintext, master.key)),
+    open: (sealed) => open(parseBox(sealed), master.key),
+  }
+  const cookies = new SqliteCookieJar(db, cipher, now)
+
+  const state = new SqliteStateRepo(db, now)
+  const identity = loadOrCreateIdentity(state, logger)
+
+  const http = new BiliHttp({
+    fetch: opts.fetch ?? globalThis.fetch,
+    identity,
+    cookies,
+    clock,
+    logger,
+    // 用时读：混淆表和 ticket key 是人在页面上填的，改完不该重启。
+    config: () => config.getSection('bili'),
+  })
+  const biliAuth = new BiliAuthClient({
+    http,
+    cookies,
+    clock,
+    logger,
+    config: () => config.getSection('bili'),
+    // refresh_token 是凭据，和 SESSDATA 同级 —— 走加密的 secrets 表，不进 runtime_state。
+    tokens: {
+      get: () => secrets.get('bili-refresh-token'),
+      set: (token) => {
+        if (token === null) secrets.delete('bili-refresh-token')
+        else secrets.set('bili-refresh-token', token)
+      },
+    },
+  })
+
   const repos: Repos = {
     subscriptions: new SqliteSubscriptionRepo(db, now),
     rules: new SqliteFilterRuleRepo(db, now),
@@ -93,8 +153,31 @@ export function openCore(opts: CoreOptions): Core {
     repos,
     secrets,
     config,
+    cookies,
+    state,
+    identity,
+    biliAuth,
     close() {
       db.close()
     },
   }
+}
+
+/**
+ * 浏览器身份：存过就读回，没存过就生成一份存下来。
+ *
+ * 「每实例一次并保持稳定」的实例边界是**cookie 会话**，不是进程 —— 重启换 UA
+ * 等于在同一个会话里换了台电脑，那正是风控在找的信号，所以它必须落库。
+ */
+function loadOrCreateIdentity(state: StateRepo, logger: Logger): BrowserIdentity {
+  const stored = state.get('browser-identity')
+  if (stored !== null) {
+    const parsed = parseIdentity(stored)
+    if (parsed !== null) return parsed
+    logger.warn({}, '存下来的浏览器身份读不出来，重新生成一份')
+  }
+  const fresh = createBrowserIdentity()
+  state.set('browser-identity', serializeIdentity(fresh))
+  logger.info({ ua: fresh.userAgent }, '已生成浏览器身份（之后每次启动都用这一份）')
+  return fresh
 }

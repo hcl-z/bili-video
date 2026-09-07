@@ -17,9 +17,13 @@ import type {
   SummaryRepo,
   UpdateRepo,
 } from './repo.ts'
+import type { CookieJar } from './cookie-jar.ts'
 import type { SecretStore } from './secret-store.ts'
+import type { StateRepo } from './state.ts'
 
 export type * from './asr.ts'
+export type * from './cookie-jar.ts'
+export type * from './state.ts'
 export type * from './audio.ts'
 export type * from './bili.ts'
 export type * from './clock.ts'
@@ -43,22 +47,21 @@ export interface Repos {
   llmCalls: LlmCallRepo
 }
 
-export interface BiliPorts {
-  reader: BiliReader
-  auth: BiliAuth
-  relations: BiliRelationWriter
-  subtitles: SubtitleFetcher
-}
-
 /**
  * 进程边界之外的适配器 —— 测试里全部换成假件的就是这一组。
  *
  * `| null` 不是「可选功能」，而是「这一票还没做」：每个后续 ticket 落地一个适配器就
  * 去掉一个 null，于是「系统还缺哪块」在类型上一眼可见，而不是散落在各处的 TODO。
+ *
+ * 四个 B 站适配器分别列在这里而不是打成一包：它们分属不同 ticket，
+ * 打包会逼着「登录做完了但读接口还没做」也只能填 null，那个 null 就不再有信息量了。
  */
 export interface ExternalPorts {
   notifiers: Notifier[]
-  bili: BiliPorts | null
+  biliAuth: BiliAuth | null
+  biliReader: BiliReader | null
+  biliRelations: BiliRelationWriter | null
+  subtitles: SubtitleFetcher | null
   asr: Asr | null
   llm: Llm | null
   audio: AudioDownloader | null
@@ -76,5 +79,9 @@ export interface Ports {
   config: ConfigStore
   secrets: SecretStore
   repos: Repos
+  /** 派生运行态：浏览器身份、登录账号、续期失败计数。不是配置。 */
+  state: StateRepo
+  /** cookie 罐。app 层要据此回答「还有多久到期」，所以它必须在组装根可见。 */
+  cookies: CookieJar
   external: ExternalPorts
 }
