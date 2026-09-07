@@ -1,0 +1,286 @@
+src/web/components/ui/card.tsx
+  s_abc690da395c45::t_06a1487bc90a1b 1,3-91
+  s_abc690da395c45::t_a5dc9dc4149446 2
+src/web/components/ui/switch.tsx
+  s_abc690da395c45::t_a5dc9dc4149446 4
+  s_abc690da395c45::t_06a1487bc90a1b 1-3,5-34
+.nvmrc
+  s_abc690da395c45::t_cced5eb1fecfd6 1
+tsconfig.shared.json
+  s_abc690da395c45::t_9cd89d4d79a332 1-16
+src/server/config/store.ts
+  s_abc690da395c45::t_462f97786d54e1 20-27
+  s_abc690da395c45::t_489689e8766819 1-19,28-71
+src/server/infra/secret/secret-box.ts
+  s_abc690da395c45::t_ed7739c84a4161 1-75
+src/web/index.html
+  s_abc690da395c45::t_2c93606bdd2eea 1-20
+src/web/lib/utils.ts
+  s_abc690da395c45::t_4969a4b2da7aa5 1-7
+src/web/pages/updates.tsx
+  s_abc690da395c45::t_5d025d1d1aac4d 1-9
+src/web/components/ui/separator.tsx
+  s_abc690da395c45::t_06a1487bc90a1b 1-3,5-27
+  s_abc690da395c45::t_a5dc9dc4149446 4
+src/server/infra/clock/system-clock.ts
+  s_abc690da395c45::t_65a400c4ef0890 1-4,6-32
+  s_abc690da395c45::t_a5c55e9f82b486 5
+config.example.yaml
+  s_abc690da395c45::t_21829d096e6122 1-68
+src/web/styles/globals.css
+  s_abc690da395c45::t_98eb7b279bcd8e 1-154
+src/server/ports/event-bus.ts
+  s_abc690da395c45::t_3a07b4a66e83f3 1-11
+src/server/log.ts
+  s_abc690da395c45::t_653e71d7cafacf 28-32
+  s_abc690da395c45::t_21d6bd8c15c2ac 64-70
+  s_abc690da395c45::t_800fa89feacfbc 33-34
+  s_abc690da395c45::t_16fa0e2ed0f274 16-17
+  s_abc690da395c45::t_f495ce44bd9c21 1-2,5-15,18-27,47-63,71-78,86-120
+  s_abc690da395c45::t_2e695c97a1a6bf 3-4
+  s_abc690da395c45::t_8544bed821a125 35-46
+  s_abc690da395c45::t_ecd61ecb832c22 79-85
+src/server/ports/logger.ts
+  s_abc690da395c45::t_31de0e5061d4b0 1-18
+src/web/components/ui/sonner.tsx
+  s_abc690da395c45::t_497b5382e624e5 10-12,14
+  s_abc690da395c45::t_06a1487bc90a1b 1-9,13,15-17,19-40
+  s_abc690da395c45::t_d6bb422239ee20 18
+src/web/components/ui/tooltip.tsx
+  s_abc690da395c45::t_a5dc9dc4149446 4
+  s_abc690da395c45::t_06a1487bc90a1b 1-3,5-56
+src/web/lib/api.ts
+  s_abc690da395c45::t_ff0f37e3b58592 2
+  s_abc690da395c45::t_b4420947e1df94 1,3-50,52,55,57-60
+  s_abc690da395c45::t_b5f9967b5dd254 51,53-54,56
+src/web/components/ui/badge.tsx
+  s_abc690da395c45::t_06a1487bc90a1b 1-2,4-47
+  s_abc690da395c45::t_a5dc9dc4149446 3
+.gitignore
+  s_abc690da395c45::t_c975d2f4d411cf 1-22
+test/smoke.test.ts
+  s_abc690da395c45::t_10b34523dfac27 2
+  s_abc690da395c45::t_e00397de80f88d 63-85
+  s_abc690da395c45::t_71cbc340b1d306 1,3-33,54-62
+  s_abc690da395c45::t_35500fe073624e 34-53
+src/web/router.tsx
+  s_abc690da395c45::t_044a749f1d21ff 1-75
+src/server/infra/db/repo-delivery.ts
+  s_abc690da395c45::t_c5f2f50a41bc1b 1-19,21,26-78,84-118
+  s_abc690da395c45::t_d58f13931e2c66 20,22-25,79-83
+src/web/components/health-dot.tsx
+  s_abc690da395c45::t_2cdc616e5effbc 1-54
+src/web/pages/subs.tsx
+  s_abc690da395c45::t_5d025d1d1aac4d 1-9
+src/server/infra/event-bus/in-memory.ts
+  s_abc690da395c45::t_04013de233fee6 1-49
+src/web/pages/summaries.tsx
+  s_abc690da395c45::t_5d025d1d1aac4d 1-9
+src/web/pages/targets.tsx
+  s_abc690da395c45::t_5d025d1d1aac4d 1-9
+src/server/infra/db/repo-summary.ts
+  s_abc690da395c45::t_9822225d2a3627 1-25,27,32-126,132-178
+  s_abc690da395c45::t_d58f13931e2c66 26,28-31,127-131
+test/fixtures/web/index.html
+  s_abc690da395c45::t_fde5d1421d2d56 1
+src/server/main.ts
+  s_abc690da395c45::t_1c8dabf25b4cc4 1-9,11-35,37-89
+  s_abc690da395c45::t_eae4a521b1cba8 10
+  s_abc690da395c45::t_c6b50725508703 36
+test/fakes/notifier.ts
+  s_abc690da395c45::t_122bc1379f6e50 1-42
+src/server/infra/secret/store.ts
+  s_abc690da395c45::t_fb4e4bc21b68e6 1-16,26-84
+  s_abc690da395c45::t_7e55313ebc5d7b 17-25
+tsconfig.json
+  s_abc690da395c45::t_1cc9cec156a1f8 2,8-17
+  s_abc690da395c45::t_c6303c7eeaf2b7 1,3-7,18
+src/web/components/ui/tabs.tsx
+  s_abc690da395c45::t_a5dc9dc4149446 3
+  s_abc690da395c45::t_06a1487bc90a1b 1-2,4-88
+src/server/infra/db/repo-subscriptions.ts
+  s_abc690da395c45::t_2a3ec1cb615371 1-17,25-82,90-122
+  s_abc690da395c45::t_f840cc6b58b4ce 18-24
+  s_abc690da395c45::t_930c3c45c1dfd0 83-89
+tsconfig.server.json
+  s_abc690da395c45::t_c3f80d69c97e37 1-21
+src/web/pages/summary-detail.tsx
+  s_abc690da395c45::t_5d025d1d1aac4d 1-9
+test/log.test.ts
+  s_abc690da395c45::t_cc236726a7cfff 8
+  s_abc690da395c45::t_a82e54247632e6 41,63,83,109
+  s_abc690da395c45::t_aff88b4184e275 46,49,51
+  s_abc690da395c45::t_8c83535343c2b9 1-7,9-20,38-40,42-45,47-48,50,52-62,64-68,70-82,84-108,110-114,116-122,153-154
+  s_abc690da395c45::t_920d1311fdc4aa 115
+  s_abc690da395c45::t_dadb128aab3d78 21-37
+  s_abc690da395c45::t_bb776b91b6a583 69
+  s_abc690da395c45::t_97d27c6cf7df03 123-152
+.env.example
+  s_abc690da395c45::t_4b2c4a2ed7aa75 3
+  s_abc690da395c45::t_4424157508e1ff 1-2,4-11
+src/web/pages/overview.tsx
+  s_abc690da395c45::t_5def65406ff1b6 1-91
+test/fixtures/web/assets/app.css
+  s_abc690da395c45::t_fde5d1421d2d56 1
+src/web/lib/query.ts
+  s_abc690da395c45::t_2399a3f844fc16 1-27
+src/web/lib/theme.ts
+  s_abc690da395c45::t_7036a80d7eb4b1 1-68
+src/server/ports/llm.ts
+  s_abc690da395c45::t_57634533d06b7a 1-24
+src/server/ports/audio.ts
+  s_abc690da395c45::t_a96e66b5e5408d 1-13
+test/repos.test.ts
+  s_abc690da395c45::t_57bc6328d7709b 1-276
+test/migrations.test.ts
+  s_abc690da395c45::t_9d651d0bf3e2c7 1-90
+src/server/http/routes/health.ts
+  s_abc690da395c45::t_b28eb26520ce44 1-22
+src/server/ports/notifier.ts
+  s_abc690da395c45::t_7d2eca14065738 1-29
+src/server/infra/db/repo-feed.ts
+  s_abc690da395c45::t_d58f13931e2c66 8,10-13,55-59
+  s_abc690da395c45::t_8d269d5d9a7fec 1-7,9,14-54,60-129,131-133
+  s_abc690da395c45::t_f07eefb613db0d 130
+test/secret.test.ts
+  s_abc690da395c45::t_dcc0270d14d75f 1-180
+src/web/components/ui/scroll-area.tsx
+  s_abc690da395c45::t_06a1487bc90a1b 1,3-55
+  s_abc690da395c45::t_a5dc9dc4149446 2
+src/web/app.tsx
+  s_abc690da395c45::t_ced91592658c11 1-19
+src/shared/contract/api.ts
+  s_abc690da395c45::t_96117336349d26 1-34
+src/web/pages/jobs.tsx
+  s_abc690da395c45::t_5d025d1d1aac4d 1-9
+src/server/ports/repo.ts
+  s_abc690da395c45::t_7addfe63f47a48 47
+  s_abc690da395c45::t_36b962e3edf467 66-67
+  s_abc690da395c45::t_62d59889653dcc 1-46,48-65,68-106
+src/web/pages/system.tsx
+  s_abc690da395c45::t_5d025d1d1aac4d 1-9
+src/web/components/ui/input.tsx
+  s_abc690da395c45::t_06a1487bc90a1b 1,3-20
+  s_abc690da395c45::t_a5dc9dc4149446 2
+src/server/infra/db/sqlite.ts
+  s_abc690da395c45::t_6a547c153e5f5e 1-37
+src/server/ports/asr.ts
+  s_abc690da395c45::t_cb37522fdcd917 1-7
+src/web/components/page.tsx
+  s_abc690da395c45::t_7210da74674192 1-34
+tsconfig.web.json
+  s_abc690da395c45::t_0001b19193e683 1-22
+src/server/ports/clock.ts
+  s_abc690da395c45::t_229bc49c500e06 1-13
+src/server/http/errors.ts
+  s_abc690da395c45::t_8411995d50b2bb 1-4,6-22,25,38-39
+  s_abc690da395c45::t_326f9273038430 5
+  s_abc690da395c45::t_9160eff2ab4e08 23-24,26-37
+src/web/components/app-shell.tsx
+  s_abc690da395c45::t_7e8f94afc5373a 1-85
+src/server/build-server.ts
+  s_abc690da395c45::t_9872d53b4d5b63 1-56
+src/web/components/ui/skeleton.tsx
+  s_abc690da395c45::t_06a1487bc90a1b 2-13
+  s_abc690da395c45::t_a5dc9dc4149446 1
+src/web/pages/logs.tsx
+  s_abc690da395c45::t_5d025d1d1aac4d 1-9
+src/web/pages/rules.tsx
+  s_abc690da395c45::t_5d025d1d1aac4d 1-9
+src/shared/contract/config.ts
+  s_abc690da395c45::t_804dda987390f0 14-15
+  s_abc690da395c45::t_06560a8cfa0fbb 1-13,16-128
+package.json
+  s_abc690da395c45::t_06a1487bc90a1b 28-31
+  s_abc690da395c45::t_6324da8f75e24c 56
+  s_abc690da395c45::t_2f77eac5c4669a 3-26,33-54,57-59,61-66
+  s_abc690da395c45::t_c126f821b80f13 60
+  s_abc690da395c45::t_f3d739b1a783b0 27,32
+  s_abc690da395c45::t_d862180d58a57f 55
+vite.config.ts
+  s_abc690da395c45::t_8a06f64a2b20ba 22-24
+  s_abc690da395c45::t_55e3530abe46a4 1-21,25-39
+src/web/main.tsx
+  s_abc690da395c45::t_584f0e32e998e4 1-14
+README.md
+  s_abc690da395c45::t_d1fa6f381c194c 1-79
+test/support/harness.ts
+  s_abc690da395c45::t_3baec67fc47a01 1-38,41-69,74-80,82-96
+  s_abc690da395c45::t_875f616cf8547a 39-40
+  s_abc690da395c45::t_161d4abceebc27 70-72
+  s_abc690da395c45::t_321feacc05a388 73
+  s_abc690da395c45::t_9397788bfc3453 81
+src/shared/contract/events.ts
+  s_abc690da395c45::t_2017a7da7d355a 1-31
+src/shared/contract/summary.ts
+  s_abc690da395c45::t_4d2278f767f785 1-39
+src/shared/contract/subscription.ts
+  s_abc690da395c45::t_80fdad8cf91a3d 1-34
+tsconfig.base.json
+  s_abc690da395c45::t_9683805f3916a6 1-17
+src/shared/contract/update.ts
+  s_abc690da395c45::t_629adae79c0495 1-26
+src/shared/contract/job.ts
+  s_abc690da395c45::t_40f117f780773e 1-35
+test/fakes/clock.ts
+  s_abc690da395c45::t_7d4f9b49659b14 1-47
+src/server/http/app.ts
+  s_abc690da395c45::t_4b9991334b8e49 7
+  s_abc690da395c45::t_413f1880562a5c 34-36,38
+  s_abc690da395c45::t_23ec8adce46f04 3-6,8-23,25-33,37,39-43
+  s_abc690da395c45::t_f8a26a2bb25b80 24
+  s_abc690da395c45::t_315e8a02203dce 1-2
+src/server/http/routes/config.ts
+  s_abc690da395c45::t_f14f507a16d646 1-49
+src/web/components/ui/label.tsx
+  s_abc690da395c45::t_06a1487bc90a1b 1,3-21
+  s_abc690da395c45::t_a5dc9dc4149446 2
+components.json
+  s_abc690da395c45::t_94869f8bc99317 1-21
+src/web/pages/ai.tsx
+  s_abc690da395c45::t_5d025d1d1aac4d 1-9
+src/shared/contract/failure.ts
+  s_abc690da395c45::t_8796fcc5c6026a 1-38
+src/server/config/load.ts
+  s_abc690da395c45::t_6e6998654a000e 1-57
+src/server/wiring.ts
+  s_abc690da395c45::t_02b403890f0320 1-100
+src/server/ports/secret-store.ts
+  s_abc690da395c45::t_987e205478119e 1-26
+src/server/ports/bili.ts
+  s_abc690da395c45::t_981a745415c964 1-80
+src/server/infra/secret/key-manager.ts
+  s_abc690da395c45::t_f0bc874dfd6b2a 1-63
+src/server/ports/config-store.ts
+  s_abc690da395c45::t_bc8349a452b93b 1-16
+src/server/ports/index.ts
+  s_abc690da395c45::t_e67f9e9754b2b8 1-80
+test/fakes/logger.ts
+  s_abc690da395c45::t_50f9490a6c5704 1-56
+src/server/infra/db/migrations.ts
+  s_abc690da395c45::t_69dd43948aebfb 1-142,149-159,161-178
+  s_abc690da395c45::t_f75f7531d6a12c 143-148
+  s_abc690da395c45::t_2f6d9e4c6517de 160
+test/config.test.ts
+  s_abc690da395c45::t_4b62b73f9f2d65 131
+  s_abc690da395c45::t_8e7e69e03ffb6e 1-130,132-165
+src/web/components/ui/button.tsx
+  s_abc690da395c45::t_a5dc9dc4149446 3
+  s_abc690da395c45::t_06a1487bc90a1b 1-2,4-63
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.43-trip",
+  "base_commit_sha": "9964a6398cf0c5774866ef1db5d688524407db7f",
+  "prompts": {},
+  "sessions": {
+    "s_abc690da395c45": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "647309db-d279-406d-8284-62f4394affab",
+        "model": "claude-opus-5"
+      },
+      "human_author": "hcl-z <1401859664@qq.com>"
+    }
+  }
+}
