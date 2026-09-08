@@ -24,6 +24,26 @@ pnpm test          # node:test
 pnpm build         # tsc -b（只出声明） + vite build → dist/web
 ```
 
+## 没有小号、没有 LLM key 也能试：`pnpm demo`
+
+```bash
+pnpm build         # demo 由后端伺服前端，所以要先出一份 dist/web
+pnpm demo          # 127.0.0.1:8789，数据在 .demo-data/
+```
+
+真库、真队列、真页面、真 Markdown，只有 `fetch` 是假的：三个假视频从抓动态一路走到落盘，
+不会有任何请求打到 B 站。三条分支分别是人工字幕、只有 AI 字幕、以及**没有字幕**（会明确失败，
+用来试「重跑」按钮）。总结落在 `.demo-data/summaries/*.md`。
+
+| 参数 | 作用 |
+| --- | --- |
+| `--fresh` | 先删 `.demo-data/`，从空库重来 |
+| `--fast` | 不减速（默认每步慢 1.5 秒，方便看队列阶段跳动） |
+| `--llm` | 只放 `/chat/completions` 出网，用配置里的真模型；B 站那边照旧是假的 |
+
+端口用 `DEMO_PORT` 换，数据目录用 `DEMO_DATA_DIR` 换。要造别的分支就改 `scripts/demo-data.ts`
+里的 `VIDEOS`。
+
 ## 两件必须先知道的事
 
 **1. `data/master.key` 丢了，所有加密内容一次性不可恢复。**

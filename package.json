@@ -19,6 +19,7 @@
     "build:web": "vite build",
     "typecheck": "tsc -b tsconfig.shared.json tsconfig.server.json tsconfig.web.json",
     "test": "node --test \"test/**/*.test.ts\"",
+    "demo": "node --env-file-if-exists=.env scripts/demo.ts",
     "prototype": "node -e \"import('node:child_process').then(({execSync})=>execSync('open prototype/workbench-prototype.html?variant=B'))\""
   },
   "imports": {

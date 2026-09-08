@@ -13,6 +13,9 @@ data/audio/
 data/summaries/
 data/logs/
 
+# demo 试跑的数据（假 B 站，随时可删）
+.demo-data/
+
 # 本地环境
 .env
 .env.local

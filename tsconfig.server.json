@@ -16,6 +16,6 @@
       "#shared/*": ["./src/shared/*"]
     }
   },
-  "include": ["src/server/**/*.ts", "test/**/*.ts"],
+  "include": ["src/server/**/*.ts", "test/**/*.ts", "scripts/**/*.ts"],
   "references": [{ "path": "./tsconfig.shared.json" }]
 }
