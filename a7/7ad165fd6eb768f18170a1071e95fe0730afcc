@@ -1,0 +1,26 @@
+src/server/infra/bili/reader.ts
+  s_abc690da395c45::t_0155530f9f24a9 101-118
+  s_abc690da395c45::t_d7cb4815e79f52 199-204,210,213-219
+  s_abc690da395c45::t_d2a5a424ce43fe 67-71,77,79-89
+test/poll.test.ts
+  s_abc690da395c45::t_bd6321b54ebbab 160-182
+  s_abc690da395c45::t_7f0ef3c4068f5d 45-57
+.gitignore
+  s_abc690da395c45::t_bd3266ddd441da 23-25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.43-trip",
+  "base_commit_sha": "a77ad165fd6eb768f18170a1071e95fe0730afcc",
+  "prompts": {},
+  "sessions": {
+    "s_abc690da395c45": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "647309db-d279-406d-8284-62f4394affab",
+        "model": "claude-opus-5"
+      },
+      "human_author": "hcl-z <1401859664@qq.com>"
+    }
+  }
+}
