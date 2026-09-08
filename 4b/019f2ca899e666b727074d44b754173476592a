@@ -1,0 +1,45 @@
+src/shared/contract/api.ts
+  s_abc690da395c45::t_501d5790648cbd 209-215
+test/summaries.test.ts
+  s_abc690da395c45::t_95bfb0ff1b97dd 200-203
+  s_abc690da395c45::t_a2e4fb5b8f8642 138-199,204-205
+src/server/http/routes/summaries.ts
+  s_abc690da395c45::t_9d3992ce6d6bcc 4
+  s_abc690da395c45::t_0ceba54e4e2516 10
+  s_abc690da395c45::t_f839a583fbb32a 22
+  s_abc690da395c45::t_3681dc2b14f528 88,113-129,131,134-135,137
+  s_abc690da395c45::t_1361db32db05c2 130,132-133,136
+  s_abc690da395c45::t_007be54a8bb3e5 89-112
+src/web/lib/api.ts
+  s_abc690da395c45::t_c69883f597b3a8 13
+  s_abc690da395c45::t_0f9f4401a17dda 129-131
+  s_abc690da395c45::t_442e0b7a332922 132-134
+src/server/http/app.ts
+  s_abc690da395c45::t_4bde98c2309f8f 56
+src/web/components/summary-reader.tsx
+  s_abc690da395c45::t_ff1e5f0891d724 70
+  s_abc690da395c45::t_cce50d855e9ec5 2,19
+  s_abc690da395c45::t_a627291361c8db 327-350
+src/web/pages/summaries.tsx
+  s_abc690da395c45::t_89610f40d2546f 2,10,15,26,105-107
+  s_abc690da395c45::t_d2579a31ef9566 36-58
+src/web/lib/use-run-summary.ts
+  s_abc690da395c45::t_bb150d74ec9508 1-12,14-17,37
+  s_abc690da395c45::t_2390197167e07e 13,18-36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.43-trip",
+  "base_commit_sha": "4b019f2ca899e666b727074d44b754173476592a",
+  "prompts": {},
+  "sessions": {
+    "s_abc690da395c45": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "647309db-d279-406d-8284-62f4394affab",
+        "model": "claude-opus-5"
+      },
+      "human_author": "hcl-z <1401859664@qq.com>"
+    }
+  }
+}
