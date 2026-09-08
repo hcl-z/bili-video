@@ -126,9 +126,19 @@ function fakeCompletion(body: string | null): FakeResponse {
   const reply = JSON.stringify({
     tldr: `${video.title.split('：')[0]}：${video.desc}`,
     points: picks.map(([, text]) => text.replace(/[。，].*$/, '')),
+    overview: video.cues
+      .filter((_, i) => i % 2 === 0)
+      .map(([, text]) => text)
+      .join('')
+      .replace(/(.{80,120}?。)/g, '$1\n\n'),
+    keyInfo: {
+      terms: picks.map(([, text]) => ({ name: clause(text), desc: text })),
+      facts: video.cues.slice(-2).map(([, text]) => text),
+      resources: [{ name: video.bvid, note: '这条演示数据本身' }],
+    },
     chapters: video.cues
       .filter((_, i) => i % 3 === 0)
-      .map(([sec, text]) => ({ startSec: sec, title: clause(text), desc: null })),
+      .map(([sec, text]) => ({ startSec: sec, title: clause(text), desc: null, summary: text })),
   })
   return {
     raw: {

@@ -28,7 +28,7 @@ describe('domain/summary-format', () => {
     assert.equal(parsed.ok, true)
     if (!parsed.ok) return
     assert.equal(parsed.value.tldr, '讲了一件事')
-    assert.deepEqual(parsed.value.chapters[0], { startSec: 83, title: '开场', desc: null })
+    assert.deepEqual(parsed.value.chapters[0], { startSec: 83, title: '开场', desc: null, summary: '' })
     assert.equal(parsed.value.chapters[1]?.desc, '细节')
   })
 
@@ -54,7 +54,9 @@ describe('domain/summary-format', () => {
     const md = renderMarkdown(META, {
       tldr: '一句话',
       points: ['要点一'],
-      chapters: [{ startSec: 83, title: '开场', desc: null }],
+      overview: '第一段。\n\n第二段。',
+      keyInfo: { terms: [{ name: 'WBI', desc: '一种签名' }], facts: ['吞吐 3 倍'], resources: [] },
+      chapters: [{ startSec: 83, title: '开场', desc: null, summary: '开场讲了背景。' }],
       transcriptSource: 'none',
       confidence: 'low',
       degradePath: 'meta-only',
@@ -62,5 +64,8 @@ describe('domain/summary-format', () => {
     assert.match(md, /^# 视频标题/)
     assert.match(md, /\[01:23\]\(https:\/\/www\.bilibili\.com\/video\/BV1x\?t=83\) 开场/)
     assert.match(md, /低置信度/)
+    assert.match(md, /## 全文总结/)
+    assert.match(md, /\*\*WBI\*\*：一种签名/)
+    assert.match(md, /开场讲了背景。/)
   })
 })

@@ -1,12 +1,8 @@
 import type { DatabaseSync } from 'node:sqlite'
 
 import type { JobStage, JobStatus, SummaryJob } from '#shared/contract/job.ts'
-import type {
-  Chapter,
-  DegradePath,
-  Summary,
-  TranscriptSource,
-} from '#shared/contract/summary.ts'
+import type { DegradePath, Summary, TranscriptSource } from '#shared/contract/summary.ts'
+import { ChapterSchema, KeyInfoSchema } from '#shared/contract/summary.ts'
 import type { JobRepo, SummaryRepo } from '../../ports/repo.ts'
 import { num, str, strOrNull, type Row } from './sqlite.ts'
 
@@ -115,7 +111,9 @@ const toSummary = (r: Row): Summary => ({
   bvid: str(r['bvid']),
   tldr: str(r['tldr']),
   points: JSON.parse(str(r['points_json'])) as string[],
-  chapters: JSON.parse(str(r['chapters_json'])) as Chapter[],
+  overview: str(r['overview']),
+  keyInfo: KeyInfoSchema.parse(JSON.parse(str(r['key_info_json'] ?? '{}'))),
+  chapters: ChapterSchema.array().parse(JSON.parse(str(r['chapters_json']))),
   fullMd: str(r['full_md']),
   transcriptSource: str(r['transcript_source']) as TranscriptSource,
   degradePath: str(r['degrade_path']) as DegradePath,
@@ -148,11 +146,12 @@ export class SqliteSummaryRepo implements SummaryRepo {
     this.db
       .prepare(
         `INSERT INTO summaries
-           (bvid, tldr, points_json, chapters_json, full_md, transcript, transcript_source,
-            confidence, degrade_path, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           (bvid, tldr, points_json, overview, key_info_json, chapters_json, full_md,
+            transcript, transcript_source, confidence, degrade_path, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(bvid) DO UPDATE SET
            tldr = excluded.tldr, points_json = excluded.points_json,
+           overview = excluded.overview, key_info_json = excluded.key_info_json,
            chapters_json = excluded.chapters_json, full_md = excluded.full_md,
            transcript = excluded.transcript, transcript_source = excluded.transcript_source,
            confidence = excluded.confidence, degrade_path = excluded.degrade_path,
@@ -162,6 +161,8 @@ export class SqliteSummaryRepo implements SummaryRepo {
         s.bvid,
         s.tldr,
         JSON.stringify(s.points),
+        s.overview,
+        JSON.stringify(s.keyInfo),
         JSON.stringify(s.chapters),
         s.fullMd,
         transcript ?? null,

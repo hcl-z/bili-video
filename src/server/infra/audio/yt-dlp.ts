@@ -21,6 +21,8 @@ export interface YtDlpDeps {
 }
 
 const TIMEOUT_MS = 20 * 60_000
+/** 小于这个就当没下完：一分钟的音频也有几百 KB。 */
+const MIN_USABLE_BYTES = 64 * 1024
 /** 只留音频，m4a 是 B 站源流的容器，不用转码。 */
 const FORMAT = 'bestaudio[ext=m4a]/bestaudio/best'
 
@@ -41,6 +43,15 @@ export class YtDlpDownloader implements AudioDownloader {
   async download(bvid: string, opts: { signal?: AbortSignal } = {}): Promise<DownloadedAudio> {
     const { dir } = this.deps
     await mkdir(dir, { recursive: true })
+
+    // 上次失败留下的音频还在就直接用：重跑不必再下一遍，也躲开 yt-dlp 对着
+    // 已下完的文件续传时的 416。
+    const kept = await this.existing(bvid)
+    if (kept !== null) {
+      this.deps.logger.info({ bvid, bytes: kept.bytes, path: kept.path }, '音频已在本地，跳过下载')
+      return kept
+    }
+
     const cookieFile = join(dir, `${safe(bvid)}.cookies.txt`)
     const url = `https://www.bilibili.com/video/${safe(bvid)}`
 
@@ -86,6 +97,25 @@ export class YtDlpDownloader implements AudioDownloader {
 
   async cleanup(path: string): Promise<void> {
     await rm(path, { force: true })
+  }
+
+  /**
+   * 已经在本地的那份。太小的当没下完 —— 中断的下载留下的半截文件送去转写
+   * 只会得到一份缺半截的字幕，那比重下一遍更糟。
+   */
+  private async existing(bvid: string): Promise<DownloadedAudio | null> {
+    let path: string
+    try {
+      path = await this.findOutput(bvid)
+    } catch {
+      return null
+    }
+    const info = await stat(path)
+    if (info.size < MIN_USABLE_BYTES) {
+      await rm(path, { force: true })
+      return null
+    }
+    return { path, bytes: info.size, durationSec: null }
   }
 
   /** 启动时扫一遍：失败保留的音频没人删，攒着能把磁盘吃光。 */

@@ -17,6 +17,7 @@ import { Link } from 'react-router-dom'
 import type { SummaryDetailResponse } from '#shared/contract/api.ts'
 import type { SummaryJob } from '#shared/contract/job.ts'
 import { JOB_STAGE_LABEL } from '#shared/contract/job.ts'
+import type { Summary } from '#shared/contract/summary.ts'
 import { DEGRADE_LABEL, TRANSCRIPT_SOURCE_LABEL } from '#shared/contract/summary.ts'
 import { chapterLink, hms, videoUrl } from '#shared/format.ts'
 import { Badge } from '@/components/ui/badge'
@@ -150,6 +151,23 @@ function Article(props: { detail: SummaryDetailResponse; rerunning?: boolean; no
         {summary.tldr}
       </p>
 
+      {summary.overview !== '' && (
+        <>
+          <SectionLabel>全文总结</SectionLabel>
+          <div className="mb-8 space-y-3.5">
+            {summary.overview
+              .split(/\n{2,}/)
+              .map((para) => para.trim())
+              .filter((para) => para !== '')
+              .map((para) => (
+                <p key={para} className="text-foreground/90 text-[15.5px] leading-[1.85]">
+                  {para}
+                </p>
+              ))}
+          </div>
+        </>
+      )}
+
       <SectionLabel>核心要点</SectionLabel>
       <ol className="mb-8">
         {summary.points.map((p, i) => (
@@ -165,31 +183,37 @@ function Article(props: { detail: SummaryDetailResponse; rerunning?: boolean; no
         ))}
       </ol>
 
+      <KeyInfo info={summary.keyInfo} />
+
       {summary.chapters.length > 0 && (
         <>
-          <SectionLabel>分段导读，点任意一段跳到 B 站对应时间点</SectionLabel>
-          <div className="mb-8 grid gap-0.5">
+          <SectionLabel>分段总结，点时间戳跳到 B 站对应时刻</SectionLabel>
+          <div className="mb-8 grid gap-2">
             {summary.chapters.map((ch) => (
-              <a
+              <article
                 key={`${ch.startSec}-${ch.title}`}
-                href={chapterLink(bvid, ch.startSec)}
-                target="_blank"
-                rel="noreferrer"
-                className="hover:bg-muted group grid grid-cols-[56px_1fr_auto] items-center gap-3 rounded-md px-3 py-2.5"
+                className="grid grid-cols-[56px_1fr] gap-3 border-t py-3 last:border-b"
               >
-                <time className="text-brand-ink font-mono text-[13px] font-semibold tabular-nums">
+                <a
+                  href={chapterLink(bvid, ch.startSec)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-brand-ink hover:underline font-mono text-[13px] font-semibold tabular-nums"
+                >
                   {hms(ch.startSec)}
-                </time>
-                <span className="min-w-0">
-                  <span className="block truncate text-sm font-semibold">{ch.title}</span>
+                </a>
+                <div className="min-w-0">
+                  <h3 className="text-[15px] leading-snug font-semibold">{ch.title}</h3>
                   {ch.desc !== null && (
-                    <span className="text-muted-foreground block truncate text-[13px]">
-                      {ch.desc}
-                    </span>
+                    <p className="text-muted-foreground mt-0.5 text-[13px]">{ch.desc}</p>
                   )}
-                </span>
-                <ExternalLink className="text-muted-foreground size-4 opacity-0 group-hover:opacity-100" />
-              </a>
+                  {ch.summary !== '' && (
+                    <p className="text-foreground/90 mt-1.5 text-[14.5px] leading-relaxed">
+                      {ch.summary}
+                    </p>
+                  )}
+                </div>
+              </article>
             ))}
           </div>
         </>
@@ -212,6 +236,64 @@ function Article(props: { detail: SummaryDetailResponse; rerunning?: boolean; no
     </Inner>
   )
 }
+
+/** 关键信息：术语、数字结论、提到的东西。三组都可能为空。 */
+function KeyInfo(props: { info: Summary['keyInfo'] }) {
+  const { terms, facts, resources } = props.info
+  if (terms.length + facts.length + resources.length === 0) return null
+
+  return (
+    <>
+      <SectionLabel>关键信息</SectionLabel>
+      <div className="mb-8 grid gap-3 md:grid-cols-2">
+        {terms.length > 0 && (
+          <InfoCard title="术语与概念">
+            <dl className="grid gap-2">
+              {terms.map((t) => (
+                <div key={t.name}>
+                  <dt className="text-[14px] font-semibold">{t.name}</dt>
+                  <dd className="text-muted-foreground text-[13.5px] leading-relaxed">{t.desc}</dd>
+                </div>
+              ))}
+            </dl>
+          </InfoCard>
+        )}
+        {facts.length > 0 && (
+          <InfoCard title="数字与结论">
+            <ul className="grid gap-1.5">
+              {facts.map((f) => (
+                <li key={f} className="text-[13.5px] leading-relaxed">
+                  {f}
+                </li>
+              ))}
+            </ul>
+          </InfoCard>
+        )}
+        {resources.length > 0 && (
+          <InfoCard title="提到的东西">
+            <dl className="grid gap-2">
+              {resources.map((r) => (
+                <div key={r.name}>
+                  <dt className="text-[14px] font-semibold">{r.name}</dt>
+                  <dd className="text-muted-foreground text-[13.5px] leading-relaxed">{r.note}</dd>
+                </div>
+              ))}
+            </dl>
+          </InfoCard>
+        )}
+      </div>
+    </>
+  )
+}
+
+const InfoCard = (props: { title: string; children: ReactNode }) => (
+  <section className="bg-card rounded-lg border px-4 py-3.5">
+    <h3 className="text-muted-foreground mb-2.5 text-[11.5px] font-bold tracking-wide">
+      {props.title}
+    </h3>
+    {props.children}
+  </section>
+)
 
 /** 完整字幕/转写全文。点开才拉：它可能有几万字。 */
 function Transcript(props: { bvid: string }) {

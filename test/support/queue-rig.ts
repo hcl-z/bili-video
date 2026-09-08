@@ -32,7 +32,16 @@ export const AV_ITEM = avItem('BV1x', '901')
 export const REPLY = JSON.stringify({
   tldr: '一句话讲完这个视频',
   points: ['要点一', '要点二', '要点三'],
-  chapters: [{ startSec: 0, title: '开场', desc: null }, { startSec: 83, title: '正题', desc: '细说' }],
+  overview: '第一段说清背景。\n\n第二段说清结论。',
+  keyInfo: {
+    terms: [{ name: 'WBI', desc: '一种查询签名' }],
+    facts: ['吞吐提升 3 倍'],
+    resources: [{ name: 'yt-dlp', note: '下音频' }],
+  },
+  chapters: [
+    { startSec: 0, title: '开场', desc: null, summary: '开场交代了背景。' },
+    { startSec: 83, title: '正题', desc: '细说', summary: '正题给出了做法和结论。' },
+  ],
 })
 
 export const llmOk: FakeResponse = {

@@ -31,6 +31,12 @@ describe('降级链', () => {
     assert.equal(s?.degradePath, 'asr')
     assert.equal(s?.transcriptSource, 'asr')
     assert.equal(s?.confidence, 'high')
+    // 全文总结、关键信息、每章小结都得落库并进 Markdown。
+    assert.match(s?.overview ?? '', /第一段说清背景/)
+    assert.equal(s?.keyInfo.terms[0]?.name, 'WBI')
+    assert.equal(s?.chapters[1]?.summary, '正题给出了做法和结论。')
+    assert.match(s?.fullMd ?? '', /## 全文总结/)
+    assert.match(s?.fullMd ?? '', /## 关键信息/)
     assert.deepEqual(audio.downloaded, ['BV1x'])
     assert.deepEqual(audio.cleaned, ['/tmp/fake/BV1x.m4a'])
     // 正文要说清它是怎么走到这一级的。

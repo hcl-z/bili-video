@@ -177,7 +177,7 @@ export class SummarizeVideo {
     if (!reply.ok) return fail(reply.failure)
     const draft = parseMetaDraft(reply.value)
     if (!draft.ok) return fail(draft.failure)
-    return ok({ tldr: draft.value.tldr, points: draft.value.points, chapters: [] })
+    return ok({ ...draft.value, chapters: [] })
   }
 
   /**
@@ -192,6 +192,8 @@ export class SummarizeVideo {
       await this.persist(job, this.meta(job), {
         tldr: '这条没能生成总结，只剩标题与链接。',
         points: reasons,
+        overview: '',
+        keyInfo: { terms: [], facts: [], resources: [] },
         chapters: [],
         transcript: transcriptText(t.cues),
         step: 'link',
@@ -206,6 +208,8 @@ export class SummarizeVideo {
       bvid: job.bvid,
       tldr: parts.tldr,
       points: parts.points,
+      overview: parts.overview,
+      keyInfo: parts.keyInfo,
       chapters: parts.chapters,
       transcriptSource: sourceFor(parts.step),
       ...levelFor(parts.step),
@@ -279,7 +283,7 @@ export class SummarizeVideo {
     try {
       const cues = await asr.transcribe(path, { language: this.deps.asrConfig().language })
       if (cues.length === 0) return fail(fatalFailure('转写结果是空的'))
-      // 成功即删。失败留着：孤儿文件超过 24h 由启动时的清理兜掉。
+      // 成功即删。失败留着，重跑时下载那一步会直接用它；超过 24h 的由启动清理兜掉。
       await audio.cleanup(path)
       return ok(cues)
     } catch (err) {

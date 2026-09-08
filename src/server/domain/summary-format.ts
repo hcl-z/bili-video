@@ -48,7 +48,21 @@ const JSON_ONLY =
 const DRAFT_SHAPE =
   '{"tldr":"一句话讲清这个视频在干什么，60 字以内",' +
   '"points":["3-5 条核心要点，每条一句话"],' +
-  '"chapters":[{"startSec":0,"title":"章节标题","desc":"一句话说明，可省略"}]}'
+  '"overview":"全文总结：3-6 段，每段一个话题，讲清作者的论证与结论，' +
+  '不是要点的复述。段间用 \\\\n\\\\n 分隔，600-1200 字",' +
+  '"keyInfo":{' +
+  '"terms":[{"name":"术语或概念","desc":"视频里怎么解释的，一句话"}],' +
+  '"facts":["视频给出的数字、结论、明确判断，各一条，带上下文"],' +
+  '"resources":[{"name":"提到的工具/项目/书/链接","note":"用来干什么"}]},' +
+  '"chapters":[{"startSec":0,"title":"章节标题",' +
+  '"desc":"一句话说明，可省略","summary":"这一章讲了什么，2-4 句"}]}'
+
+/** 三块新内容对模型是新要求，光给形状不够，得说清「写什么」和「不写什么」。 */
+const DRAFT_RULES = [
+  'overview 要能独立读懂：不给出「本视频介绍了…」这种套话，直接写内容。',
+  'keyInfo 只收视频里真出现过的东西，没有就给空数组，别拿常识凑数。',
+  'chapters 覆盖全片，4-8 段，startSec 用整数秒；每段都要有 summary。',
+]
 
 export function summaryPrompt(meta: VideoMeta, transcript: string): { system: string; user: string } {
   return {
@@ -62,7 +76,8 @@ export function summaryPrompt(meta: VideoMeta, transcript: string): { system: st
       '',
       '按这个形状回一个 JSON：',
       DRAFT_SHAPE,
-      'chapters 覆盖全片，4-8 段，startSec 用整数秒且必须落在字幕出现过的时间点上。',
+      ...DRAFT_RULES,
+      'startSec 必须落在字幕出现过的时间点上。',
     ]),
   }
 }
@@ -94,8 +109,11 @@ export function chunkPrompt(
       '字幕（每行形如 `[时间] 内容`，时间是 `mm:ss`，超过一小时是 `h:mm:ss`）：',
       part.transcript,
       '',
-      '用 3-6 行写这一段讲了什么，一行一件事，每行以 `[时间]` 开头，' +
+      '用 4-8 行写这一段讲了什么，一行一件事，每行以 `[时间]` 开头，' +
         '时间点照抄上面出现过的那些，格式也照抄。这一段之外的内容不要写。',
+      // 汇总阶段拿不到原文，术语和数字得在这一步捞出来，否则关键信息只能靠猜。
+      '如果这一段出现了术语、数字、结论或提到的工具/项目，再补几行，' +
+        '以 `关键：` 开头，写清是什么、视频里怎么说的。',
     ]),
   }
 }
@@ -120,8 +138,9 @@ export function reducePrompt(
       '',
       '把它们合成一份总览，按这个形状回一个 JSON：',
       DRAFT_SHAPE,
-      'chapters 覆盖全片，4-8 段，startSec 用整数秒，且必须是上面要点里出现过的时间点 —— ' +
-        '它们是原视频的绝对时间，不要重新编号；`h:mm:ss` 是时:分:秒，换算成秒再填。',
+      ...DRAFT_RULES,
+      'startSec 必须是上面要点里出现过的时间点 —— 它们是原视频的绝对时间，不要重新编号；' +
+        '`h:mm:ss` 是时:分:秒，换算成秒再填。',
     ]),
   }
 }
@@ -215,7 +234,14 @@ const SOURCE_LABEL: Record<Summary['transcriptSource'], string> = {
 export interface RenderParts
   extends Pick<
     Summary,
-    'tldr' | 'points' | 'chapters' | 'transcriptSource' | 'confidence' | 'degradePath'
+    | 'tldr'
+    | 'points'
+    | 'overview'
+    | 'keyInfo'
+    | 'chapters'
+    | 'transcriptSource'
+    | 'confidence'
+    | 'degradePath'
   > {
   /** 降级原因，每退一级一条。没降级就是空的。 */
   reasons?: readonly string[]
@@ -245,16 +271,41 @@ export function renderMarkdown(meta: VideoMeta, s: RenderParts): string {
     for (const p of s.points) out.push(`- ${p}`)
   }
 
+  if (s.overview !== '') out.push('', '## 全文总结', '', s.overview, '')
+
+  const { terms, facts, resources } = s.keyInfo
+  if (terms.length + facts.length + resources.length > 0) {
+    out.push('', '## 关键信息', '')
+    if (terms.length > 0) {
+      out.push('**术语与概念**', '')
+      for (const t of terms) out.push(`- **${t.name}**：${t.desc}`)
+      out.push('')
+    }
+    if (facts.length > 0) {
+      out.push('**数字与结论**', '')
+      for (const f of facts) out.push(`- ${f}`)
+      out.push('')
+    }
+    if (resources.length > 0) {
+      out.push('**提到的东西**', '')
+      for (const r of resources) out.push(`- **${r.name}**：${r.note}`)
+      out.push('')
+    }
+  }
+
   if (s.chapters.length > 0) {
     out.push('', '## 章节', '')
-    for (const c of s.chapters) out.push(chapterLine(meta.bvid, c))
+    for (const c of s.chapters) out.push(...chapterLines(meta.bvid, c))
   }
   return `${out.join('\n')}\n`
 }
 
-const chapterLine = (bvid: string, c: Chapter): string => {
-  const head = `- [${hms(c.startSec)}](${chapterLink(bvid, c.startSec)}) ${c.title}`
-  return c.desc === null ? head : `${head} —— ${c.desc}`
+function chapterLines(bvid: string, c: Chapter): string[] {
+  const head = `### [${hms(c.startSec)}](${chapterLink(bvid, c.startSec)}) ${c.title}`
+  const out = [head, '']
+  if (c.desc !== null) out.push(`*${c.desc}*`, '')
+  if (c.summary !== '') out.push(c.summary, '')
+  return out
 }
 
 /** 落盘文件名。用 bvid 而不是标题：标题会改，改完重跑会留下一份孤儿文件。 */

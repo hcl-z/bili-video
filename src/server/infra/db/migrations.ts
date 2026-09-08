@@ -170,10 +170,17 @@ CREATE TABLE bili_write_calls (
 CREATE INDEX idx_bili_write_calls_at ON bili_write_calls(at DESC);
 `
 
+// 全文总结与关键信息。老行给空值，读出来就是「这条没有这两块」。
+const SUMMARY_DETAIL = `
+ALTER TABLE summaries ADD COLUMN overview TEXT NOT NULL DEFAULT '';
+ALTER TABLE summaries ADD COLUMN key_info_json TEXT NOT NULL DEFAULT '{}';
+`
+
 export const MIGRATIONS: Migration[] = [
   { version: 1, name: 'init', sql: INIT },
   { version: 2, name: 'runtime_state', sql: RUNTIME_STATE },
   { version: 3, name: 'bili_write_calls', sql: BILI_WRITE_CALLS },
+  { version: 4, name: 'summary_detail', sql: SUMMARY_DETAIL },
 ]
 
 /**

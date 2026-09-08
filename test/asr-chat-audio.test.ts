@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdtemp, readdir, writeFile } from 'node:fs/promises'
+import { mkdtemp, readdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, it } from 'node:test'
@@ -51,6 +51,7 @@ describe('chat-audio 转写', () => {
     const dir = await mkdtemp(join(tmpdir(), 'asr-test-'))
     const audio = join(dir, 'BV1x.m4a')
     await writeFile(audio, 'not really audio')
+    const before = (await readdir(tmpdir())).filter((f) => f.startsWith('bili-asr-'))
 
     const cues = await asr.transcribe(audio)
 
@@ -75,8 +76,13 @@ describe('chat-audio 转写', () => {
     assert.match(body.messages[0]?.content[0]?.input_audio.data ?? '', /^data:audio\/mpeg;base64,/)
     assert.equal(fetch.requests[0]?.headers['authorization'], 'Bearer sk-test-key-value')
 
-    // 切段的临时目录跑完就删。
-    assert.equal((await readdir(tmpdir())).some((f) => f.startsWith('bili-asr-')), false)
+    // 切段的临时目录跑完就删。只看这一轮新出现的 bili-asr-*：并行跑的别的测试
+    // 也在同一个 tmpdir 里造目录。
+    const added = (await readdir(tmpdir())).filter(
+      (f) => f.startsWith('bili-asr-') && !before.includes(f),
+    )
+    assert.deepEqual(added, [])
+    await rm(dir, { recursive: true, force: true })
   })
 
   it('对方回 4xx 时抛错，让降级链退到下一级', async () => {
@@ -97,5 +103,6 @@ describe('chat-audio 转写', () => {
     await writeFile(audio, 'not really audio')
 
     await assert.rejects(() => asr.transcribe(audio), /HTTP 404/)
+    await rm(dir, { recursive: true, force: true })
   })
 })
