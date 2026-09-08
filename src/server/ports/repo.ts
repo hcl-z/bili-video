@@ -68,6 +68,8 @@ export interface SummaryRepo {
   get(bvid: string): Summary | null
   /** transcript 单独传：它可能有几万字，不值得塞进到处传递的 Summary 里。 */
   upsert(summary: Summary, transcript?: string | null): void
+  /** 完整字幕/转写全文。同样单独读，别让列表页顺手把几万字捎出来。 */
+  transcript(bvid: string): string | null
   list(q: { limit: number; before?: number }): Summary[]
 }
 

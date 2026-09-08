@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import type { SummariesResponse, SummaryDetailResponse } from '#shared/contract/api.ts'
+import type {
+  SummariesResponse,
+  SummaryDetailResponse,
+  TranscriptResponse,
+} from '#shared/contract/api.ts'
 import { FakeFetch, type FakeResponse } from './fakes/bili-fetch.ts'
 import { createHarness } from './support/harness.ts'
 
@@ -200,6 +204,14 @@ describe('总结分栏阅读', () => {
     // 都总结过了，批量补队就没得补。
     const all = await h.server.app.request('/api/summaries/run-all', { method: 'POST' })
     assert.deepEqual(await all.json(), { queued: 0, skipped: 1 })
+
+    // 完整字幕单独一个端点，带时间戳，原样存着。
+    const tr = (await (
+      await h.server.app.request('/api/summaries/BV1ok/transcript')
+    ).json()) as TranscriptResponse
+    assert.equal(tr.source, 'subtitle')
+    assert.match(tr.text, /^\[01:23\] 进入正题$/)
+    assert.equal((await h.server.app.request('/api/summaries/BV1none/transcript')).status, 404)
 
     await h.close()
   })

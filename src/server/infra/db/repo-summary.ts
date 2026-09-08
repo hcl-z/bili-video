@@ -135,6 +135,14 @@ export class SqliteSummaryRepo implements SummaryRepo {
     return r ? toSummary(r as Row) : null
   }
 
+  transcript(bvid: string): string | null {
+    const r = this.db.prepare('SELECT transcript FROM summaries WHERE bvid = ?').get(bvid) as
+      | Row
+      | undefined
+    const text = r?.['transcript']
+    return typeof text === 'string' && text !== '' ? text : null
+  }
+
   /** 重跑覆盖同一行，所以「任务可重跑无副作用」成立。 */
   upsert(s: Summary, transcript?: string | null): void {
     this.db

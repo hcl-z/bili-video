@@ -15,6 +15,7 @@ import type {
   SubscriptionsResponse,
   SummariesResponse,
   SummaryDetailResponse,
+  TranscriptResponse,
   SystemResponse,
   TestRulesResponse,
   UpdatesResponse,
@@ -125,6 +126,9 @@ export const api = {
   summaries: () => request<SummariesResponse>('/summaries'),
 
   summary: (bvid: string) => request<SummaryDetailResponse>(`/summaries/${bvid}`),
+
+  /** 完整字幕/转写全文。点开才拉，可能有几万字。 */
+  transcript: (bvid: string) => request<TranscriptResponse>(`/summaries/${bvid}/transcript`),
 
   /** 手动把一条视频排上队。轮询只管新抓到的，旧的靠这个补。 */
   runSummary: (bvid: string) => request<SummaryJob>(`/summaries/${bvid}/run`, { method: 'POST' }),

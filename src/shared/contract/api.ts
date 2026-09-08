@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { AiConfigSchema, AppConfigSchema, AsrConfigSchema } from './config.ts'
 import { DeliveryKindSchema, DeliveryStatusSchema, SummaryJobSchema } from './job.ts'
 import { ProbeResultSchema } from './probe.ts'
-import { DegradePathSchema, SummarySchema } from './summary.ts'
+import { DegradePathSchema, SummarySchema, TranscriptSourceSchema } from './summary.ts'
 import {
   FilterRuleSchema,
   RuleKindSchema,
@@ -205,6 +205,14 @@ export const SummariesResponseSchema = z.object({
   filteredCount: z.number().int().min(0),
 })
 export type SummariesResponse = z.infer<typeof SummariesResponseSchema>
+
+/** 完整字幕/转写全文。单独一个端点：它可能有几万字，不该跟着详情一起拉。 */
+export const TranscriptResponseSchema = z.object({
+  bvid: z.string(),
+  source: TranscriptSourceSchema,
+  text: z.string(),
+})
+export type TranscriptResponse = z.infer<typeof TranscriptResponseSchema>
 
 /** 批量补队的结果。skipped 是被规则拦下或已经在队列里的。 */
 export const RunAllSummariesResponseSchema = z.object({

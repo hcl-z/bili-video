@@ -24,6 +24,12 @@ export const DEGRADE_LABEL: Record<DegradePath, string> = {
   'link-only': '仅给链接',
 }
 
+export const TRANSCRIPT_SOURCE_LABEL: Record<TranscriptSource, string> = {
+  subtitle: '来自官方字幕',
+  asr: '来自语音转写',
+  none: '没有语音内容',
+}
+
 export const ChapterSchema = z.object({
   /** 秒。推送里渲染成 bilibili.com/video/BVxxx?t=<startSec>。 */
   startSec: z.number().int().min(0),

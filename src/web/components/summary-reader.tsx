@@ -1,16 +1,27 @@
 import { useQuery } from '@tanstack/react-query'
-import { Ban, ExternalLink, FileQuestion, Loader2, Play, RefreshCw, TriangleAlert } from 'lucide-react'
+import {
+  Ban,
+  ChevronDown,
+  ChevronRight,
+  ExternalLink,
+  FileQuestion,
+  Loader2,
+  Play,
+  RefreshCw,
+  TriangleAlert,
+} from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 
 import type { SummaryDetailResponse } from '#shared/contract/api.ts'
 import type { SummaryJob } from '#shared/contract/job.ts'
 import { JOB_STAGE_LABEL } from '#shared/contract/job.ts'
-import { DEGRADE_LABEL } from '#shared/contract/summary.ts'
+import { DEGRADE_LABEL, TRANSCRIPT_SOURCE_LABEL } from '#shared/contract/summary.ts'
 import { chapterLink, hms, videoUrl } from '#shared/format.ts'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
 import { api } from '@/lib/api'
 import { formatCount, formatDuration, formatTime } from '@/lib/format'
@@ -184,6 +195,10 @@ function Article(props: { detail: SummaryDetailResponse; rerunning?: boolean; no
         </>
       )}
 
+      {summary.degradePath !== 'meta-only' && summary.degradePath !== 'link-only' && (
+        <Transcript bvid={bvid} />
+      )}
+
       <dl className="bg-border grid grid-cols-2 gap-px overflow-hidden rounded-lg border md:grid-cols-4">
         <Cell label="处理路径" value={DEGRADE_LABEL[summary.degradePath]} />
         <Cell label="tokens" value={formatCount(usage.inTokens + usage.outTokens)} />
@@ -196,6 +211,80 @@ function Article(props: { detail: SummaryDetailResponse; rerunning?: boolean; no
       </dl>
     </Inner>
   )
+}
+
+/** 完整字幕/转写全文。点开才拉：它可能有几万字。 */
+function Transcript(props: { bvid: string }) {
+  const [open, setOpen] = useState(false)
+  const q = useQuery({
+    queryKey: [...keys.summaries, props.bvid, 'transcript'],
+    queryFn: () => api.transcript(props.bvid),
+    enabled: open,
+  })
+
+  return (
+    <section className="mb-8">
+      <Button variant="outline" size="sm" onClick={() => setOpen(!open)}>
+        {open ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
+        {open ? '收起全文' : '看完整字幕'}
+        {q.data !== undefined && (
+          <span className="text-muted-foreground font-normal">
+            {TRANSCRIPT_SOURCE_LABEL[q.data.source]}
+          </span>
+        )}
+      </Button>
+
+      {open && (
+        <div className="mt-3 rounded-lg border">
+          {q.isPending ? (
+            <div className="space-y-2 p-4">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-5/6" />
+              <Skeleton className="h-4 w-4/6" />
+            </div>
+          ) : q.isError ? (
+            <p className="text-muted-foreground p-4 text-sm">{q.error.message}</p>
+          ) : (
+            <ScrollArea className="h-[420px]">
+              <div className="p-2">
+                {parseCues(q.data.text).map((line, i) => (
+                  <p
+                    key={`${line.sec}-${i}`}
+                    className="hover:bg-muted/60 grid grid-cols-[58px_1fr] gap-2 rounded-md px-2 py-1"
+                  >
+                    {line.sec === null ? (
+                      <span />
+                    ) : (
+                      <a
+                        href={chapterLink(props.bvid, line.sec)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-brand-ink hover:underline font-mono text-[12.5px] tabular-nums"
+                      >
+                        {line.stamp}
+                      </a>
+                    )}
+                    <span className="text-[14px] leading-relaxed">{line.text}</span>
+                  </p>
+                ))}
+              </div>
+            </ScrollArea>
+          )}
+        </div>
+      )}
+    </section>
+  )
+}
+
+/** 每行形如 `[mm:ss] 内容`（超过一小时是 `h:mm:ss`）。认不出时间戳就整行当正文。 */
+function parseCues(text: string): Array<{ stamp: string; sec: number | null; text: string }> {
+  return text.split('\n').map((raw) => {
+    const m = /^\[(\d{1,2}(?::\d{2})+)\]\s*(.*)$/.exec(raw)
+    if (m === null) return { stamp: '', sec: null, text: raw }
+    const parts = m[1]!.split(':').map(Number)
+    const sec = parts.reduce((acc, n) => acc * 60 + n, 0)
+    return { stamp: m[1]!, sec, text: m[2] ?? '' }
+  })
 }
 
 /** 推送状态一句话。两票推送还没做，所以「未推送」是常态而不是异常。 */

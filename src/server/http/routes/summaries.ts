@@ -5,6 +5,7 @@ import type {
   SummariesResponse,
   SummaryDetailResponse,
   SummaryFeedItem,
+  TranscriptResponse,
   UpsMap,
 } from '#shared/contract/api.ts'
 import type { SummaryQueue } from '../../app/queue-runner.ts'
@@ -83,6 +84,21 @@ export function summaryRoutes(ports: Ports, queue: SummaryQueue): Hono {
               })),
       }
       // 库里什么都没有也回 200：页面要能显示「这条还没总结」而不是报错。
+      return c.json(body)
+    })
+
+    /** 完整字幕/转写全文。几万字的东西不塞进详情，谁要看谁单独拉。 */
+    .get('/:bvid/transcript', (c) => {
+      const bvid = c.req.param('bvid')
+      if (!BVID.test(bvid)) return c.json(errorBody('invalid-request', 'bvid 不对'), 400)
+
+      const summary = summaries.get(bvid)
+      const text = summaries.transcript(bvid)
+      if (summary === null || text === null) {
+        return c.json(errorBody('not-found', '这条没有字幕或转写文本'), 404)
+      }
+
+      const body: TranscriptResponse = { bvid, source: summary.transcriptSource, text }
       return c.json(body)
     })
 
