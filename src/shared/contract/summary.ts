@@ -24,6 +24,34 @@ export const ChapterSchema = z.object({
 })
 export type Chapter = z.infer<typeof ChapterSchema>
 
+/**
+ * LLM 只产出这三块，其余字段（来源、降级路径、置信度）由管线填。
+ *
+ * 模型的回答是一道外边界，所以照样 zod 收干净：会加围栏、会把 startSec 写成字符串、会省掉 desc。
+ */
+export const SummaryDraftSchema = z.object({
+  tldr: z.string().trim().min(1),
+  // 要点条数只兜上限：短视频给两条也是能用的总结，为了凑 3 条把整篇丢掉不值。
+  points: z.array(z.string().trim().min(1)).min(1).max(8),
+  // 章节目录是交付物的一部分，空的算这次没成，进失败重试而不是产出半份。
+  chapters: z
+    .array(
+      z.object({
+        startSec: z.coerce.number().int().min(0),
+        title: z.string().trim().min(1),
+        desc: z
+          .string()
+          .nullish()
+          .transform((v) => {
+            const t = v?.trim() ?? ''
+            return t === '' ? null : t
+          }),
+      }),
+    )
+    .min(1),
+})
+export type SummaryDraft = z.infer<typeof SummaryDraftSchema>
+
 export const SummarySchema = z.object({
   bvid: z.string(),
   tldr: z.string(),

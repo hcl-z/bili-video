@@ -105,6 +105,11 @@ export const AsrConfigSchema = z.object({
   concurrency: z.literal(1).default(1),
 })
 
+export const OutputConfigSchema = z.object({
+  /** 总结 Markdown 的落盘目录。相对路径按 DATA_DIR 解析。 */
+  markdownDir: z.string().min(1).default('summaries'),
+})
+
 export const NotifyConfigSchema = z.object({
   wxpusher: z
     .object({
@@ -146,6 +151,7 @@ export const AppConfigSchema = z.object({
   filter: FilterConfigSchema.default({}),
   ai: AiConfigSchema.default({}),
   asr: AsrConfigSchema.default({}),
+  output: OutputConfigSchema.default({}),
   notify: NotifyConfigSchema.default({}),
   catchup: CatchupConfigSchema.default({}),
   health: HealthConfigSchema.default({}),
@@ -156,6 +162,7 @@ export type AppConfig = z.infer<typeof AppConfigSchema>
 export type ConfigSection = keyof AppConfig
 export type AiConfig = z.infer<typeof AiConfigSchema>
 export type AsrConfig = z.infer<typeof AsrConfigSchema>
+export type OutputConfig = z.infer<typeof OutputConfigSchema>
 
 /** section 名 → 该 section 的 schema。配置的按段读写都过这张表。 */
 export const CONFIG_SECTIONS = {
@@ -165,6 +172,7 @@ export const CONFIG_SECTIONS = {
   filter: FilterConfigSchema,
   ai: AiConfigSchema,
   asr: AsrConfigSchema,
+  output: OutputConfigSchema,
   notify: NotifyConfigSchema,
   catchup: CatchupConfigSchema,
   health: HealthConfigSchema,

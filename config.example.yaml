@@ -69,6 +69,10 @@ asr:
   language: zh
   concurrency: 1
 
+output:
+  # 总结 Markdown 往哪儿写。相对路径按 DATA_DIR 解析，重跑同一个视频覆盖同一个文件。
+  markdownDir: summaries
+
 notify:
   wxpusher:
     enabled: false

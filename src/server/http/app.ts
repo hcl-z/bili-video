@@ -6,6 +6,7 @@ import { serveStatic } from '@hono/node-server/serve-static'
 import type { AiService } from '../app/ai.ts'
 import type { AuthLifecycle } from '../app/auth-lifecycle.ts'
 import type { Poller } from '../app/poller.ts'
+import type { SummaryQueue } from '../app/queue-runner.ts'
 import type { RuleService } from '../app/rules.ts'
 import type { SubscriptionService } from '../app/subscriptions.ts'
 import type { Ports } from '../ports/index.ts'
@@ -13,6 +14,7 @@ import { errorBody, makeErrorHandler } from './errors.ts'
 import { aiRoutes } from './routes/ai.ts'
 import { configRoutes } from './routes/config.ts'
 import { healthRoutes } from './routes/health.ts'
+import { jobRoutes } from './routes/jobs.ts'
 import { ruleRoutes } from './routes/rules.ts'
 import { subscriptionRoutes } from './routes/subscriptions.ts'
 import { systemRoutes } from './routes/system.ts'
@@ -30,6 +32,7 @@ export interface HttpOptions {
   poll: Poller
   rules: RuleService
   ai: AiService
+  queue: SummaryQueue
 }
 
 /**
@@ -48,6 +51,7 @@ export function createHttpApp(ports: Ports, opts: HttpOptions): Hono {
   api.route('/subscriptions', subscriptionRoutes(opts.subs))
   api.route('/updates', updateRoutes(ports, opts.poll))
   api.route('/rules', ruleRoutes(opts.rules))
+  api.route('/jobs', jobRoutes(ports, opts.queue))
   api.route('/ai', aiRoutes(opts.ai))
   api.route('/events', eventRoutes(ports))
   // /api 下没命中的一律结构化 404，绝不落到静态资源的 index.html 上去。

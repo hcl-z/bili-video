@@ -13,6 +13,7 @@ import type { ConfigStore } from './config-store.ts'
 import type { EventBus } from './event-bus.ts'
 import type { Llm } from './llm.ts'
 import type { Logger } from './logger.ts'
+import type { MarkdownWriter } from './markdown.ts'
 import type { Notifier } from './notifier.ts'
 import type {
   AnchorRepo,
@@ -40,6 +41,7 @@ export type * from './config-store.ts'
 export type * from './event-bus.ts'
 export type * from './llm.ts'
 export type * from './logger.ts'
+export type * from './markdown.ts'
 export type * from './notifier.ts'
 export type * from './repo.ts'
 export type * from './secret-store.ts'
@@ -59,7 +61,7 @@ export interface Repos {
 }
 
 /**
- * 进程边界之外的适配器 —— 测试里全部换成假件的就是这一组。
+ * 进程边界之外的适配器。测试里换掉的就是这一组（多数换假件，有几个用真适配器 + 假 fetch）。
  *
  * `| null` 不是「可选功能」，而是「这一票还没做」：每个后续 ticket 落地一个适配器就
  * 去掉一个 null，于是「系统还缺哪块」在类型上一眼可见，而不是散落在各处的 TODO。
@@ -101,5 +103,7 @@ export interface Ports {
   state: StateRepo
   /** cookie 罐。app 层要据此回答「还有多久到期」，所以它必须在组装根可见。 */
   cookies: CookieJar
+  /** 总结落盘。不进 external 是因为它没有「这一票还没做」这个状态，永远在。 */
+  markdown: MarkdownWriter
   external: ExternalPorts
 }

@@ -18,7 +18,9 @@ import { BiliAuthClient } from './infra/bili/login.ts'
 import { BiliProfileClient } from './infra/bili/profile.ts'
 import { BiliReaderClient } from './infra/bili/reader.ts'
 import { BiliRelationsClient } from './infra/bili/relations.ts'
+import { BiliSubtitleClient } from './infra/bili/subtitle.ts'
 import { ExecCommandRunner } from './infra/command/exec.ts'
+import { FsMarkdownWriter } from './infra/fs/markdown-writer.ts'
 import { migrate } from './infra/db/migrations.ts'
 import { SqliteStateRepo } from './infra/db/repo-state.ts'
 import { SqliteDeliveryRepo, SqliteLlmCallRepo } from './infra/db/repo-delivery.ts'
@@ -31,7 +33,14 @@ import { loadMasterKey } from './infra/secret/key-manager.ts'
 import { open, parseBox, seal } from './infra/secret/secret-box.ts'
 import { SqliteSecretStore } from './infra/secret/store.ts'
 import type { ProbeResult } from '#shared/contract/probe.ts'
-import type { BiliAuth, BiliProfile, BiliReader, BiliRelationWriter } from './ports/bili.ts'
+import type {
+  BiliAuth,
+  BiliProfile,
+  BiliReader,
+  BiliRelationWriter,
+  SubtitleFetcher,
+} from './ports/bili.ts'
+import type { MarkdownWriter } from './ports/markdown.ts'
 import type { Clock } from './ports/clock.ts'
 import type { CommandRunner } from './ports/command.ts'
 import type { Llm } from './ports/llm.ts'
@@ -85,6 +94,10 @@ export interface Core {
   biliRelations: BiliRelationWriter
   /** UP 主名片查询。 */
   biliProfile: BiliProfile
+  /** 官方字幕（含 AI 字幕）。 */
+  subtitles: SubtitleFetcher
+  /** 总结 Markdown 落盘。 */
+  markdown: MarkdownWriter
   /** OpenAI 兼容的 LLM。总开关的闸门在 AiService 上，不在这里。 */
   llm: Llm
   /** ASR 连通性测试。按 provider 走 HTTP 或本地命令两条路。 */
@@ -183,6 +196,11 @@ export function openCore(opts: CoreOptions): Core {
   })
   const biliProfile = new BiliProfileClient(http)
   const biliReader = new BiliReaderClient(http, logger)
+  const subtitles = new BiliSubtitleClient(http, logger)
+  const markdown = new FsMarkdownWriter({
+    dataDir,
+    dir: () => config.getSection('output').markdownDir,
+  })
 
   const netFetch = opts.fetch ?? globalThis.fetch
   const llm = new OpenAiCompatLlm({
@@ -213,6 +231,8 @@ export function openCore(opts: CoreOptions): Core {
     biliReader,
     biliRelations,
     biliProfile,
+    subtitles,
+    markdown,
     llm,
     probeAsr,
     close() {

@@ -51,10 +51,6 @@ try {
   process.exit(1)
 }
 
-// 上次进程崩在中途的总结任务，捡回来续跑。
-const revived = core.repos.jobs.resetRunning(clock.now())
-if (revived > 0) logger.warn({ jobs: revived }, '重置上次未跑完的总结任务')
-
 const ports: Ports = {
   version: VERSION,
   clock,
@@ -65,14 +61,15 @@ const ports: Ports = {
   repos: core.repos,
   state: core.state,
   cookies: core.cookies,
-  // 后面几票逐个把 null 换成真适配器（字幕、ASR、LLM、下载器、通知渠道）。
+  markdown: core.markdown,
+  // 后面几票逐个把 null 换成真适配器（ASR、下载器、通知渠道）。
   external: {
     notifiers: [],
     biliAuth: core.biliAuth,
     biliReader: core.biliReader,
     biliRelations: core.biliRelations,
     biliProfile: core.biliProfile,
-    subtitles: null,
+    subtitles: core.subtitles,
     asr: null,
     llm: core.llm,
     audio: null,

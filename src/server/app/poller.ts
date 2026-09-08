@@ -29,6 +29,8 @@ export interface PollDeps {
   events: EventBus
   /** 登录态可用吗。false 就整轮跳过 —— 没登录的聚合流只会回空或 -101。 */
   loggedIn: () => boolean
+  /** 新视频入队用。同步返回、不 await：抓取速度不该被总结拖住。 */
+  onVideo: (v: { bvid: string; updateId: string }) => void
 }
 
 export class Poller {
@@ -212,7 +214,9 @@ export class Poller {
     const byId = new Map(rows.map((r) => [r.dynId, r]))
     for (const dynId of inserted) {
       const row = byId.get(dynId)
-      if (row !== undefined) this.deps.events.emit({ type: 'update.new', dynId, uid: row.uid })
+      if (row === undefined) continue
+      this.deps.events.emit({ type: 'update.new', dynId, uid: row.uid })
+      this.offerToQueue(row)
     }
 
     for (const [uid, ts] of nextAnchors(marks, this.deps.anchors.getAll())) {
@@ -223,6 +227,20 @@ export class Poller {
       this.logger.info({ inserted: inserted.length, blocked }, '抓到新动态')
     }
     return { ok: true, found: inserted.length, skipped: skipped.length, blocked, reason: null }
+  }
+
+  /**
+   * 要不要总结这一条。AI 总开关不在这里判 —— 那是队列的事，
+   * 这里只管「视频、没被拦、这个 UP 开了总结」。
+   */
+  private offerToQueue(row: UpdateWithRaw): void {
+    if (row.type !== 'AV' || row.bvid === null || row.filtered) return
+    if (this.deps.subs.get(row.uid)?.enableAi !== true) return
+    try {
+      this.deps.onVideo({ bvid: row.bvid, updateId: row.dynId })
+    } catch (err) {
+      this.logger.error({ bvid: row.bvid, err: String(err) }, '入队失败，不影响这一轮抓取')
+    }
   }
 
   /** 失败分类决定「歇多久」还是「彻底停下」。 */

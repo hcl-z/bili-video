@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { api } from '@/lib/api'
+import { formatTime } from '@/lib/format'
 import { keys } from '@/lib/query'
 import { cn } from '@/lib/utils'
 
@@ -24,13 +25,6 @@ const TYPE_LABEL: Record<Update['type'], string> = {
   FORWARD: '转发',
   ARTICLE: '专栏',
 }
-
-const TIME = new Intl.DateTimeFormat('zh-CN', {
-  month: '2-digit',
-  day: '2-digit',
-  hour: '2-digit',
-  minute: '2-digit',
-})
 
 export function UpdatesPage() {
   const qc = useQueryClient()
@@ -191,7 +185,7 @@ function UpdateRow(props: { update: Update; ups: UpdatesResponse['ups'] }) {
               )}
               <span className="truncate">{up?.name ?? `uid ${u.uid}`}</span>
               <span>·</span>
-              <span>{TIME.format(u.pubTs * 1000)}</span>
+              <span>{formatTime(u.pubTs * 1000)}</span>
               {u.filtered && (
                 <Button
                   variant="ghost"

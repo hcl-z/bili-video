@@ -11,8 +11,8 @@ const AFFECTS: Record<AppEventType, readonly (readonly string[])[]> = {
   'poll.finished': [keys.updates, keys.system],
   'auth.changed': [keys.system],
   'config.changed': [keys.config, keys.ai],
-  'job.changed': [],
-  'summary.done': [],
+  'job.changed': [keys.jobs],
+  'summary.done': [keys.jobs],
 }
 
 /** 订阅 /api/events，按事件类型失效对应查询。EventSource 自己会重连，掉线不用管。 */

@@ -90,6 +90,8 @@ export async function createHarness(opts: HarnessOptions = {}): Promise<Harness>
     repos: core.repos,
     state: core.state,
     cookies: core.cookies,
+    // 真 writer，写进临时 dataDir —— 「落盘了没有」才测得到。
+    markdown: core.markdown,
     external: {
       notifiers: [notifier],
       biliAuth: core.biliAuth,
@@ -97,7 +99,7 @@ export async function createHarness(opts: HarnessOptions = {}): Promise<Harness>
       // 关注与名片都是真适配器，只有 fetch 是假的 —— 限流和审计因此也是真在跑。
       biliRelations: core.biliRelations,
       biliProfile: core.biliProfile,
-      subtitles: null,
+      subtitles: core.subtitles,
       asr: null,
       llm: core.llm,
       audio: null,

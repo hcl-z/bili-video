@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { AiConfigSchema, AppConfigSchema, AsrConfigSchema } from './config.ts'
+import { SummaryJobSchema } from './job.ts'
 import { ProbeResultSchema } from './probe.ts'
 import {
   FilterRuleSchema,
@@ -146,6 +147,13 @@ export const PollResultSchema = z.object({
   reason: z.string().nullable(),
 })
 export type PollResult = z.infer<typeof PollResultSchema>
+
+export const JobsResponseSchema = z.object({
+  jobs: z.array(SummaryJobSchema),
+  /** bvid → 标题链接，页面要显示是哪个视频而不是一串 BV 号。 */
+  videos: z.record(z.string(), z.object({ title: z.string(), url: z.string() })),
+})
+export type JobsResponse = z.infer<typeof JobsResponseSchema>
 
 export const RulesResponseSchema = z.object({
   rules: z.array(FilterRuleSchema),

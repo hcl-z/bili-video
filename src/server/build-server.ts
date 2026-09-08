@@ -6,8 +6,10 @@ import type { Hono } from 'hono'
 import { AiService } from './app/ai.ts'
 import { AuthLifecycle } from './app/auth-lifecycle.ts'
 import { Poller } from './app/poller.ts'
+import { SummaryQueue } from './app/queue-runner.ts'
 import { RuleService } from './app/rules.ts'
 import { SubscriptionService } from './app/subscriptions.ts'
+import { SummarizeVideo } from './app/summarize-video.ts'
 import { createHttpApp } from './http/app.ts'
 import { renderQr } from './infra/bili/qr-terminal.ts'
 import { TimedRegex } from './infra/regex/timed-regex.ts'
@@ -42,6 +44,7 @@ export interface Services {
   rules: RuleService
   poll: Poller
   ai: AiService
+  queue: SummaryQueue
 }
 
 export interface BuildOptions {
@@ -63,6 +66,35 @@ export function buildServer(ports: Ports, opts: BuildOptions = {}): Server {
     clock: ports.clock,
     logger: ports.logger,
     match: (pattern, text) => timedRegex.test(pattern, text),
+  })
+  const ai = new AiService({
+    config: ports.config,
+    secrets: ports.secrets,
+    events: ports.events,
+    logger: ports.logger,
+    llm: ports.external.llm,
+    probeAsr: ports.external.probeAsr,
+  })
+  const queue = new SummaryQueue({
+    jobs: ports.repos.jobs,
+    summarize: new SummarizeVideo({
+      subtitles: ports.external.subtitles,
+      // 走 AiService 而不是 ports.external.llm：总开关关着时它给 null。
+      llm: () => ai.llm(),
+      updates: ports.repos.updates,
+      subs: ports.repos.subscriptions,
+      summaries: ports.repos.summaries,
+      llmCalls: ports.repos.llmCalls,
+      markdown: ports.markdown,
+      clock: ports.clock,
+      logger: ports.logger,
+      events: ports.events,
+    }),
+    llm: () => ai.llm(),
+    config: ports.config,
+    clock: ports.clock,
+    logger: ports.logger,
+    events: ports.events,
   })
   const services: Services = {
     auth,
@@ -88,15 +120,10 @@ export function buildServer(ports: Ports, opts: BuildOptions = {}): Server {
       events: ports.events,
       // 没装 auth 适配器时当「不能干活」，别对着空 cookie 打一串请求。
       loggedIn: () => auth?.isUsable() ?? false,
+      onVideo: (v) => queue.enqueue(v),
     }),
-    ai: new AiService({
-      config: ports.config,
-      secrets: ports.secrets,
-      events: ports.events,
-      logger: ports.logger,
-      llm: ports.external.llm,
-      probeAsr: ports.external.probeAsr,
-    }),
+    ai,
+    queue,
   }
   const app = createHttpApp(ports, {
     startedAt,
@@ -106,6 +133,7 @@ export function buildServer(ports: Ports, opts: BuildOptions = {}): Server {
     poll: services.poll,
     rules: services.rules,
     ai: services.ai,
+    queue: services.queue,
   })
 
   let listening: ServerType | null = null
@@ -136,6 +164,7 @@ export function buildServer(ports: Ports, opts: BuildOptions = {}): Server {
         )
       }
       services.poll.start()
+      services.queue.start()
 
       const auth = services.auth
       if (auth === null) {
@@ -163,6 +192,9 @@ export function buildServer(ports: Ports, opts: BuildOptions = {}): Server {
 
     async stop(): Promise<void> {
       services.poll.stop()
+      services.queue.stop()
+      // 在飞的任务还在写库，等它们收尾再让调用方关连接。超过 10 秒就不等了（HTTP 那层自己有超时）。
+      await services.queue.drain(10_000)
       const srv = listening
       listening = null
       if (srv !== null) {

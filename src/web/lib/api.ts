@@ -5,6 +5,7 @@ import type {
   ConfigResponse,
   ErrorResponse,
   HealthResponse,
+  JobsResponse,
   PatchAiSettingsRequest,
   PatchSubscriptionRequest,
   PollResult,
@@ -15,6 +16,7 @@ import type {
   TestRulesResponse,
   UpdatesResponse,
 } from '#shared/contract/api.ts'
+import type { SummaryJob } from '#shared/contract/job.ts'
 import type { RuleKind } from '#shared/contract/subscription.ts'
 
 /**
@@ -115,6 +117,10 @@ export const api = {
 
   testRules: (input: { sample: string; uid: string | null }) =>
     request<TestRulesResponse>('/rules/test', { method: 'POST', body: JSON.stringify(input) }),
+
+  jobs: () => request<JobsResponse>('/jobs'),
+
+  retryJob: (id: number) => request<SummaryJob>(`/jobs/${id}/retry`, { method: 'POST' }),
 
   aiSettings: () => request<AiSettingsResponse>('/ai'),
 
