@@ -1,0 +1,165 @@
+test/poll.test.ts
+  s_abc690da395c45::t_531bf992eb37ae 140-141
+  s_abc690da395c45::t_80100a87026984 78-81
+  s_abc690da395c45::t_cfe2b7bbf0a0fa 4
+  s_abc690da395c45::t_6c15ed98447662 13-42,46-47,52-58
+  s_abc690da395c45::t_04ce1e37434972 1-3,5-12,43-45,48-51,59-66,76-77,82-107,109-126,131-139,142-147,149-160,173,175-218,221-279,281-287
+  s_abc690da395c45::t_b0f3019701c02c 67-72,75
+  s_abc690da395c45::t_5215efc2b86674 127-130
+  s_abc690da395c45::t_8b4cdde8e3dee5 161-172
+  s_abc690da395c45::t_26adba1da60ecd 219-220
+  s_abc690da395c45::t_a7dacf07db4286 108,148,174,280
+  s_abc690da395c45::t_537cc1bd8bc6ad 73-74
+src/server/http/routes/subscriptions.ts
+  s_abc690da395c45::t_b99ed2d80e936f 12-13
+src/server/build-server.ts
+  s_abc690da395c45::t_377d6be58cea86 154
+  s_abc690da395c45::t_baa8712a027d71 41-42
+  s_abc690da395c45::t_30a8ecb546798f 7-8,12
+  s_abc690da395c45::t_227a7c5fca7d34 120-128
+  s_abc690da395c45::t_c31c57e9fb904a 53,58-64,66,75-89,96-97
+  s_abc690da395c45::t_f627ab93d13039 54-57
+src/server/infra/regex/timed-regex.ts
+  s_abc690da395c45::t_f9011e60bc7494 3-5,7-8,15,18,20,23,31-35,49-50
+  s_abc690da395c45::t_66f0b54f2ac7bf 12-13
+  s_abc690da395c45::t_3660e2cc733001 27-28
+  s_abc690da395c45::t_629dd0a0e195df 1-2,6,9-11,14,16-17,19,21-22,24-26,29-30,36-48
+test/regex.test.ts
+  s_abc690da395c45::t_082615ea85c1fc 1-3,7-13,15-19,21-30,32-33
+  s_abc690da395c45::t_3da24a32e40bf8 4-6,14,20,31
+test/domain/anchor.test.ts
+  s_abc690da395c45::t_678713774afe5e 1-48
+README.md
+  s_abc690da395c45::t_54cd4b778ad4dc 86-91,97-113
+  s_abc690da395c45::t_557313b618a847 92-96
+  s_abc690da395c45::t_8714183af41f9b 50-52,54
+src/server/http/routes/updates.ts
+  s_abc690da395c45::t_12c3415f23a44d 1-3,5-6,8-12,17,22-34
+  s_abc690da395c45::t_83a810fa4ba94e 4,7,13-16,18-21
+src/server/http/app.ts
+  s_abc690da395c45::t_cf56bd17398de3 7-8,14,17-18
+  s_abc690da395c45::t_716d126ab93d12 28-29
+  s_abc690da395c45::t_3d3f3b75177b6d 43,46-48
+src/server/app/poller.ts
+  s_abc690da395c45::t_4f6121811b3503 265-267
+  s_abc690da395c45::t_ae86836e3d3508 197
+  s_abc690da395c45::t_81f809311ba32a 40
+  s_abc690da395c45::t_3fb24d733c1476 153-154
+  s_abc690da395c45::t_276b193e7280e1 59-62,70-71
+  s_abc690da395c45::t_2f4e7bd6b2410b 183
+  s_abc690da395c45::t_cfebddb7091103 2
+  s_abc690da395c45::t_f937c292cb4ea8 1,3-39,41-58,63-69,72-152,155-182,184-196,198-264,268-278
+src/web/pages/rules.tsx
+  s_abc690da395c45::t_170d56c5963d28 1-6,8-25,28-49,51-80,82,84-132,136-189,191-202
+  s_abc690da395c45::t_c3f2f85f94f4bc 7,81,83,190
+src/server/infra/bili/reader.ts
+  s_abc690da395c45::t_dae54ec789b05d 175-176
+  s_abc690da395c45::t_b18fc12bf79cc7 1-25,28-29,34-35,37-44,46-47,49-55,57-58,61-63,65-103,106-117,120-121,124-125,128-130,132-149,155,164-166,168-174,177-193,195-201
+  s_abc690da395c45::t_6a7495a9bef6c5 156-157,159-161,163
+  s_abc690da395c45::t_86b8e2a51a6761 150-154,158,162,167
+  s_abc690da395c45::t_6965053e734db6 194
+  s_abc690da395c45::t_1335d5ca6fc7b0 118-119,122-123,126-127,131
+  s_abc690da395c45::t_f2af006e484c46 104-105
+  s_abc690da395c45::t_5d70cac72dc50b 26-27,30-33,36,45,48,56,59-60,64
+test/support/harness.ts
+  s_abc690da395c45::t_c69b706fcfcf42 48-52
+  s_abc690da395c45::t_2e6bbc9fc7d87a 75-78
+  s_abc690da395c45::t_0a63b552d7e5c9 92
+src/shared/contract/api.ts
+  s_abc690da395c45::t_3bfa26d5ea1b1b 130-138,140,142-143,145-156,158-185
+  s_abc690da395c45::t_840480bdc3ae75 68-81,84
+  s_abc690da395c45::t_b5dfd301ca917e 9
+  s_abc690da395c45::t_e50ef38387fe5b 139,141,144
+  s_abc690da395c45::t_24a21f7626fcf9 3-8
+  s_abc690da395c45::t_ea6942875f65b4 67
+  s_abc690da395c45::t_f4a0b2c42850c8 157
+  s_abc690da395c45::t_d142e1930b1a0f 121-129
+src/server/main.ts
+  s_abc690da395c45::t_0a63b552d7e5c9 72
+  s_abc690da395c45::t_f4adba43c62532 68
+src/web/components/ui/select.tsx
+  s_abc690da395c45::t_6eb82d22161261 1-130
+src/server/wiring.ts
+  s_abc690da395c45::t_6b01eaf735f83e 172,183
+  s_abc690da395c45::t_63a9ec2a53ebd9 29
+  s_abc690da395c45::t_dde82156f296b4 73-74
+  s_abc690da395c45::t_40b6e9f16f6d21 16
+src/web/pages/updates.tsx
+  s_abc690da395c45::t_a499ab08877376 1-33,36-61,64-104,108-183,192-215
+  s_abc690da395c45::t_a26d24ebe05762 184-191
+src/web/components/ui/textarea.tsx
+  s_abc690da395c45::t_1844e374db135c 1-17
+src/server/app/rules.ts
+  s_abc690da395c45::t_206bccc5c9189e 48-53
+  s_abc690da395c45::t_e2dcb977296c98 97-100
+  s_abc690da395c45::t_a0a659f54ce1c2 85
+  s_abc690da395c45::t_c832f6c1504dec 101,103-107,115-124
+  s_abc690da395c45::t_82660df329fcd1 2-3,5-6,8-47,54-84,86-96,102,108-114,125-137
+  s_abc690da395c45::t_bf05baf695aed0 4,7
+  s_abc690da395c45::t_eec54a0b72544a 1
+src/web/lib/query.ts
+  s_abc690da395c45::t_c9afa616111caf 29-30
+src/web/components/app-shell.tsx
+  s_abc690da395c45::t_0b68abc089f95b 9
+  s_abc690da395c45::t_d88ae9bd6eabc9 23-24
+src/server/http/parse.ts
+  s_abc690da395c45::t_86f86625e4a5ed 4
+  s_abc690da395c45::t_a18c077e37821c 1-3,5-44
+src/web/lib/use-sse.ts
+  s_abc690da395c45::t_4e396b23677c79 18
+  s_abc690da395c45::t_33570c73091469 1-17,19-31,33-42
+  s_abc690da395c45::t_b892519c2442eb 32
+src/server/http/sse.ts
+  s_abc690da395c45::t_44781a5770389d 1-5,7,10-35
+  s_abc690da395c45::t_db5040e56ce120 6,8-9
+src/web/lib/api.ts
+  s_abc690da395c45::t_9e65654863f08e 96-114
+  s_abc690da395c45::t_16b975d885736e 7-8,12-13,15
+src/server/ports/state.ts
+  s_abc690da395c45::t_259686d495ece8 16-17
+test/domain/filter.test.ts
+  s_abc690da395c45::t_cfe2b7bbf0a0fa 4
+  s_abc690da395c45::t_12f018ec3ba64f 1-3,5-136
+src/server/http/routes/rules.ts
+  s_abc690da395c45::t_d98bacd0b38357 1-53
+src/server/domain/anchor.ts
+  s_abc690da395c45::t_b9f07cf6611135 1
+  s_abc690da395c45::t_4ba36851b79e3b 2-29
+src/server/domain/filter.ts
+  s_abc690da395c45::t_ae7f5245ae7975 42-48,53,55-57,61-62,66-67,71-72,74
+  s_abc690da395c45::t_b8abc939ca0e82 54
+  s_abc690da395c45::t_10b70b0cb67a71 58-60,63-65
+  s_abc690da395c45::t_e087a8429ce0c3 2-41,49-52,68-70,73,75-98,100-101,105-106,114-132
+  s_abc690da395c45::t_09bb893eeda541 1
+  s_abc690da395c45::t_47d90fdf9f4506 99
+  s_abc690da395c45::t_19082f0236ab13 102-104,107-113
+src/web/components/rule-tester.tsx
+  s_abc690da395c45::t_c3f2f85f94f4bc 6,114
+  s_abc690da395c45::t_29fd6628d001d4 1-5,7-113,115-121
+src/server/ports/bili.ts
+  s_abc690da395c45::t_9d1207a8971bec 40-41
+  s_abc690da395c45::t_308847db57b5e4 23-24
+  s_abc690da395c45::t_03bf8a619e2191 13-14,21-22
+src/server/http/routes/system.ts
+  s_abc690da395c45::t_e499bfc70b8aed 5
+  s_abc690da395c45::t_18adc82fe2662f 15-20,25
+src/shared/contract/subscription.ts
+  s_abc690da395c45::t_03e8f7fce5daca 18
+  s_abc690da395c45::t_8456402d37da2f 28-37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.43-trip",
+  "base_commit_sha": "63490494da518570f59b8d135453b7143c403428",
+  "prompts": {},
+  "sessions": {
+    "s_abc690da395c45": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "647309db-d279-406d-8284-62f4394affab",
+        "model": "claude-opus-5"
+      },
+      "human_author": "hcl-z <1401859664@qq.com>"
+    }
+  }
+}
