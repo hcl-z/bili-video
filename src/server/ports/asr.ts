@@ -1,7 +1,8 @@
+import type { AsrConfig } from '#shared/contract/config.ts'
 import type { Cue } from '#shared/contract/summary.ts'
 
-/** 本地 mlx-whisper / 云端 OpenAI 兼容两种实现；容器里只能用后者（拿不到 Metal）。 */
+/** 本地 mlx-whisper / 云端两种；容器里只能用云端（拿不到 Metal）。 */
 export interface Asr {
-  readonly provider: 'mlx-whisper' | 'openai-compat'
+  readonly provider: AsrConfig['provider']
   transcribe(audioPath: string, opts?: { language?: string; signal?: AbortSignal }): Promise<Cue[]>
 }

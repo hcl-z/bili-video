@@ -2,6 +2,7 @@ import type { AsrConfig } from '#shared/contract/config.ts'
 import type { Asr } from '../../ports/asr.ts'
 import type { CommandRunner } from '../../ports/command.ts'
 import type { Logger } from '../../ports/logger.ts'
+import { ChatAudioAsr } from './chat-audio.ts'
 import { MlxWhisperAsr } from './mlx-whisper.ts'
 import { OpenAiCompatAsr } from './openai-compat.ts'
 
@@ -25,7 +26,23 @@ export function makeAsr(deps: AsrSwitchDeps): Asr {
     config: deps.config,
     apiKey: deps.apiKey,
   })
-  const pick = (): Asr => (deps.config().provider === 'mlx-whisper' ? local : cloud)
+  const chat = new ChatAudioAsr({
+    fetch: deps.fetch,
+    commands: deps.commands,
+    logger: deps.logger,
+    config: deps.config,
+    apiKey: deps.apiKey,
+  })
+  const pick = (): Asr => {
+    switch (deps.config().provider) {
+      case 'mlx-whisper':
+        return local
+      case 'chat-audio':
+        return chat
+      default:
+        return cloud
+    }
+  }
 
   return {
     get provider() {

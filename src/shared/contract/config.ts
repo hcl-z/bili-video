@@ -95,14 +95,26 @@ export const AiConfigSchema = z.object({
 })
 
 export const AsrConfigSchema = z.object({
-  /** 容器里拿不到 Metal，必须是 openai-compat；启动校验会断言这条。 */
-  provider: z.enum(['mlx-whisper', 'openai-compat']).default('mlx-whisper'),
-  /** 只有 openai-compat 用得上；mlx-whisper 是本地进程，没有 baseURL。apiKey 同 LLM，加密存 secrets 表。 */
+  /**
+   * 容器里拿不到 Metal，必须是云端那两种；启动校验会断言这条。
+   *
+   * openai-compat = Whisper 那套 /audio/transcriptions；
+   * chat-audio = 把音频塞进 chat/completions 的 input_audio（MiMo、Qwen-Omni 这类）。
+   */
+  provider: z.enum(['mlx-whisper', 'openai-compat', 'chat-audio']).default('mlx-whisper'),
+  /** 只有云端两种用得上；mlx-whisper 是本地进程，没有 baseURL。apiKey 同 LLM，加密存 secrets 表。 */
   baseURL: z.string().default(''),
   model: z.string().default('mlx-community/whisper-large-v3-turbo'),
   language: z.string().default('zh'),
   /** ASR 是分钟级重活，并发 1 —— 免得把 16GB 内存吃满。 */
   concurrency: z.literal(1).default(1),
+  /**
+   * chat-audio 专用：切成多长一段送过去（秒）。
+   *
+   * 这类接口没有时间轴，切段是唯一能拿到时间戳的办法，段长就是时间戳的精度；
+   * 同时它们多半有请求体上限（MiMo 是 base64 后 10MB），段太长会被拒。
+   */
+  segmentSec: z.number().int().min(30).max(1800).default(120),
 })
 
 export const OutputConfigSchema = z.object({

@@ -72,6 +72,7 @@ function AiForm(props: { settings: AiSettingsResponse }) {
     baseURL: init.asr.baseURL,
     model: init.asr.model,
     language: init.asr.language,
+    segmentSec: String(init.asr.segmentSec),
     apiKey: '',
   })
 
@@ -94,6 +95,7 @@ function AiForm(props: { settings: AiSettingsResponse }) {
           baseURL: asr.baseURL.trim(),
           model: asr.model.trim(),
           language: asr.language.trim(),
+          segmentSec: numOr(asr.segmentSec, init.asr.segmentSec),
         },
         // 空串不传：后端把「没有这个字段」当作不修改，而不是清空。
         ...(llm.apiKey.trim() === '' ? {} : { llmApiKey: llm.apiKey.trim() }),
@@ -217,7 +219,10 @@ function AiForm(props: { settings: AiSettingsResponse }) {
 
       <Card>
         <CardContent className="space-y-4 py-4">
-          <SectionTitle title="ASR" hint="本机 mlx-whisper 走命令行；远端走 OpenAI 兼容的转写接口。" />
+          <SectionTitle
+            title="ASR"
+            hint="本机 mlx-whisper 走命令行；远端两种：Whisper 那套转写接口，或把音频塞进 chat 的那类。"
+          />
           <Field id="asr-provider" label="provider">
             <Select
               value={asr.provider}
@@ -228,11 +233,12 @@ function AiForm(props: { settings: AiSettingsResponse }) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="mlx-whisper">mlx-whisper（本机）</SelectItem>
-                <SelectItem value="openai-compat">openai-compat（远端）</SelectItem>
+                <SelectItem value="openai-compat">openai-compat（远端，/audio/transcriptions）</SelectItem>
+                <SelectItem value="chat-audio">chat-audio（远端，chat 里塞音频）</SelectItem>
               </SelectContent>
             </Select>
           </Field>
-          {asr.provider === 'openai-compat' && (
+          {asr.provider !== 'mlx-whisper' && (
             <>
               <Field id="asr-base" label="baseURL">
                 <Input
@@ -268,6 +274,16 @@ function AiForm(props: { settings: AiSettingsResponse }) {
               placeholder="zh"
             />
           </Field>
+          {asr.provider === 'chat-audio' && (
+            <Field id="asr-seg" label="切段时长（秒）">
+              <Input
+                id="asr-seg"
+                value={asr.segmentSec}
+                onChange={(e) => setAsr((s) => ({ ...s, segmentSec: e.target.value }))}
+                placeholder="120"
+              />
+            </Field>
+          )}
         </CardContent>
       </Card>
 

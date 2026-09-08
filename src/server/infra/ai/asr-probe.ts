@@ -47,18 +47,21 @@ async function probeLocal(deps: AsrProbeDeps): Promise<ProbeResult> {
 async function probeHttp(deps: AsrProbeDeps, cfg: AsrConfig): Promise<ProbeResult> {
   if (cfg.baseURL.trim() === '') return notConfigured('baseURL')
   const key = deps.apiKey()
+  const url = joinUrl(cfg.baseURL, '/models')
   const started = deps.clock.now()
   try {
-    const res = await deps.fetch(joinUrl(cfg.baseURL, '/models'), {
+    const res = await deps.fetch(url, {
       headers: key === null ? {} : { authorization: `Bearer ${key}` },
       signal: AbortSignal.timeout(TIMEOUT_MS),
     })
     const body = await res.text()
     const ms = deps.clock.now() - started
     if (res.ok) return probeOk(ms)
+    // 地址跟着一起给：baseURL 少个 /v1 是这里最常见的错，不写出来看不出来。
     const { stage, detail } = classifyProbe(res.status, body)
-    return { ok: false, ms, stage, detail }
+    return { ok: false, ms, stage, detail: `${detail}｜请求的是 ${url}` }
   } catch (err) {
-    return networkProbe(err, deps.clock.now() - started)
+    const res = networkProbe(err, deps.clock.now() - started)
+    return { ...res, detail: `${res.detail ?? ''}｜请求的是 ${url}` }
   }
 }
