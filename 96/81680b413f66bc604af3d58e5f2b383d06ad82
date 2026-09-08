@@ -1,0 +1,133 @@
+src/server/infra/fs/markdown-writer.ts
+  s_abc690da395c45::t_bf112fc0b9a9a0 1-36
+test/bili/subtitle.test.ts
+  s_abc690da395c45::t_1847d5c01c12f8 1-71
+src/server/main.ts
+  s_abc690da395c45::t_d18a2a84b12b78 64-65,72
+test/domain/summary-format.test.ts
+  s_abc690da395c45::t_33aaa38ee21e1f 41
+  s_abc690da395c45::t_94eb100f5c7356 1-36,38-40,42-65
+  s_abc690da395c45::t_ff09d42d225d61 37
+src/shared/contract/summary.ts
+  s_abc690da395c45::t_78141429ab69ae 27-54
+src/server/ports/markdown.ts
+  s_abc690da395c45::t_15a54ed601f1fa 1-7
+src/server/app/poller.ts
+  s_abc690da395c45::t_3d06ba23fb4ffd 232-236,238-239,241-245
+  s_abc690da395c45::t_f5b4ec0cbd83a0 33
+  s_abc690da395c45::t_af3e3fc7fcf959 237,240
+  s_abc690da395c45::t_6aa434b848f265 32
+  s_abc690da395c45::t_1d1bc4fcd82447 217-219
+src/server/http/app.ts
+  s_abc690da395c45::t_88fe491ddc9015 9
+  s_abc690da395c45::t_a45d0e4d92a874 17
+  s_abc690da395c45::t_86ee53e17d9b88 35
+  s_abc690da395c45::t_825b4a3f666d28 54
+src/web/pages/jobs.tsx
+  s_abc690da395c45::t_f7514a4dae777d 97
+  s_abc690da395c45::t_940ccff898849f 13,26-31
+  s_abc690da395c45::t_7f81fea02d5c94 108
+  s_abc690da395c45::t_8afc33e53fd981 1-12,14-25,34-35,37-49,58-59,63-96,98-107,109-152
+  s_abc690da395c45::t_56368f1d79c458 50-57
+src/server/infra/bili/subtitle.ts
+  s_abc690da395c45::t_9638baf0226858 1-115
+src/server/wiring.ts
+  s_abc690da395c45::t_15ed04b6c309a0 36-43
+  s_abc690da395c45::t_ef3b4f3ecbc744 21,23
+  s_abc690da395c45::t_b4fd6dd451c3f4 97-100
+  s_abc690da395c45::t_aa985ed2ec0d70 199-203
+  s_abc690da395c45::t_9a9fd9d189ff7f 234-235
+src/server/domain/degrade.ts
+  s_abc690da395c45::t_0c41ba3fe0987e 1-22
+src/server/domain/summary-format.ts
+  s_abc690da395c45::t_497ba1818be2c1 5,7,9-28,31-56,59,61-65,67-71,73,75-84,96-97,99-135
+  s_abc690da395c45::t_ebf87a84e7f4a8 1,3-4,6,8
+  s_abc690da395c45::t_416772fc273917 29-30
+  s_abc690da395c45::t_33e93ad4acd0d4 88-95
+  s_abc690da395c45::t_d75f33c9c36a73 85-87,98
+  s_abc690da395c45::t_65c62fafddf75b 57-58,60,66,72,74
+  s_abc690da395c45::t_65c0a807808ac8 2
+test/support/harness.ts
+  s_abc690da395c45::t_d29f2739ca256d 93-94,102
+src/server/app/summarize-video.ts
+  s_abc690da395c45::t_7aa67a323c05dc 103,106,112,115
+  s_abc690da395c45::t_58e86a99390056 1-4,6-11,13-102,104-105,107-111,113-114,116-127,129-131,133-136
+  s_abc690da395c45::t_46fbd8ec2f7876 5
+  s_abc690da395c45::t_0977cf03e45100 12
+  s_abc690da395c45::t_790cc3a8362bf9 128,132
+src/web/lib/api.ts
+  s_abc690da395c45::t_27ed6a8169527e 8
+  s_abc690da395c45::t_61619a394c5343 19
+  s_abc690da395c45::t_107a1232bb0e11 121-122,124
+  s_abc690da395c45::t_69090bc929174a 123
+src/server/ports/index.ts
+  s_abc690da395c45::t_63ce84af3f15fe 106
+  s_abc690da395c45::t_66b02c18294d79 44
+  s_abc690da395c45::t_bf1ceb76986569 64
+  s_abc690da395c45::t_4c8070066da82a 16
+  s_abc690da395c45::t_a3647e305dd3e2 107
+src/web/lib/query.ts
+  s_abc690da395c45::t_e6864bf0d1d9ac 32
+src/server/app/queue-runner.ts
+  s_abc690da395c45::t_3b2cfa1dd5c583 143-145,149,151-153
+  s_abc690da395c45::t_0effa5094ba717 1,3
+  s_abc690da395c45::t_66e0b254101aff 2,4-16,19-21,24-26,28-30,33-35,46-77,80-88,95-106,112-119,121,124-126,128-129,133,138-142,146-148,150,154-166,169,171-174,179,182-185,188-190,204-209
+  s_abc690da395c45::t_5009796e773aaf 17-18,22-23,27,31-32,36-45
+  s_abc690da395c45::t_b3da517ec8c209 78-79,89-94
+  s_abc690da395c45::t_b5131a7fd0094a 130-132,134-137
+  s_abc690da395c45::t_e67178e8484ab6 107-111,120,122-123,127
+  s_abc690da395c45::t_897dc294e4e234 167-168,170
+  s_abc690da395c45::t_12ff3b47efd1c3 175-178,180-181,186-187,191-203
+config.example.yaml
+  s_abc690da395c45::t_68c08f8854376d 72-75
+test/jobs.test.ts
+  s_abc690da395c45::t_6316bce3df5e88 1-22,24-25,27-29,34-132,134-141,145,147-181
+  s_abc690da395c45::t_c63c7d71f082e1 133,143-144
+  s_abc690da395c45::t_41a0ee778025f0 23,26,30-33
+  s_abc690da395c45::t_1afc5ddd145e75 142,146
+src/web/pages/updates.tsx
+  s_abc690da395c45::t_7816f09b0b1854 188
+  s_abc690da395c45::t_12e0a288bf0597 17
+src/server/build-server.ts
+  s_abc690da395c45::t_35dfa45d728a6d 197
+  s_abc690da395c45::t_64432b971ee576 196
+  s_abc690da395c45::t_c3bf7c04a085d0 47
+  s_abc690da395c45::t_6a50e6922df349 70-98
+  s_abc690da395c45::t_abcd13b9f1cb89 9,12
+  s_abc690da395c45::t_bdf4c0e728a3c4 167
+  s_abc690da395c45::t_c2c92f0dd922a9 136
+  s_abc690da395c45::t_c9427ccb18f2a8 123,125-126
+  s_abc690da395c45::t_d11b530228cc1c 195
+src/server/http/routes/jobs.ts
+  s_abc690da395c45::t_6d5d58d33d5221 1-4,6-15,17-22,32-33
+  s_abc690da395c45::t_9b6e316839ed45 5
+  s_abc690da395c45::t_1c975c66b5b205 16,23-31
+src/shared/contract/api.ts
+  s_abc690da395c45::t_24638ebabd979a 151-157
+  s_abc690da395c45::t_1bb82be33ce453 3
+src/shared/contract/config.ts
+  s_abc690da395c45::t_c41d5648ba934e 154
+  s_abc690da395c45::t_46827bbcdc6576 175
+  s_abc690da395c45::t_1ccca1914f7b11 165
+  s_abc690da395c45::t_3087de22d60721 108-112
+src/web/lib/use-sse.ts
+  s_abc690da395c45::t_298141ba9f836a 14-15
+src/web/lib/format.ts
+  s_abc690da395c45::t_02c39f605fd073 1-11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.43-trip",
+  "base_commit_sha": "9681680b413f66bc604af3d58e5f2b383d06ad82",
+  "prompts": {},
+  "sessions": {
+    "s_abc690da395c45": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "647309db-d279-406d-8284-62f4394affab",
+        "model": "unknown"
+      },
+      "human_author": "hcl-z <1401859664@qq.com>"
+    }
+  }
+}
