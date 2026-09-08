@@ -26,4 +26,6 @@ export const keys = {
   config: ['config'] as const,
   system: ['system'] as const,
   subs: ['subs'] as const,
+  updates: ['updates'] as const,
+  rules: ['rules'] as const,
 }

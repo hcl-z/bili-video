@@ -4,9 +4,12 @@ import { serve, type ServerType } from '@hono/node-server'
 import type { Hono } from 'hono'
 
 import { AuthLifecycle } from './app/auth-lifecycle.ts'
+import { Poller } from './app/poller.ts'
+import { RuleService } from './app/rules.ts'
 import { SubscriptionService } from './app/subscriptions.ts'
 import { createHttpApp } from './http/app.ts'
 import { renderQr } from './infra/bili/qr-terminal.ts'
+import { TimedRegex } from './infra/regex/timed-regex.ts'
 import type { Ports } from './ports/index.ts'
 
 /**
@@ -35,6 +38,8 @@ export interface Server {
 export interface Services {
   auth: AuthLifecycle | null
   subs: SubscriptionService
+  rules: RuleService
+  poll: Poller
 }
 
 export interface BuildOptions {
@@ -45,8 +50,20 @@ export interface BuildOptions {
 
 export function buildServer(ports: Ports, opts: BuildOptions = {}): Server {
   const startedAt = ports.clock.now()
+  const auth = makeAuthLifecycle(ports, opts)
+  const timedRegex = new TimedRegex(
+    () => ports.config.getSection('filter').regexTimeoutMs,
+    ports.logger,
+  )
+  const rules = new RuleService({
+    rules: ports.repos.rules,
+    config: ports.config,
+    clock: ports.clock,
+    logger: ports.logger,
+    match: (pattern, text) => timedRegex.test(pattern, text),
+  })
   const services: Services = {
-    auth: makeAuthLifecycle(ports, opts),
+    auth,
     subs: new SubscriptionService({
       subs: ports.repos.subscriptions,
       clock: ports.clock,
@@ -55,12 +72,29 @@ export function buildServer(ports: Ports, opts: BuildOptions = {}): Server {
       profile: ports.external.biliProfile,
       autoFollow: () => ports.config.getSection('bili').write.autoFollow,
     }),
+    rules,
+    poll: new Poller({
+      reader: ports.external.biliReader,
+      subs: ports.repos.subscriptions,
+      updates: ports.repos.updates,
+      anchors: ports.repos.anchors,
+      state: ports.state,
+      rules,
+      config: ports.config,
+      clock: ports.clock,
+      logger: ports.logger,
+      events: ports.events,
+      // 没装 auth 适配器时当「不能干活」，别对着空 cookie 打一串请求。
+      loggedIn: () => auth?.isUsable() ?? false,
+    }),
   }
   const app = createHttpApp(ports, {
     startedAt,
     webRoot: opts.webRoot ?? null,
     auth: services.auth,
     subs: services.subs,
+    poll: services.poll,
+    rules: services.rules,
   })
 
   let listening: ServerType | null = null
@@ -83,6 +117,15 @@ export function buildServer(ports: Ports, opts: BuildOptions = {}): Server {
     },
 
     async bootstrap(): Promise<void> {
+      // 正则在这里预编译一遍。坏规则运行时只是「不命中」，不报出来就永远查不到。
+      for (const bad of services.rules.validateAll()) {
+        ports.logger.error(
+          { id: bad.id, scope: bad.scope, kind: bad.kind, pattern: bad.pattern },
+          '过滤规则里的正则编译不过，这一条不会生效',
+        )
+      }
+      services.poll.start()
+
       const auth = services.auth
       if (auth === null) {
         ports.logger.warn({}, 'B 站适配器未接入，跳过登录态核对')
@@ -108,6 +151,7 @@ export function buildServer(ports: Ports, opts: BuildOptions = {}): Server {
     },
 
     async stop(): Promise<void> {
+      services.poll.stop()
       const srv = listening
       listening = null
       if (srv !== null) {

@@ -8,10 +8,9 @@ import {
   AddSubscriptionRequestSchema,
   PatchSubscriptionRequestSchema,
 } from '#shared/contract/api.ts'
-import type { Failure } from '#shared/contract/failure.ts'
 import type { SubscriptionService } from '../../app/subscriptions.ts'
-import { errorBody, zodIssues } from '../errors.ts'
-import { ZodError } from 'zod'
+import { errorBody } from '../errors.ts'
+import { parseBody, statusOf } from '../parse.ts'
 
 /**
  * 订阅的增删改查。业务编排全在 app/subscriptions，这一层只做三件事：
@@ -63,41 +62,3 @@ export function subscriptionRoutes(subs: SubscriptionService): Hono {
       return c.json(body)
     })
 }
-
-/** zod 在 HTTP 边界跑完，穿过去就是确定类型（「Parse, don't validate」的三处边界之一）。 */
-async function parseBody<T>(
-  req: Request,
-  schema: { parse(v: unknown): T },
-): Promise<{ ok: true; value: T } | { ok: false; body: ReturnType<typeof errorBody> }> {
-  let raw: unknown
-  try {
-    raw = await req.json()
-  } catch {
-    return { ok: false, body: errorBody('invalid-request', '请求体必须是 JSON') }
-  }
-  try {
-    return { ok: true, value: schema.parse(raw) }
-  } catch (err) {
-    if (err instanceof ZodError) {
-      return { ok: false, body: errorBody('invalid-request', '入参校验失败', zodIssues(err)) }
-    }
-    throw err
-  }
-}
-
-/** 失败分类 → HTTP 状态。分类是业务概念，状态码只是它在 HTTP 上的投影。 */
-function statusOf(f: Failure): 400 | 401 | 429 | 502 {
-  switch (f.kind) {
-    case 'fatal':
-      return 400
-    case 'auth-lost':
-      return 401
-    case 'rate-limit':
-    case 'risk-control':
-      return 429
-    case 'transient':
-      return 502
-  }
-}
-
-const failureBody = (f: Failure): [string, string] => [f.kind, f.message]

@@ -15,6 +15,7 @@ export type Subscription = z.infer<typeof SubscriptionSchema>
 
 /** 全局默认规则 + per-UP 覆盖。scope 为 'global' 或某个 uid。 */
 export const RuleScopeSchema = z.union([z.literal('global'), z.string()])
+export type RuleScope = z.infer<typeof RuleScopeSchema>
 
 export const RuleKindSchema = z.enum([
   'keyword-allow',
@@ -23,6 +24,16 @@ export const RuleKindSchema = z.enum([
   'regex-deny',
 ])
 export type RuleKind = z.infer<typeof RuleKindSchema>
+
+/** 规则类型的中文名。前后端同一份，免得两边各写一遍还写歪。 */
+export const RULE_KIND_LABEL: Record<RuleKind, string> = {
+  'keyword-deny': '关键词黑名单',
+  'keyword-allow': '关键词白名单',
+  'regex-deny': '正则黑名单',
+  'regex-allow': '正则白名单',
+}
+
+export const RULE_KINDS = RuleKindSchema.options
 
 export const FilterRuleSchema = z.object({
   id: z.number().int(),

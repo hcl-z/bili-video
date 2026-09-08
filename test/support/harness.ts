@@ -45,6 +45,11 @@ export interface HarnessOptions {
   webRoot?: string
   /** 复用同一个 FakeFetch（restart 场景要保留打过的桩）。 */
   fetch?: FakeFetch
+  /**
+   * 装配前先塞进 cookie 罐的 Set-Cookie 行，等于「上次已经登录过」。
+   * 必须在 buildServer 之前 —— 登录态的初值是构造时看 cookie 罐定的。
+   */
+  cookies?: string[]
   /** restart 内部用：把临时目录的所有权交给新实例，免得跑完一屋子 tmp 目录没人收。 */
   ownsDataDir?: boolean
 }
@@ -67,6 +72,10 @@ export async function createHarness(opts: HarnessOptions = {}): Promise<Harness>
     fetch: fetch.fetch,
   })
 
+  if (opts.cookies !== undefined && core.cookies.isEmpty()) {
+    core.cookies.setFromResponse(opts.cookies, clock.now())
+  }
+
   const ports: Ports = {
     version: 'test',
     clock,
@@ -80,7 +89,7 @@ export async function createHarness(opts: HarnessOptions = {}): Promise<Harness>
     external: {
       notifiers: [notifier],
       biliAuth: core.biliAuth,
-      biliReader: null,
+      biliReader: core.biliReader,
       // 关注与名片都是真适配器，只有 fetch 是假的 —— 限流和审计因此也是真在跑。
       biliRelations: core.biliRelations,
       biliProfile: core.biliProfile,

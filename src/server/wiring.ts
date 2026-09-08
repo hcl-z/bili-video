@@ -13,6 +13,7 @@ import { SqliteCookieJar, type Cipher } from './infra/bili/cookie-jar.ts'
 import { BiliHttp } from './infra/bili/http-client.ts'
 import { BiliAuthClient } from './infra/bili/login.ts'
 import { BiliProfileClient } from './infra/bili/profile.ts'
+import { BiliReaderClient } from './infra/bili/reader.ts'
 import { BiliRelationsClient } from './infra/bili/relations.ts'
 import { migrate } from './infra/db/migrations.ts'
 import { SqliteStateRepo } from './infra/db/repo-state.ts'
@@ -25,7 +26,7 @@ import { openDatabase } from './infra/db/sqlite.ts'
 import { loadMasterKey } from './infra/secret/key-manager.ts'
 import { open, parseBox, seal } from './infra/secret/secret-box.ts'
 import { SqliteSecretStore } from './infra/secret/store.ts'
-import type { BiliAuth, BiliProfile, BiliRelationWriter } from './ports/bili.ts'
+import type { BiliAuth, BiliProfile, BiliReader, BiliRelationWriter } from './ports/bili.ts'
 import type { Clock } from './ports/clock.ts'
 import type { ConfigStore } from './ports/config-store.ts'
 import type { CookieJar } from './ports/cookie-jar.ts'
@@ -69,6 +70,8 @@ export interface Core {
   identity: BrowserIdentity
   /** 扫码登录与 cookie 续期的适配器。 */
   biliAuth: BiliAuth
+  /** 聚合流读取。 */
+  biliReader: BiliReader
   /** 唯一的写接口：查关系 + 关注。限流与审计都在它内部。 */
   biliRelations: BiliRelationWriter
   /** UP 主名片查询。 */
@@ -166,6 +169,7 @@ export function openCore(opts: CoreOptions): Core {
     limits: () => config.getSection('bili').write,
   })
   const biliProfile = new BiliProfileClient(http)
+  const biliReader = new BiliReaderClient(http, logger)
 
   return {
     db,
@@ -176,6 +180,7 @@ export function openCore(opts: CoreOptions): Core {
     state,
     identity,
     biliAuth,
+    biliReader,
     biliRelations,
     biliProfile,
     close() {

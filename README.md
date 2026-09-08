@@ -47,11 +47,11 @@ SESSDATA、cookies、AI apiKey 都用它派生的密钥加密落库（AES-256-GC
 src/shared/contract/   前后端共享的 zod schema 与类型
 src/server/
   ports/               端口（接口）：Clock / Logger / EventBus / 9 个仓储 / B站 / ASR / LLM / Notifier …
-  domain/              纯逻辑，零 IO：B站错误码分类、登录态决策、uid 识别与关系判定
-  app/                 编排：登录生命周期（扫码 → 续期 → 失效）、订阅与自动关注
-  infra/               适配器：SQLite、secret-box、事件总线、真时钟、B站（签名/登录/续期/关注）
+  domain/              纯逻辑，零 IO：B站错误码分类、登录态决策、uid 识别、锚点推进、过滤判定
+  app/                 编排：登录生命周期（扫码 → 续期 → 失效）、订阅与自动关注、轮询、过滤规则
+  infra/               适配器：SQLite、secret-box、事件总线、真时钟、带超时的正则、B站（签名/登录/续期/关注/聚合流）
   config/              YAML seed → DB，DB 为真相 + 热重载
-  http/                Hono 装配与路由
+  http/                Hono 装配与路由，含 SSE（/api/events）
   build-server.ts      ★ 组装根：buildServer(ports)，唯一 new 具体实现的地方
   main.ts              薄入口：构造真实 infra，交给 buildServer
 src/web/               Vite + React + Tailwind v4 + shadcn/ui
@@ -82,6 +82,34 @@ test/
 
 这些常量按版本会变，抄的时候记一下来源。原先的社区文档仓库（`bilibili-API-collect`）
 已于 2026-01-28 被 B 站要求下架，现在只能从浏览器里自己抠。
+
+## 轮询、锚点、过滤
+
+轮询走关注列表的聚合流（`web-dynamic/v1/feed/all`），每 2 分钟一轮，秒位错到 `:30`。
+单轮加锁：上一轮没跑完，这次 tick 直接跳过而不排队 —— 排队只会在慢的时候雪崩。
+每轮先用 `feed/all/update` 问一句「比 baseline 新的有几条」，是 0 就不拉全量。
+
+请求必须带 `features=itemOpusStyle`：不带的话图文动态的正文既不在 `desc` 也不在 `major` 里，
+抓回来是一条没内容的空动态。payload 还有两个坑 —— 用不上的 `major` 分支是**显式 null**
+（不是缺字段），`pub_ts` 是**字符串**。这两条都会让 zod 把整条判为解析失败。
+所以有条目没解析出来时**不推进 baseline**：心跳一旦越过它们，它们就再也不会被拉回来。
+
+**去重靠 per-UP 时间戳锚点**，不靠「见过的 id 列表」。锚点只单调推进，
+而且只推进到「早于本 UP 最早失败项」的最大成功时间戳 —— 于是中间某条处理失败时，
+它和它之后的条目下一轮会重来，不会被跳过。这条规则是纯函数（`domain/anchor.ts`），
+单测覆盖成功/失败交错的多种排列。锚点落库，所以重启不会重复处理。
+
+失败分五类（`auth-lost` / `risk-control` / `rate-limit` / `transient` / `fatal`），
+以返回值传递，不抛异常。撞风控按 `retryAfterMs × 2^(连续失败次数-1)` 退避，上限 30 分钟，
+成功一次立刻清零；鉴权失效则摘掉 cron 并在页面上提示重新登录，扫码成功后自动接着跑。
+
+过滤是纯函数（`domain/filter.ts`）：黑名单优先于白名单，白名单非空时只有命中白名单的才通过；
+per-UP 规则**整套覆盖**全局规则，不是叠加。匹配范围只有动态正文、视频标题、视频简介 ——
+总结正文不参与，否则为了过滤得先花钱生成总结。免扰时段内的条目是挂起，不是丢弃。
+被拦下的条目照样入库并在更新流里灰显，点开能看到是哪条规则拦的。
+
+用户手写的正则在 `node:vm` 里跑，超过 `filter.regexTimeoutMs`（默认 100ms）就中断，
+该规则记一次超时、当作没命中，不阻塞整轮轮询。编译不过的正则启动时就报错并指名是哪一条。
 
 ## 自动关注为什么这么小心
 

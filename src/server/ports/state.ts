@@ -13,6 +13,8 @@ export type StateKey =
   | 'auth-uname'
   /** 连续续期失败次数。到上限就转「登录已失效」，不再无效重试。 */
   | 'refresh-failures'
+  /** 聚合流的 update_baseline，下一轮先拿它问心跳。 */
+  | 'feed-baseline'
 
 export interface StateRepo {
   get(key: StateKey): string | null

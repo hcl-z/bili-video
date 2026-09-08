@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 
 import type { AuthSnapshot, SystemResponse } from '#shared/contract/api.ts'
 import type { AuthLifecycle } from '../../app/auth-lifecycle.ts'
+import type { Poller } from '../../app/poller.ts'
 import { remainingMs } from '../../domain/auth.ts'
 import type { Ports } from '../../ports/index.ts'
 
@@ -11,11 +12,17 @@ import type { Ports } from '../../ports/index.ts'
  * 只读当前快照，不主动去问 B 站 —— 页面刷新不该顺手打一串外部请求。
  * 真正的核对由启动流程和 cron 做，这里看到的是它们留下的结论。
  */
-export function systemRoutes(ports: Ports, startedAt: number, auth: AuthLifecycle | null): Hono {
+export function systemRoutes(
+  ports: Ports,
+  startedAt: number,
+  auth: AuthLifecycle | null,
+  poll: Poller,
+): Hono {
   return new Hono().get('/', (c) => {
     const now = ports.clock.now()
     const body: SystemResponse = {
       auth: auth === null ? adapterMissing(ports, now) : auth.snapshot(),
+      poll: poll.snapshot(),
       version: ports.version,
       startedAt,
       uptimeMs: now - startedAt,

@@ -10,14 +10,18 @@ import type { Result } from '#shared/contract/failure.ts'
 /** 只读。聚合流 + 心跳，一轮一个请求。 */
 export interface BiliReader {
   fetchFeed(opts?: { offset?: string | null }): Promise<Result<FeedPage>>
-  /** feed/all/update 心跳：有没有新内容，比拉全量便宜。 */
-  hasUpdate(sinceTs: number): Promise<Result<boolean>>
+  /** feed/all/update 心跳：比 baseline 新的有几条，比拉全量便宜。 */
+  countSince(baseline: string): Promise<Result<number>>
 }
 
 export interface FeedPage {
   items: ParsedDynamic[]
   hasMore: boolean
   offset: string | null
+  /** 下一轮心跳用的游标（B 站的 update_baseline）。 */
+  baseline: string | null
+  /** 形状不认识、没解析出来的条数。>0 时不该推进 baseline，否则这些条目就永久看不见了。 */
+  unparsed: number
 }
 
 /**
@@ -33,6 +37,8 @@ export interface ParsedDynamic {
   pubTs: number
   title: string | null
   text: string | null
+  /** 视频简介 / 专栏摘要。只参与过滤匹配，不入库。 */
+  desc: string | null
   cover: string | null
   bvid: string | null
   url: string

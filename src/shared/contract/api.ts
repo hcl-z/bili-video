@@ -1,6 +1,12 @@
 import { z } from 'zod'
 import { AppConfigSchema } from './config.ts'
-import { SubscriptionSchema } from './subscription.ts'
+import {
+  FilterRuleSchema,
+  RuleKindSchema,
+  RuleScopeSchema,
+  SubscriptionSchema,
+} from './subscription.ts'
+import { UpdateSchema } from './update.ts'
 
 /**
  * 每个 /api 端点的 req/res schema。前端从 z.infer 拿类型，
@@ -58,8 +64,24 @@ export const AuthSnapshotSchema = z.object({
 })
 export type AuthSnapshot = z.infer<typeof AuthSnapshotSchema>
 
+/** auth-lost 是终态：cron 已经被摘掉，页面看到它就该催人重新登录。 */
+export const PollStatusSchema = z.enum(['idle', 'running', 'backoff', 'disabled', 'auth-lost'])
+export type PollStatus = z.infer<typeof PollStatusSchema>
+
+export const PollSnapshotSchema = z.object({
+  status: PollStatusSchema,
+  lastRunAt: z.number().int().nullable(),
+  lastOk: z.boolean().nullable(),
+  lastError: z.string().nullable(),
+  /** 退避到什么时候；null = 不在退避中。 */
+  resumeAt: z.number().int().nullable(),
+  consecutiveFailures: z.number().int().min(0),
+})
+export type PollSnapshot = z.infer<typeof PollSnapshotSchema>
+
 export const SystemResponseSchema = z.object({
   auth: AuthSnapshotSchema,
+  poll: PollSnapshotSchema,
   version: z.string(),
   startedAt: z.number().int(),
   uptimeMs: z.number().int().min(0),
@@ -95,6 +117,71 @@ export const PatchSubscriptionRequestSchema = z.object({
   enableAi: z.boolean().optional(),
 })
 export type PatchSubscriptionRequest = z.infer<typeof PatchSubscriptionRequestSchema>
+
+/** 更新流的查询串。被过滤的默认也列出来（灰显），filtered=0 才只看通过的。 */
+export const UpdatesQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(200).default(50),
+  uid: z.string().optional(),
+  before: z.coerce.number().int().optional(),
+  filtered: z.enum(['0', '1']).default('1'),
+})
+export type UpdatesQuery = z.infer<typeof UpdatesQuerySchema>
+
+export const UpdatesResponseSchema = z.object({
+  updates: z.array(UpdateSchema),
+  /** uid → 昵称头像，页面要显示是谁发的。 */
+  ups: z.record(z.string(), z.object({ name: z.string(), face: z.string().nullable() })),
+})
+export type UpdatesResponse = z.infer<typeof UpdatesResponseSchema>
+
+export const PollResultSchema = z.object({
+  ok: z.boolean(),
+  /** 真正新入库的条数。 */
+  found: z.number().int().min(0),
+  /** 已经在库里的（重复轮询的正常结果）。 */
+  skipped: z.number().int().min(0),
+  blocked: z.number().int().min(0),
+  /** 跳过或失败的人话原因；正常跑完是 null。 */
+  reason: z.string().nullable(),
+})
+export type PollResult = z.infer<typeof PollResultSchema>
+
+export const RulesResponseSchema = z.object({
+  rules: z.array(FilterRuleSchema),
+  /** 规则 id → 正则超时次数。只列有过超时的。 */
+  timeouts: z.record(z.string(), z.number().int()),
+})
+export type RulesResponse = z.infer<typeof RulesResponseSchema>
+
+export const AddRuleRequestSchema = z.object({
+  scope: RuleScopeSchema,
+  kind: RuleKindSchema,
+  pattern: z.string().min(1),
+  enabled: z.boolean().default(true),
+})
+export type AddRuleRequest = z.infer<typeof AddRuleRequestSchema>
+
+export const PatchRuleRequestSchema = z.object({ enabled: z.boolean() })
+export type PatchRuleRequest = z.infer<typeof PatchRuleRequestSchema>
+
+/** 样本测试框的入参。uid 为空表示只用全局规则试。 */
+export const TestRulesRequestSchema = z.object({
+  sample: z.string().min(1),
+  uid: z.string().nullable().default(null),
+})
+export type TestRulesRequest = z.infer<typeof TestRulesRequestSchema>
+
+export const TestRulesResponseSchema = z.object({
+  hits: z.array(z.object({ id: z.number().int(), label: z.string(), timedOut: z.boolean() })),
+  verdict: z.discriminatedUnion('kind', [
+    z.object({ kind: z.literal('pass') }),
+    z.object({ kind: z.literal('blocked'), reason: z.string() }),
+    z.object({ kind: z.literal('held'), reason: z.string() }),
+  ]),
+  /** 实际生效的那套规则，页面据此显示「per-UP 覆盖了全局」。 */
+  used: z.array(FilterRuleSchema),
+})
+export type TestRulesResponse = z.infer<typeof TestRulesResponseSchema>
 
 export const ErrorResponseSchema = z.object({
   error: z.object({

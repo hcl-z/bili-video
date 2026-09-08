@@ -4,10 +4,15 @@ import type {
   ErrorResponse,
   HealthResponse,
   PatchSubscriptionRequest,
+  PollResult,
+  RulesResponse,
   SubscriptionResult,
   SubscriptionsResponse,
   SystemResponse,
+  TestRulesResponse,
+  UpdatesResponse,
 } from '#shared/contract/api.ts'
+import type { RuleKind } from '#shared/contract/subscription.ts'
 
 /**
  * 数据层：所有请求走这一个函数，因此「怎么报错」只有一种写法。
@@ -88,4 +93,23 @@ export const api = {
 
   followSub: (uid: string) =>
     request<SubscriptionResult>(`/subscriptions/${uid}/follow`, { method: 'POST' }),
+
+  // 被过滤的条目默认也要（灰显），filtered=0 才只看通过的。
+  updates: (opts: { includeFiltered?: boolean } = {}) =>
+    request<UpdatesResponse>(`/updates${opts.includeFiltered === false ? '?filtered=0' : ''}`),
+
+  pollNow: () => request<PollResult>('/updates/poll', { method: 'POST' }),
+
+  rules: () => request<RulesResponse>('/rules'),
+
+  addRule: (rule: { scope: string; kind: RuleKind; pattern: string }) =>
+    request<RulesResponse>('/rules', { method: 'POST', body: JSON.stringify(rule) }),
+
+  patchRule: (id: number, enabled: boolean) =>
+    request<RulesResponse>(`/rules/${id}`, { method: 'PATCH', body: JSON.stringify({ enabled }) }),
+
+  removeRule: (id: number) => request<RulesResponse>(`/rules/${id}`, { method: 'DELETE' }),
+
+  testRules: (input: { sample: string; uid: string | null }) =>
+    request<TestRulesResponse>('/rules/test', { method: 'POST', body: JSON.stringify(input) }),
 }

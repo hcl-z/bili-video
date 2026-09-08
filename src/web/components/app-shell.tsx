@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
+import { useServerEvents } from '@/lib/use-sse'
 import { useTheme } from '@/lib/theme'
 import { NAV, type NavItem } from '@/router'
 
@@ -19,6 +20,8 @@ const GROUPS: NavItem['group'][] = ['监听', '订阅', '系统']
  */
 export function AppShell() {
   const { theme, toggle } = useTheme()
+  // 全站一条 SSE 连接，事件到了自动失效对应查询。
+  useServerEvents()
 
   return (
     <div className="min-h-screen">
