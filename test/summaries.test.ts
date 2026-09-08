@@ -135,4 +135,72 @@ describe('总结分栏阅读', () => {
 
     await h.close()
   })
+
+  it('没进过队列的视频能手动排一条；被拦下的和库里没有的都排不上', async () => {
+    const fetch = new FakeFetch()
+      .on('feed/all/update', { data: { update_num: 1 } })
+      .on('feed/all', {
+        data: {
+          items: [av('01', 'BV1ok', '正常视频')],
+          has_more: false,
+          offset: '',
+          update_baseline: 'b1',
+        },
+      })
+      .on('web-interface/nav', { data: { wbi_img: { img_url: IMG, sub_url: SUB } } })
+      .on('web-interface/view', { data: { cid: 555, pages: [{ cid: 555 }] } })
+      .on('player/wbi/v2', {
+        data: {
+          subtitle: {
+            subtitles: [
+              { lan: 'zh-CN', lan_doc: '中文', ai_type: 0, subtitle_url: '//sub.test/zh.json' },
+            ],
+          },
+        },
+      })
+      .on('sub.test/zh.json', { raw: { body: [{ from: 83, to: 86, content: '进入正题' }] } })
+      .on('/chat/completions', llmOk)
+
+    const h = await createHarness({
+      fetch,
+      cookies: ['SESSDATA=fake; Path=/; Domain=.bilibili.com'],
+    })
+    // enableAi 关着抓一轮：这就是「一堆未总结」的来路。
+    h.core.repos.subscriptions.upsert({
+      uid: '111',
+      name: 'UP-111',
+      face: null,
+      enableDynamic: true,
+      enableVideo: true,
+      enableAi: false,
+    })
+    h.core.config.setSection('bili', {
+      ...h.core.config.getSection('bili'),
+      wbiMixinTable: Array.from({ length: 64 }, (_, i) => i),
+    })
+    h.core.config.setSection('ai', {
+      ...h.core.config.getSection('ai'),
+      enabled: true,
+      baseURL: 'https://llm.test/v1',
+      model: 'm1',
+    })
+    h.server.services.queue.start()
+    await h.server.services.poll.pollOnce()
+    assert.equal(h.core.repos.jobs.getByBvid('BV1ok'), null)
+
+    const run = await h.server.app.request('/api/summaries/BV1ok/run', { method: 'POST' })
+    assert.equal(run.status, 200)
+    await h.server.services.queue.drain()
+    assert.equal(h.core.repos.jobs.getByBvid('BV1ok')?.status, 'done')
+    assert.equal(h.core.repos.summaries.get('BV1ok')?.tldr, '一句话讲完')
+
+    const missing = await h.server.app.request('/api/summaries/BV1none/run', { method: 'POST' })
+    assert.equal(missing.status, 404)
+
+    // 都总结过了，批量补队就没得补。
+    const all = await h.server.app.request('/api/summaries/run-all', { method: 'POST' })
+    assert.deepEqual(await all.json(), { queued: 0, skipped: 1 })
+
+    await h.close()
+  })
 })

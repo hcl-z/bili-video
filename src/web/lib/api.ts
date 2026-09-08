@@ -10,6 +10,7 @@ import type {
   PatchSubscriptionRequest,
   PollResult,
   RulesResponse,
+  RunAllSummariesResponse,
   SubscriptionResult,
   SubscriptionsResponse,
   SummariesResponse,
@@ -124,6 +125,12 @@ export const api = {
   summaries: () => request<SummariesResponse>('/summaries'),
 
   summary: (bvid: string) => request<SummaryDetailResponse>(`/summaries/${bvid}`),
+
+  /** 手动把一条视频排上队。轮询只管新抓到的，旧的靠这个补。 */
+  runSummary: (bvid: string) => request<SummaryJob>(`/summaries/${bvid}/run`, { method: 'POST' }),
+
+  runAllSummaries: () =>
+    request<RunAllSummariesResponse>('/summaries/run-all', { method: 'POST' }),
 
   jobs: () => request<JobsResponse>('/jobs'),
 

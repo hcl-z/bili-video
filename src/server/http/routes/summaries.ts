@@ -1,11 +1,13 @@
 import { Hono } from 'hono'
 
 import type {
+  RunAllSummariesResponse,
   SummariesResponse,
   SummaryDetailResponse,
   SummaryFeedItem,
   UpsMap,
 } from '#shared/contract/api.ts'
+import type { SummaryQueue } from '../../app/queue-runner.ts'
 import { feedState } from '../../domain/summary-format.ts'
 import type { Ports } from '../../ports/index.ts'
 import { errorBody } from '../errors.ts'
@@ -17,7 +19,7 @@ const INDEX_LIMIT = 100
 const BVID = /^[A-Za-z0-9]{3,24}$/
 
 /** 分栏阅读的两个端点：左边索引一次拉齐，右边点一条拉一条。 */
-export function summaryRoutes(ports: Ports): Hono {
+export function summaryRoutes(ports: Ports, queue: SummaryQueue): Hono {
   const { updates, summaries, jobs, llmCalls, deliveries, subscriptions } = ports.repos
 
   const upsMap = (): UpsMap => {
@@ -82,5 +84,55 @@ export function summaryRoutes(ports: Ports): Hono {
       }
       // 库里什么都没有也回 200：页面要能显示「这条还没总结」而不是报错。
       return c.json(body)
+    })
+
+    /** 把这一窗里没总结过的都排上队。索引里攒了一堆的时候，不用一条条点。 */
+    .post('/run-all', (c) => {
+      if (!ports.config.getSection('ai').enabled) {
+        return c.json(errorBody('conflict', 'AI 总开关关着，打开后才会跑'), 409)
+      }
+
+      let queued = 0
+      let skipped = 0
+      for (const u of updates.list({ limit: INDEX_LIMIT, includeFiltered: true })) {
+        if (u.bvid === null) continue
+        const job = jobs.getByBvid(u.bvid)
+        const pending = job !== null && job.status !== 'done' && job.status !== 'failed'
+        if (u.filtered || pending || summaries.get(u.bvid) !== null) {
+          skipped += 1
+          continue
+        }
+        queue.enqueue({ bvid: u.bvid, updateId: u.dynId })
+        queued += 1
+      }
+
+      const body: RunAllSummariesResponse = { queued, skipped }
+      return c.json(body)
+    })
+
+    /**
+     * 手动排队。轮询只给「新抓到的」入队，所以开关是后来才打开的那些视频
+     * 永远等不到自己那一轮 —— 这个端点就是补这个洞。
+     */
+    .post('/:bvid/run', (c) => {
+      const bvid = c.req.param('bvid')
+      if (!BVID.test(bvid)) return c.json(errorBody('invalid-request', 'bvid 不对'), 400)
+
+      const update = updates.getByBvid(bvid)
+      if (update === null) return c.json(errorBody('not-found', '库里没有这条动态'), 404)
+      if (update.filtered) {
+        return c.json(errorBody('conflict', '这条被规则拦下了，先去规则页放行'), 409)
+      }
+      if (!ports.config.getSection('ai').enabled) {
+        return c.json(errorBody('conflict', 'AI 总开关关着，打开后才会跑'), 409)
+      }
+
+      // 已经有任务的走重跑那条路，免得同一个视频攒出两条任务。
+      const existing = jobs.getByBvid(bvid)
+      if (existing === null) return c.json(queue.enqueue({ bvid, updateId: update.dynId }))
+      if (queue.retry(existing.id) === 'busy') {
+        return c.json(errorBody('conflict', '这条已经在队列里了'), 409)
+      }
+      return c.json(jobs.get(existing.id) ?? existing)
     })
 }

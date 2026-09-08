@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { Ban, ExternalLink, FileQuestion, Loader2, RefreshCw, TriangleAlert } from 'lucide-react'
+import { Ban, ExternalLink, FileQuestion, Loader2, Play, RefreshCw, TriangleAlert } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
@@ -16,6 +16,7 @@ import { api } from '@/lib/api'
 import { formatCount, formatDuration, formatTime } from '@/lib/format'
 import { keys } from '@/lib/query'
 import { useRetryJob } from '@/lib/use-retry-job'
+import { useRunSummary } from '@/lib/use-run-summary'
 
 /** 右栏：把总结当文章读。限宽 720px，与原型 variant=B 一致。 */
 export function SummaryReader(props: { bvid: string }) {
@@ -66,14 +67,7 @@ export function SummaryReader(props: { bvid: string }) {
         </Empty>
       )
     case 'none':
-      return d.update === null ? (
-        <NotInDb bvid={d.bvid} />
-      ) : (
-        <Empty icon={FileQuestion} title="这条没进队列">
-          要么这个 UP 的 AI 开关关着，要么 AI 总开关关着。去「AI 与 ASR」或「UP 主」页打开，
-          之后新动态就会自动总结。
-        </Empty>
-      )
+      return d.update === null ? <NotInDb bvid={d.bvid} /> : <NotQueued bvid={d.bvid} />
   }
 }
 
@@ -326,6 +320,30 @@ function Filtered(props: { detail: SummaryDetailResponse }) {
       <Button asChild className="mt-4" size="sm" variant="outline">
         <Link to="/rules">打开规则页</Link>
       </Button>
+    </Empty>
+  )
+}
+
+/** 抓到过但没进队列：多半是开关后来才打开的，那一轮已经过去了，所以给一颗手动的按钮。 */
+function NotQueued(props: { bvid: string }) {
+  const run = useRunSummary(props.bvid)
+  return (
+    <Empty icon={FileQuestion} title="这条没进队列">
+      <p>
+        抓到它的那一轮，要么这个 UP 的 AI 开关关着，要么 AI 总开关关着。现在就想要总结的话，
+        点下面这颗按钮单独排一条。
+      </p>
+      <Button className="mt-4" size="sm" onClick={() => run.mutate()} disabled={run.isPending}>
+        {run.isPending ? (
+          <Loader2 className="size-3.5 motion-safe:animate-spin" />
+        ) : (
+          <Play className="size-3.5" />
+        )}
+        现在就总结
+      </Button>
+      <p className="mt-3">
+        想让以后的新动态自动总结，去「AI 与 ASR」或「UP 主」页把开关打开。
+      </p>
     </Empty>
   )
 }

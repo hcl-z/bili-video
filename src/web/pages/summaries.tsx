@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { ChevronLeft, FileText } from 'lucide-react'
+import { ChevronLeft, FileText, Loader2, Play } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 
 import type { SummariesResponse, SummaryFeedItem } from '#shared/contract/api.ts'
@@ -7,10 +7,12 @@ import { SUMMARY_STATE_LABEL } from '#shared/contract/api.ts'
 import { DEGRADE_LABEL } from '#shared/contract/summary.ts'
 import { SummaryReader } from '@/components/summary-reader'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { api } from '@/lib/api'
 import { formatTime } from '@/lib/format'
 import { keys } from '@/lib/query'
+import { useRunAllSummaries } from '@/lib/use-run-summary'
 import { cn } from '@/lib/utils'
 
 /**
@@ -21,6 +23,7 @@ import { cn } from '@/lib/utils'
 export function SummariesPage() {
   const selected = useParams().bvid ?? null
   const q = useQuery({ queryKey: keys.summaries, queryFn: api.summaries })
+  const runAll = useRunAllSummaries()
 
   return (
     <div className="lg:grid lg:h-[calc(100dvh-var(--appbar-h))] lg:grid-cols-[320px_1fr] xl:grid-cols-[364px_1fr]">
@@ -30,11 +33,29 @@ export function SummariesPage() {
           selected !== null && 'hidden',
         )}
       >
-        <div className="bg-background/85 sticky top-0 z-10 border-b px-4 py-3 backdrop-blur">
-          <h1 className="text-sm font-semibold">总结</h1>
-          <p className="text-muted-foreground mt-0.5 text-xs">
-            {q.data === undefined ? '正在读…' : indexHint(q.data)}
-          </p>
+        <div className="bg-background/85 sticky top-0 z-10 flex items-center gap-2 border-b px-4 py-3 backdrop-blur">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-sm font-semibold">总结</h1>
+            <p className="text-muted-foreground mt-0.5 text-xs">
+              {q.data === undefined ? '正在读…' : indexHint(q.data)}
+            </p>
+          </div>
+          {pendingCount(q.data) > 0 && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="shrink-0"
+              onClick={() => runAll.mutate()}
+              disabled={runAll.isPending}
+            >
+              {runAll.isPending ? (
+                <Loader2 className="size-3.5 motion-safe:animate-spin" />
+              ) : (
+                <Play className="size-3.5" />
+              )}
+              补 {pendingCount(q.data)} 条
+            </Button>
+          )}
         </div>
 
         {q.isPending ? (
@@ -80,6 +101,10 @@ export function SummariesPage() {
     </div>
   )
 }
+
+/** 能补的条数：没总结、没在队列里、也没被拦下的。 */
+const pendingCount = (d: SummariesResponse | undefined): number =>
+  d === undefined ? 0 : d.items.filter((i) => i.state === 'none').length
 
 const indexHint = (d: SummariesResponse): string =>
   d.filteredCount === 0

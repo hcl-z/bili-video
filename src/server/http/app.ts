@@ -53,7 +53,7 @@ export function createHttpApp(ports: Ports, opts: HttpOptions): Hono {
   api.route('/updates', updateRoutes(ports, opts.poll))
   api.route('/rules', ruleRoutes(opts.rules))
   api.route('/jobs', jobRoutes(ports, opts.queue))
-  api.route('/summaries', summaryRoutes(ports))
+  api.route('/summaries', summaryRoutes(ports, opts.queue))
   api.route('/ai', aiRoutes(opts.ai))
   api.route('/events', eventRoutes(ports))
   // /api 下没命中的一律结构化 404，绝不落到静态资源的 index.html 上去。

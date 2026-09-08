@@ -206,6 +206,13 @@ export const SummariesResponseSchema = z.object({
 })
 export type SummariesResponse = z.infer<typeof SummariesResponseSchema>
 
+/** 批量补队的结果。skipped 是被规则拦下或已经在队列里的。 */
+export const RunAllSummariesResponseSchema = z.object({
+  queued: z.number().int().min(0),
+  skipped: z.number().int().min(0),
+})
+export type RunAllSummariesResponse = z.infer<typeof RunAllSummariesResponseSchema>
+
 /** 一个视频花了多少。分段总结会调多次，所以是求和而不是单次。 */
 export const VideoUsageSchema = z.object({
   calls: z.number().int().min(0),
