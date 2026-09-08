@@ -23,7 +23,7 @@ const PLAYER_URL = 'https://api.bilibili.com/x/player/wbi/v2'
 const ViewSchema = z.object({
   aid: z.coerce.number().int().optional(),
   cid: z.coerce.number().int().optional(),
-  pages: z.array(z.object({ cid: z.coerce.number().int() })).default([]),
+  pages: z.array(z.object({ cid: z.coerce.number().int(), part: z.string().default('') })).default([]),
 })
 
 const TrackSchema = z.object({
@@ -60,6 +60,14 @@ export class BiliSubtitleClient implements SubtitleFetcher {
   constructor(http: BiliHttp, logger: Logger) {
     this.http = http
     this.logger = logger.child({ mod: 'subtitle' })
+  }
+
+  async parts(bvid: string): Promise<Result<string[]>> {
+    const view = await this.http.get<unknown>(VIEW_URL, { bvid })
+    if (!view.ok) return fail(view.failure)
+    const parsed = ViewSchema.safeParse(view.value)
+    if (!parsed.success) return fail(shapeFailure('view', view.value))
+    return ok(parsed.data.pages.map((p) => p.part).filter((t) => t.trim() !== ''))
   }
 
   /** null = 这个视频确实没有字幕（含 AI 字幕）。失败是值，调用方按 kind 决定重试。 */

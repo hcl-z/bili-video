@@ -1,15 +1,17 @@
 import { rmSync } from 'node:fs'
-import { join, resolve } from 'node:path'
+import { basename, join, resolve } from 'node:path'
 import process from 'node:process'
 
 import { buildServer } from '../src/server/build-server.ts'
 import { SystemClock } from '../src/server/infra/clock/system-clock.ts'
 import { InMemoryEventBus } from '../src/server/infra/event-bus/in-memory.ts'
 import { createLogger } from '../src/server/log.ts'
+import type { Asr } from '../src/server/ports/asr.ts'
+import type { AudioDownloader } from '../src/server/ports/audio.ts'
 import type { Ports } from '../src/server/ports/index.ts'
 import { openCore } from '../src/server/wiring.ts'
 import { FakeFetch } from '../test/fakes/bili-fetch.ts'
-import { DEMO_UP, demoBili, demoVideos } from './demo-data.ts'
+import { DEMO_UP, demoAsrCues, demoBili, demoVideos } from './demo-data.ts'
 
 /**
  * 假 B 站的试跑环境：真库、真队列、真页面，只有出网是编排好的。
@@ -61,6 +63,23 @@ const core = openCore({
   fetch: fetchImpl,
 })
 
+/** 没字幕那条走「下音频 → 转写」，这里两步都是假的：demo 不该要求装 yt-dlp 和本地模型。 */
+const audio: AudioDownloader = {
+  download: async (bvid) => {
+    await slow('/chat/completions')
+    return { path: `${bvid}.m4a`, bytes: 3 << 20, durationSec: 130 }
+  },
+  cleanup: async () => {},
+  sweepOrphans: async () => 0,
+}
+const asr: Asr = {
+  provider: 'mlx-whisper',
+  transcribe: async (path) => {
+    await slow('/chat/completions')
+    return demoAsrCues(basename(path, '.m4a'))
+  },
+}
+
 // 装成「上次登录过」：demo 不该逼人先扫码。
 if (core.cookies.isEmpty()) {
   core.cookies.setFromResponse(['SESSDATA=demo; Path=/; Domain=.bilibili.com'], clock.now())
@@ -101,9 +120,9 @@ const ports: Ports = {
     biliRelations: core.biliRelations,
     biliProfile: core.biliProfile,
     subtitles: core.subtitles,
-    asr: null,
+    asr,
     llm: core.llm,
-    audio: null,
+    audio,
     probeAsr: core.probeAsr,
   },
 }

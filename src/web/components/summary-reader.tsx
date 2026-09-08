@@ -48,7 +48,13 @@ export function SummaryReader(props: { bvid: string }) {
     case 'done':
       return <Article detail={d} />
     case 'failed':
-      return d.job === null ? <NotInDb bvid={d.bvid} /> : <Failed job={d.job} />
+      if (d.job === null) return <NotInDb bvid={d.bvid} />
+      // 重跑挂了但库里还留着上一次的好总结：给文章，失败原因挂在顶上。
+      return d.summary !== null && d.summary.degradePath !== 'link-only' ? (
+        <Article detail={d} notice={<FailNotice job={d.job} />} />
+      ) : (
+        <Failed detail={d} job={d.job} />
+      )
     case 'pending':
     case 'running':
       // 重跑：库里还留着上一次的总结，先给旧文章看，别把页面清空。
@@ -71,7 +77,7 @@ export function SummaryReader(props: { bvid: string }) {
   }
 }
 
-function Article(props: { detail: SummaryDetailResponse; rerunning?: boolean }) {
+function Article(props: { detail: SummaryDetailResponse; rerunning?: boolean; notice?: ReactNode }) {
   const { summary, update, up, usage, deliveries, bvid } = props.detail
   if (summary === null) return null
 
@@ -126,6 +132,8 @@ function Article(props: { detail: SummaryDetailResponse; rerunning?: boolean }) 
           正在重跑，下面还是上一次的结果
         </p>
       )}
+
+      {props.notice}
 
       {summary.confidence === 'low' && (
         <p className="border-destructive/40 bg-destructive/5 mb-6 rounded-lg border px-4 py-3 text-sm">
@@ -206,16 +214,93 @@ function pushLabel(deliveries: SummaryDetailResponse['deliveries']): string {
   return `${sent}/${deliveries.length} 已推`
 }
 
-function Failed(props: { job: SummaryJob }) {
+/** 重跑失败时挂在旧文章顶上的那条：说清停在哪儿，并给一次再试的机会。 */
+function FailNotice(props: { job: SummaryJob }) {
+  const retry = useRetryJob(props.job.id)
+  return (
+    <div className="border-destructive/40 bg-destructive/5 mb-6 flex items-start gap-2.5 rounded-lg border px-4 py-3 text-sm">
+      <TriangleAlert className="text-destructive mt-0.5 size-4 shrink-0" />
+      <p className="min-w-0 flex-1">
+        重跑没成，停在「{JOB_STAGE_LABEL[props.job.stage]}」：{props.job.error ?? '原因不明'}
+        。下面是上一次的结果。
+      </p>
+      <Button size="sm" variant="outline" onClick={() => retry.mutate()} disabled={retry.isPending}>
+        {retry.isPending ? (
+          <Loader2 className="size-3.5 motion-safe:animate-spin" />
+        ) : (
+          <RefreshCw className="size-3.5" />
+        )}
+        再试
+      </Button>
+    </div>
+  )
+}
+
+/** 失败也得留下能推出去的最小内容：封面、标题、链接、失败原因。 */
+function Failed(props: { detail: SummaryDetailResponse; job: SummaryJob }) {
   const { job } = props
+  const { summary, update, bvid } = props.detail
   const retry = useRetryJob(job.id)
+  // link-only 的那条最小记录里，每退一级留了一条原因。
+  const trail = summary?.degradePath === 'link-only' ? summary.points : []
 
   return (
-    <Empty icon={TriangleAlert} title="这条没总结成">
-      <p className="bg-muted/60 rounded-md px-3 py-2 text-left text-sm">
-        停在「{JOB_STAGE_LABEL[job.stage]}」：{job.error ?? '原因不明'}
+    <Inner>
+      {update?.cover != null && (
+        <img
+          src={update.cover}
+          alt=""
+          referrerPolicy="no-referrer"
+          className="bg-muted mb-5 aspect-video w-full rounded-lg border object-cover"
+        />
+      )}
+
+      <h1 className="text-2xl leading-tight font-bold tracking-tight md:text-[27px]">
+        {update?.title ?? bvid}
+      </h1>
+
+      <div className="mt-3 mb-6 flex items-center gap-2.5">
+        <Badge variant="destructive">没总结成</Badge>
+        <p className="text-muted-foreground font-mono text-xs tabular-nums">
+          {formatTime(update === null ? job.updatedAt : update.pubTs * 1000)}
+        </p>
+        <Button asChild variant="ghost" size="sm" className="ml-auto shrink-0">
+          <a href={videoUrl(bvid)} target="_blank" rel="noreferrer">
+            <ExternalLink className="size-3.5" />
+            看原片
+          </a>
+        </Button>
+      </div>
+
+      <p className="border-destructive/40 bg-destructive/5 mb-5 flex gap-2.5 rounded-lg border px-4 py-3 text-sm">
+        <TriangleAlert className="text-destructive mt-0.5 size-4 shrink-0" />
+        <span>
+          停在「{JOB_STAGE_LABEL[job.stage]}」：{job.error ?? '原因不明'}
+        </span>
       </p>
-      <p className="mt-3">重跑是幂等的，同一条任务、同一份总结，不会产生第二条数据。</p>
+
+      {trail.length > 0 && (
+        <>
+          <SectionLabel>一路退到哪儿了</SectionLabel>
+          <ol className="mb-6">
+            {trail.map((r, i) => (
+              <li
+                key={r}
+                className="text-foreground/90 grid grid-cols-[26px_1fr] gap-3.5 border-t py-2.5 text-[15px] leading-relaxed last:border-b"
+              >
+                <span className="text-muted-foreground font-mono text-[13px] font-bold tabular-nums">
+                  {String(i + 1).padStart(2, '0')}
+                </span>
+                <span>{r}</span>
+              </li>
+            ))}
+          </ol>
+        </>
+      )}
+
+      <p className="text-muted-foreground text-sm">
+        重跑是幂等的，同一条任务、同一份总结，不会产生第二条数据。
+      </p>
       <Button className="mt-4" size="sm" onClick={() => retry.mutate()} disabled={retry.isPending}>
         {retry.isPending ? (
           <Loader2 className="size-3.5 motion-safe:animate-spin" />
@@ -224,7 +309,7 @@ function Failed(props: { job: SummaryJob }) {
         )}
         再跑一次
       </Button>
-    </Empty>
+    </Inner>
   )
 }
 

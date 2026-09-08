@@ -47,6 +47,9 @@ export interface Services {
   queue: SummaryQueue
 }
 
+/** 超过一天的音频文件当孤儿清掉。 */
+const ORPHAN_AUDIO_MS = 24 * 3_600_000
+
 export interface BuildOptions {
   webRoot?: string | null
   /** 二维码往哪儿写。默认 stdout —— 扫码是终端里的动作，不该被日志格式化。 */
@@ -79,8 +82,12 @@ export function buildServer(ports: Ports, opts: BuildOptions = {}): Server {
     jobs: ports.repos.jobs,
     summarize: new SummarizeVideo({
       subtitles: ports.external.subtitles,
+      audio: ports.external.audio,
+      asr: ports.external.asr,
       // 走 AiService 而不是 ports.external.llm：总开关关着时它给 null。
       llm: () => ai.llm(),
+      chunkConfig: () => ports.config.getSection('ai').chunk,
+      asrConfig: () => ports.config.getSection('asr'),
       updates: ports.repos.updates,
       subs: ports.repos.subscriptions,
       summaries: ports.repos.summaries,
@@ -165,6 +172,12 @@ export function buildServer(ports: Ports, opts: BuildOptions = {}): Server {
       }
       services.poll.start()
       services.queue.start()
+      // 上次跑挂了留下的音频没人删，攒着能把磁盘吃光。
+      try {
+        await ports.external.audio?.sweepOrphans(ORPHAN_AUDIO_MS)
+      } catch (err) {
+        ports.logger.warn({ err: String(err) }, '清理音频临时文件失败')
+      }
 
       const auth = services.auth
       if (auth === null) {

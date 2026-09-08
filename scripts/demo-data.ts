@@ -12,7 +12,7 @@ interface DemoVideo {
   cid: number
   title: string
   desc: string
-  /** 'human' 人工字幕 / 'ai' 只有 AI 字幕 / 'none' 没字幕（这一条会失败，用来试重跑）。 */
+  /** 'human' 人工字幕 / 'ai' 只有 AI 字幕 / 'none' 没字幕，退到语音转写。 */
   subtitle: 'human' | 'ai' | 'none'
   cues: Array<[number, string]>
 }
@@ -55,12 +55,24 @@ const VIDEOS: DemoVideo[] = [
   {
     bvid: 'BV1Demo003',
     cid: 1003,
-    title: '这个视频没有字幕（用来试失败与重跑）',
-    desc: '字幕清单为空，任务会明确失败。',
+    title: '这个视频没有字幕（用来看语音转写那条降级路）',
+    desc: '字幕清单为空，于是下载音频、本地转写，处理路径会显示「语音转写」。',
     subtitle: 'none',
-    cues: [],
+    cues: [
+      [0, '这条视频没有字幕，所以你看到的这些句子是转写出来的。'],
+      [22, '流程是先下音频，再交给本地模型，出来的东西和字幕一个形状。'],
+      [64, '转写也失败的话，就退到只看标题和简介的推测，会标成低置信度。'],
+      [108, '再往下全挂了，也还会留一条只有标题、封面和链接的最小记录。'],
+    ],
   },
 ]
+
+/** 没字幕那条走转写：demo 里由假转写吐这些句子，省掉 yt-dlp 与本地模型。 */
+export function demoAsrCues(bvid: string): Array<{ from: number; to: number; text: string }> {
+  const v = byBvid.get(bvid)
+  if (v === undefined) return []
+  return v.cues.map(([from, text], i) => ({ from, to: v.cues[i + 1]?.[0] ?? from + 5, text }))
+}
 
 export const demoVideos = (): DemoVideo[] => VIDEOS
 

@@ -60,6 +60,10 @@ export const SummaryDraftSchema = z.object({
 })
 export type SummaryDraft = z.infer<typeof SummaryDraftSchema>
 
+/** 简介兜底那一级的产出：没有时间轴就不要章节，编出来的时间戳比没有更糟。 */
+export const MetaDraftSchema = SummaryDraftSchema.omit({ chapters: true })
+export type MetaDraft = z.infer<typeof MetaDraftSchema>
+
 export const SummarySchema = z.object({
   bvid: z.string(),
   tldr: z.string(),

@@ -57,6 +57,7 @@ describe('domain/summary-format', () => {
       chapters: [{ startSec: 83, title: '开场', desc: null }],
       transcriptSource: 'none',
       confidence: 'low',
+      degradePath: 'meta-only',
     })
     assert.match(md, /^# 视频标题/)
     assert.match(md, /\[01:23\]\(https:\/\/www\.bilibili\.com\/video\/BV1x\?t=83\) 开场/)

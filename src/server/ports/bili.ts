@@ -98,4 +98,6 @@ export interface AuthStatus {
 /** 字幕免登录只会返回空数组，必须带 SESSDATA。 */
 export interface SubtitleFetcher {
   fetch(bvid: string): Promise<Result<Cue[] | null>>
+  /** 分 P 标题。只有简介兜底那一级要用，所以单独一条而不是塞进 fetch 的返回。 */
+  parts(bvid: string): Promise<Result<string[]>>
 }

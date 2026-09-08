@@ -118,7 +118,10 @@ describe('AI 配置', () => {
       .on('/models', { raw: { data: [] } })
     const h = await createHarness({
       fetch,
-      commands: { probe: async () => ({ found: true, detail: 'mlx-whisper' }) },
+      commands: {
+        probe: async () => ({ found: true, detail: 'mlx-whisper' }),
+        run: async () => ({ code: 0, stdout: '', stderr: '', timedOut: false }),
+      },
     })
     try {
       // 改完就测，没重启 —— 用时读配置这条在这里被顺带测到。

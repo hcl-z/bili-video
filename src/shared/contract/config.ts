@@ -162,6 +162,7 @@ export type AppConfig = z.infer<typeof AppConfigSchema>
 export type ConfigSection = keyof AppConfig
 export type AiConfig = z.infer<typeof AiConfigSchema>
 export type AsrConfig = z.infer<typeof AsrConfigSchema>
+export type ChunkConfig = z.infer<typeof ChunkConfigSchema>
 export type OutputConfig = z.infer<typeof OutputConfigSchema>
 
 /** section 名 → 该 section 的 schema。配置的按段读写都过这张表。 */

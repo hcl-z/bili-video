@@ -11,6 +11,8 @@ import {
   type BrowserIdentity,
 } from './infra/bili/browser-identity.ts'
 import { makeAsrProbe } from './infra/ai/asr-probe.ts'
+import { makeAsr } from './infra/asr/switch.ts'
+import { YtDlpDownloader } from './infra/audio/yt-dlp.ts'
 import { OpenAiCompatLlm } from './infra/ai/openai-compat.ts'
 import { SqliteCookieJar, type Cipher } from './infra/bili/cookie-jar.ts'
 import { BiliHttp } from './infra/bili/http-client.ts'
@@ -33,6 +35,8 @@ import { loadMasterKey } from './infra/secret/key-manager.ts'
 import { open, parseBox, seal } from './infra/secret/secret-box.ts'
 import { SqliteSecretStore } from './infra/secret/store.ts'
 import type { ProbeResult } from '#shared/contract/probe.ts'
+import type { Asr } from './ports/asr.ts'
+import type { AudioDownloader } from './ports/audio.ts'
 import type {
   BiliAuth,
   BiliProfile,
@@ -96,6 +100,10 @@ export interface Core {
   biliProfile: BiliProfile
   /** 官方字幕（含 AI 字幕）。 */
   subtitles: SubtitleFetcher
+  /** yt-dlp 取音频。 */
+  audio: AudioDownloader
+  /** 转写。provider 在这一层之下切，编排层看不见区别。 */
+  asr: Asr
   /** 总结 Markdown 落盘。 */
   markdown: MarkdownWriter
   /** OpenAI 兼容的 LLM。总开关的闸门在 AiService 上，不在这里。 */
@@ -211,12 +219,28 @@ export function openCore(opts: CoreOptions): Core {
     config: () => config.getSection('ai'),
     apiKey: () => secrets.get(LLM_API_KEY),
   })
+  const commands = opts.commands ?? new ExecCommandRunner()
+  const audio = new YtDlpDownloader({
+    commands,
+    cookies,
+    clock,
+    logger,
+    dir: join(dataDir, 'audio'),
+    identity,
+  })
+  const asr = makeAsr({
+    fetch: netFetch,
+    commands,
+    logger,
+    config: () => config.getSection('asr'),
+    apiKey: () => secrets.get(ASR_API_KEY),
+  })
   const probeAsr = makeAsrProbe({
     fetch: netFetch,
     clock,
     config: () => config.getSection('asr'),
     apiKey: () => secrets.get(ASR_API_KEY),
-    commands: opts.commands ?? new ExecCommandRunner(),
+    commands,
   })
 
   return {
@@ -232,6 +256,8 @@ export function openCore(opts: CoreOptions): Core {
     biliRelations,
     biliProfile,
     subtitles,
+    audio,
+    asr,
     markdown,
     llm,
     probeAsr,

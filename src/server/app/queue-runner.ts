@@ -1,4 +1,4 @@
-import type { Failure, Result } from '#shared/contract/failure.ts'
+import type { Failure } from '#shared/contract/failure.ts'
 import type { JobStage, SummaryJob } from '#shared/contract/job.ts'
 import { fatalFailure } from '../domain/bili-error.ts'
 import type { Clock } from '../ports/clock.ts'
@@ -7,45 +7,8 @@ import type { EventBus } from '../ports/event-bus.ts'
 import type { Llm } from '../ports/llm.ts'
 import type { Logger } from '../ports/logger.ts'
 import type { JobRepo } from '../ports/repo.ts'
+import { Lane } from './lane.ts'
 import type { SummarizeVideo, Transcript } from './summarize-video.ts'
-
-/**
- * 一条并发通道。转写和 LLM 各占一条，因为贵的资源不是同一个：
- * 转写吃 CPU（本机 whisper 就一份），LLM 吃对方的限流。
- */
-class Lane {
-  /** 额度是「用的时候读」的（配置随时能改），不是构造时抓一份存起来。 */
-  private readonly limit: () => number
-  private active = 0
-  private readonly waiting: Array<() => void> = []
-
-  constructor(limit: () => number) {
-    this.limit = limit
-  }
-
-  get free(): boolean {
-    return this.active < Math.max(1, this.limit())
-  }
-
-  async run<T>(task: () => Promise<T>): Promise<T> {
-    if (this.free) this.active += 1
-    else await new Promise<void>((resolve) => this.waiting.push(resolve))
-    try {
-      return await task()
-    } finally {
-      this.active -= 1
-      this.admit()
-    }
-  }
-
-  /** 额度调大时也要叫醒排队的，所以放开成独立方法。 */
-  admit(): void {
-    while (this.waiting.length > 0 && this.free) {
-      this.active += 1
-      this.waiting.shift()?.()
-    }
-  }
-}
 
 export interface QueueDeps {
   jobs: JobRepo
@@ -66,7 +29,6 @@ export interface QueueDeps {
 export class SummaryQueue {
   private readonly deps: QueueDeps
   private readonly logger: Logger
-  private readonly transcribeLane: Lane
   private readonly llmLane: Lane
   private readonly running = new Map<number, Promise<void>>()
   private started = false
@@ -75,7 +37,6 @@ export class SummaryQueue {
   constructor(deps: QueueDeps) {
     this.deps = deps
     this.logger = deps.logger.child({ mod: 'queue' })
-    this.transcribeLane = new Lane(() => deps.config.getSection('asr').concurrency)
     this.llmLane = new Lane(() => deps.config.getSection('ai').llmConcurrency)
   }
 
@@ -89,7 +50,6 @@ export class SummaryQueue {
     // 订阅配置本身而不是 config.changed 事件：后者只有两条 HTTP 路径手动发。
     this.unsubscribe = this.deps.config.onChange((section) => {
       if (section !== 'ai' && section !== 'asr') return
-      this.transcribeLane.admit()
       this.llmLane.admit()
       this.pump()
     })
@@ -140,9 +100,8 @@ export class SummaryQueue {
   }
 
   /**
-   * 取活。两道闸：在飞总数封在两条通道额度之和，且第一条通道还有位子 ——
-   * 否则任务被标成 running 却堵在通道口，页面上看着像卡住了。
-   * 转写一交棒就再 pump 一次，所以两段仍然是流水线（A 总结时 B 已经在取字幕）。
+   * 取活。在飞总数封在两条通道额度之和：取字幕不占额度，所以一条视频在等本机转写时，
+   * 有字幕的视频照样能取字幕、照样能进 LLM 通道。
    */
   private pump(): void {
     if (!this.started) return
@@ -150,7 +109,7 @@ export class SummaryQueue {
 
     const capacity =
       this.deps.config.getSection('asr').concurrency + this.deps.config.getSection('ai').llmConcurrency
-    while (this.running.size < capacity && this.transcribeLane.free) {
+    while (this.running.size < capacity) {
       const job = this.deps.jobs.claimNext(this.deps.clock.now())
       if (job === null) return
       this.emit(job.id, 'running', job.stage)
@@ -172,12 +131,11 @@ export class SummaryQueue {
       this.emit(job.id, 'running', s)
     }
     try {
-      const t: Result<Transcript> = await this.transcribeLane
-        .run(() => this.deps.summarize.transcribe(job.bvid, stage))
-        .finally(() => this.pump())
-      if (!t.ok) return this.fail(job, at, t.failure)
+      // 转写不会「失败」，只会降级 —— 拿不到语音内容照样往下走，退到简介兜底。
+      // 转写内部自己排队（并发 1），队列这层不拦，否则一条长视频会把有字幕的也堵住。
+      const t: Transcript = await this.deps.summarize.transcribe(job.bvid, stage)
 
-      const res = await this.llmLane.run(() => this.deps.summarize.summarize(job, t.value, stage))
+      const res = await this.llmLane.run(() => this.deps.summarize.summarize(job, t, stage))
       if (!res.ok) return this.fail(job, at, res.failure)
 
       this.deps.jobs.finish(job.id, { ok: true }, this.deps.clock.now())

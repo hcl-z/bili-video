@@ -5,6 +5,8 @@ import { join } from 'node:path'
 import { buildServer, type Server } from '../../src/server/build-server.ts'
 import { openCore, type Core } from '../../src/server/wiring.ts'
 import { InMemoryEventBus } from '../../src/server/infra/event-bus/in-memory.ts'
+import type { Asr } from '../../src/server/ports/asr.ts'
+import type { AudioDownloader } from '../../src/server/ports/audio.ts'
 import type { CommandRunner } from '../../src/server/ports/command.ts'
 import type { Ports } from '../../src/server/ports/index.ts'
 import { FakeFetch } from '../fakes/bili-fetch.ts'
@@ -55,6 +57,12 @@ export interface HarnessOptions {
   ownsDataDir?: boolean
   /** 本地可执行文件的假件。不给就是真的去 PATH 上找，测试里别这么干。 */
   commands?: CommandRunner
+  /**
+   * 音频下载与转写的假件。默认 null = 「这个进程没接 ASR」，
+   * 于是没字幕的视频直接退到简介兜底 —— 不给假件就绝不会真去 exec yt-dlp。
+   */
+  audio?: AudioDownloader | null
+  asr?: Asr | null
 }
 
 export async function createHarness(opts: HarnessOptions = {}): Promise<Harness> {
@@ -100,9 +108,9 @@ export async function createHarness(opts: HarnessOptions = {}): Promise<Harness>
       biliRelations: core.biliRelations,
       biliProfile: core.biliProfile,
       subtitles: core.subtitles,
-      asr: null,
+      asr: opts.asr ?? null,
       llm: core.llm,
-      audio: null,
+      audio: opts.audio ?? null,
       probeAsr: core.probeAsr,
     },
   }
