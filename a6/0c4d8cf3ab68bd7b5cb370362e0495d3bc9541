@@ -1,0 +1,38 @@
+test/summaries.test.ts
+  s_abc690da395c45::t_700d84a2ebbf9e 208-215
+  s_abc690da395c45::t_21fb995f0b13d4 4-8
+src/server/http/routes/summaries.ts
+  s_abc690da395c45::t_9dc6d23bc2425c 90-104
+  s_abc690da395c45::t_d0482c1b3aa4d7 8
+src/server/ports/repo.ts
+  s_abc690da395c45::t_3367633fdda44e 71-72
+src/web/lib/api.ts
+  s_abc690da395c45::t_2e6cc4eff49b05 18,130-131
+src/shared/contract/summary.ts
+  s_abc690da395c45::t_d6e10f8c1c9bc0 27-32
+src/shared/contract/api.ts
+  s_abc690da395c45::t_0e77abe7b95fe5 5
+  s_abc690da395c45::t_e153a4f63b1cad 209-216
+src/server/infra/db/repo-summary.ts
+  s_abc690da395c45::t_3367633fdda44e 138-145
+src/web/components/summary-reader.tsx
+  s_abc690da395c45::t_90bf23f887844b 2-12,14,20,24
+  s_abc690da395c45::t_de4f5508582484 198-201
+  s_abc690da395c45::t_b10f415e1df141 216-289
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.43-trip",
+  "base_commit_sha": "a60c4d8cf3ab68bd7b5cb370362e0495d3bc9541",
+  "prompts": {},
+  "sessions": {
+    "s_abc690da395c45": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "647309db-d279-406d-8284-62f4394affab",
+        "model": "claude-opus-5"
+      },
+      "human_author": "hcl-z <1401859664@qq.com>"
+    }
+  }
+}
