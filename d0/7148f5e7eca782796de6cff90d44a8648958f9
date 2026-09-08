@@ -1,0 +1,34 @@
+README.md
+  s_abc690da395c45::t_f4effb8ff5f721 27-46
+.gitignore
+  s_abc690da395c45::t_2e48e4d0eb517f 16-18
+scripts/demo.ts
+  s_abc690da395c45::t_5ba937b5b090de 70-74
+  s_abc690da395c45::t_272e05f485125d 1-69,75-139
+scripts/demo-data.ts
+  s_abc690da395c45::t_a5ecb12d126b95 106-108
+  s_abc690da395c45::t_14f8ffe9454a87 164-166
+  s_abc690da395c45::t_2276d0abd5927c 119
+  s_abc690da395c45::t_c04c4a5e85512b 141-143
+  s_abc690da395c45::t_c19592c9d8e212 1-105,109-118,120-140,144-163,167
+package.json
+  s_abc690da395c45::t_2e48e4d0eb517f 22
+tsconfig.server.json
+  s_abc690da395c45::t_2e48e4d0eb517f 19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.43-trip",
+  "base_commit_sha": "d07148f5e7eca782796de6cff90d44a8648958f9",
+  "prompts": {},
+  "sessions": {
+    "s_abc690da395c45": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "647309db-d279-406d-8284-62f4394affab",
+        "model": "claude-opus-5"
+      },
+      "human_author": "hcl-z <1401859664@qq.com>"
+    }
+  }
+}
