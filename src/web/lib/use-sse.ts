@@ -10,7 +10,7 @@ const AFFECTS: Record<AppEventType, readonly (readonly string[])[]> = {
   'update.new': [keys.updates],
   'poll.finished': [keys.updates, keys.system],
   'auth.changed': [keys.system],
-  'config.changed': [keys.config],
+  'config.changed': [keys.config, keys.ai],
   'job.changed': [],
   'summary.done': [],
 }

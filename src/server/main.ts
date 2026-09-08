@@ -74,8 +74,9 @@ const ports: Ports = {
     biliProfile: core.biliProfile,
     subtitles: null,
     asr: null,
-    llm: null,
+    llm: core.llm,
     audio: null,
+    probeAsr: core.probeAsr,
   },
 }
 

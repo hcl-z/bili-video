@@ -1,3 +1,4 @@
+import type { ProbeResult } from '#shared/contract/probe.ts'
 import type { Asr } from './asr.ts'
 import type { AudioDownloader } from './audio.ts'
 import type {
@@ -34,6 +35,7 @@ export type * from './state.ts'
 export type * from './audio.ts'
 export type * from './bili.ts'
 export type * from './clock.ts'
+export type * from './command.ts'
 export type * from './config-store.ts'
 export type * from './event-bus.ts'
 export type * from './llm.ts'
@@ -76,6 +78,11 @@ export interface ExternalPorts {
   asr: Asr | null
   llm: Llm | null
   audio: AudioDownloader | null
+  /**
+   * ASR 的连通性测试。不放在 Asr 上：mlx-whisper 那条路探的是本地可执行文件，
+   * 跟转写本身不是同一个边界，而 Asr 适配器要到票 10 才有。
+   */
+  probeAsr: (() => Promise<ProbeResult>) | null
 }
 
 /**

@@ -3,12 +3,14 @@ import process from 'node:process'
 import { Hono } from 'hono'
 import { serveStatic } from '@hono/node-server/serve-static'
 
+import type { AiService } from '../app/ai.ts'
 import type { AuthLifecycle } from '../app/auth-lifecycle.ts'
 import type { Poller } from '../app/poller.ts'
 import type { RuleService } from '../app/rules.ts'
 import type { SubscriptionService } from '../app/subscriptions.ts'
 import type { Ports } from '../ports/index.ts'
 import { errorBody, makeErrorHandler } from './errors.ts'
+import { aiRoutes } from './routes/ai.ts'
 import { configRoutes } from './routes/config.ts'
 import { healthRoutes } from './routes/health.ts'
 import { ruleRoutes } from './routes/rules.ts'
@@ -27,6 +29,7 @@ export interface HttpOptions {
   subs: SubscriptionService
   poll: Poller
   rules: RuleService
+  ai: AiService
 }
 
 /**
@@ -45,6 +48,7 @@ export function createHttpApp(ports: Ports, opts: HttpOptions): Hono {
   api.route('/subscriptions', subscriptionRoutes(opts.subs))
   api.route('/updates', updateRoutes(ports, opts.poll))
   api.route('/rules', ruleRoutes(opts.rules))
+  api.route('/ai', aiRoutes(opts.ai))
   api.route('/events', eventRoutes(ports))
   // /api 下没命中的一律结构化 404，绝不落到静态资源的 index.html 上去。
   api.all('*', (c) => c.json(errorBody('not-found', `没有这个端点：${c.req.path}`), 404))

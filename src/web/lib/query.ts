@@ -28,4 +28,5 @@ export const keys = {
   subs: ['subs'] as const,
   updates: ['updates'] as const,
   rules: ['rules'] as const,
+  ai: ['ai'] as const,
 }

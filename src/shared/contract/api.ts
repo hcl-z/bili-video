@@ -1,5 +1,6 @@
 import { z } from 'zod'
-import { AppConfigSchema } from './config.ts'
+import { AiConfigSchema, AppConfigSchema, AsrConfigSchema } from './config.ts'
+import { ProbeResultSchema } from './probe.ts'
 import {
   FilterRuleSchema,
   RuleKindSchema,
@@ -182,6 +183,38 @@ export const TestRulesResponseSchema = z.object({
   used: z.array(FilterRuleSchema),
 })
 export type TestRulesResponse = z.infer<typeof TestRulesResponseSchema>
+
+/** apiKey 在响应里的唯一形态。明文永远不出服务端。 */
+export const SecretStateSchema = z.object({
+  configured: z.boolean(),
+  /** 形如 `sk-1****9abc`；没配是 null。 */
+  masked: z.string().nullable(),
+  updatedAt: z.number().int().nullable(),
+})
+export type SecretState = z.infer<typeof SecretStateSchema>
+
+export const AiSettingsResponseSchema = z.object({
+  ai: AiConfigSchema,
+  asr: AsrConfigSchema,
+  llmKey: SecretStateSchema,
+  asrKey: SecretStateSchema,
+})
+export type AiSettingsResponse = z.infer<typeof AiSettingsResponseSchema>
+
+/**
+ * apiKey 的三态由值本身表达：缺省或空串 = 不修改，null = 清空，其余 = 写新值。
+ * 「空串等于不修改」是因为表单只写不读 —— 用户没动那个框时它就是空的。
+ */
+export const PatchAiSettingsRequestSchema = z.object({
+  ai: AiConfigSchema.partial().optional(),
+  asr: AsrConfigSchema.partial().optional(),
+  llmApiKey: z.string().nullable().optional(),
+  asrApiKey: z.string().nullable().optional(),
+})
+export type PatchAiSettingsRequest = z.infer<typeof PatchAiSettingsRequestSchema>
+
+export const AiTestResponseSchema = z.object({ llm: ProbeResultSchema, asr: ProbeResultSchema })
+export type AiTestResponse = z.infer<typeof AiTestResponseSchema>
 
 export const ErrorResponseSchema = z.object({
   error: z.object({

@@ -97,6 +97,8 @@ export const AiConfigSchema = z.object({
 export const AsrConfigSchema = z.object({
   /** 容器里拿不到 Metal，必须是 openai-compat；启动校验会断言这条。 */
   provider: z.enum(['mlx-whisper', 'openai-compat']).default('mlx-whisper'),
+  /** 只有 openai-compat 用得上；mlx-whisper 是本地进程，没有 baseURL。apiKey 同 LLM，加密存 secrets 表。 */
+  baseURL: z.string().default(''),
   model: z.string().default('mlx-community/whisper-large-v3-turbo'),
   language: z.string().default('zh'),
   /** ASR 是分钟级重活，并发 1 —— 免得把 16GB 内存吃满。 */
@@ -152,6 +154,8 @@ export const AppConfigSchema = z.object({
 
 export type AppConfig = z.infer<typeof AppConfigSchema>
 export type ConfigSection = keyof AppConfig
+export type AiConfig = z.infer<typeof AiConfigSchema>
+export type AsrConfig = z.infer<typeof AsrConfigSchema>
 
 /** section 名 → 该 section 的 schema。配置的按段读写都过这张表。 */
 export const CONFIG_SECTIONS = {

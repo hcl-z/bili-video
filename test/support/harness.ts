@@ -5,6 +5,7 @@ import { join } from 'node:path'
 import { buildServer, type Server } from '../../src/server/build-server.ts'
 import { openCore, type Core } from '../../src/server/wiring.ts'
 import { InMemoryEventBus } from '../../src/server/infra/event-bus/in-memory.ts'
+import type { CommandRunner } from '../../src/server/ports/command.ts'
 import type { Ports } from '../../src/server/ports/index.ts'
 import { FakeFetch } from '../fakes/bili-fetch.ts'
 import { FakeClock } from '../fakes/clock.ts'
@@ -52,6 +53,8 @@ export interface HarnessOptions {
   cookies?: string[]
   /** restart 内部用：把临时目录的所有权交给新实例，免得跑完一屋子 tmp 目录没人收。 */
   ownsDataDir?: boolean
+  /** 本地可执行文件的假件。不给就是真的去 PATH 上找，测试里别这么干。 */
+  commands?: CommandRunner
 }
 
 export async function createHarness(opts: HarnessOptions = {}): Promise<Harness> {
@@ -70,6 +73,7 @@ export async function createHarness(opts: HarnessOptions = {}): Promise<Harness>
     events,
     seedFile: opts.seedFile === undefined ? 'config.example.yaml' : opts.seedFile,
     fetch: fetch.fetch,
+    ...(opts.commands === undefined ? {} : { commands: opts.commands }),
   })
 
   if (opts.cookies !== undefined && core.cookies.isEmpty()) {
@@ -95,8 +99,9 @@ export async function createHarness(opts: HarnessOptions = {}): Promise<Harness>
       biliProfile: core.biliProfile,
       subtitles: null,
       asr: null,
-      llm: null,
+      llm: core.llm,
       audio: null,
+      probeAsr: core.probeAsr,
     },
   }
 

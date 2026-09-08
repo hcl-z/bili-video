@@ -3,6 +3,7 @@ import process from 'node:process'
 import { serve, type ServerType } from '@hono/node-server'
 import type { Hono } from 'hono'
 
+import { AiService } from './app/ai.ts'
 import { AuthLifecycle } from './app/auth-lifecycle.ts'
 import { Poller } from './app/poller.ts'
 import { RuleService } from './app/rules.ts'
@@ -40,6 +41,7 @@ export interface Services {
   subs: SubscriptionService
   rules: RuleService
   poll: Poller
+  ai: AiService
 }
 
 export interface BuildOptions {
@@ -87,6 +89,14 @@ export function buildServer(ports: Ports, opts: BuildOptions = {}): Server {
       // 没装 auth 适配器时当「不能干活」，别对着空 cookie 打一串请求。
       loggedIn: () => auth?.isUsable() ?? false,
     }),
+    ai: new AiService({
+      config: ports.config,
+      secrets: ports.secrets,
+      events: ports.events,
+      logger: ports.logger,
+      llm: ports.external.llm,
+      probeAsr: ports.external.probeAsr,
+    }),
   }
   const app = createHttpApp(ports, {
     startedAt,
@@ -95,6 +105,7 @@ export function buildServer(ports: Ports, opts: BuildOptions = {}): Server {
     subs: services.subs,
     poll: services.poll,
     rules: services.rules,
+    ai: services.ai,
   })
 
   let listening: ServerType | null = null

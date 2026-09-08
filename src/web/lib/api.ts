@@ -1,8 +1,11 @@
 import type { AppConfig, ConfigSection } from '#shared/contract/config.ts'
 import type {
+  AiSettingsResponse,
+  AiTestResponse,
   ConfigResponse,
   ErrorResponse,
   HealthResponse,
+  PatchAiSettingsRequest,
   PatchSubscriptionRequest,
   PollResult,
   RulesResponse,
@@ -112,4 +115,12 @@ export const api = {
 
   testRules: (input: { sample: string; uid: string | null }) =>
     request<TestRulesResponse>('/rules/test', { method: 'POST', body: JSON.stringify(input) }),
+
+  aiSettings: () => request<AiSettingsResponse>('/ai'),
+
+  // apiKey 留空表示不修改。表单只写不读，所以「没动过」和「空」是同一件事。
+  patchAiSettings: (patch: PatchAiSettingsRequest) =>
+    request<AiSettingsResponse>('/ai', { method: 'PATCH', body: JSON.stringify(patch) }),
+
+  testAi: () => request<AiTestResponse>('/ai/test', { method: 'POST' }),
 }

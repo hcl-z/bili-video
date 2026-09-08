@@ -1,6 +1,7 @@
 import { join } from 'node:path'
 import type { DatabaseSync } from 'node:sqlite'
 
+import { ASR_API_KEY, LLM_API_KEY } from './app/ai.ts'
 import { seedConfigIfEmpty } from './config/load.ts'
 import { SqliteConfigStore } from './config/store.ts'
 import {
@@ -9,12 +10,15 @@ import {
   serializeIdentity,
   type BrowserIdentity,
 } from './infra/bili/browser-identity.ts'
+import { makeAsrProbe } from './infra/ai/asr-probe.ts'
+import { OpenAiCompatLlm } from './infra/ai/openai-compat.ts'
 import { SqliteCookieJar, type Cipher } from './infra/bili/cookie-jar.ts'
 import { BiliHttp } from './infra/bili/http-client.ts'
 import { BiliAuthClient } from './infra/bili/login.ts'
 import { BiliProfileClient } from './infra/bili/profile.ts'
 import { BiliReaderClient } from './infra/bili/reader.ts'
 import { BiliRelationsClient } from './infra/bili/relations.ts'
+import { ExecCommandRunner } from './infra/command/exec.ts'
 import { migrate } from './infra/db/migrations.ts'
 import { SqliteStateRepo } from './infra/db/repo-state.ts'
 import { SqliteDeliveryRepo, SqliteLlmCallRepo } from './infra/db/repo-delivery.ts'
@@ -26,8 +30,11 @@ import { openDatabase } from './infra/db/sqlite.ts'
 import { loadMasterKey } from './infra/secret/key-manager.ts'
 import { open, parseBox, seal } from './infra/secret/secret-box.ts'
 import { SqliteSecretStore } from './infra/secret/store.ts'
+import type { ProbeResult } from '#shared/contract/probe.ts'
 import type { BiliAuth, BiliProfile, BiliReader, BiliRelationWriter } from './ports/bili.ts'
 import type { Clock } from './ports/clock.ts'
+import type { CommandRunner } from './ports/command.ts'
+import type { Llm } from './ports/llm.ts'
 import type { ConfigStore } from './ports/config-store.ts'
 import type { CookieJar } from './ports/cookie-jar.ts'
 import type { EventBus } from './ports/event-bus.ts'
@@ -57,6 +64,8 @@ export interface CoreOptions {
    * 于是 cookie 加解密、身份、签名、错误分类全都是真的在跑。
    */
   fetch?: typeof fetch
+  /** 本地可执行文件探测。fetch 之外的第二个进程边界，测试同样要能换掉。 */
+  commands?: CommandRunner
 }
 
 export interface Core {
@@ -76,6 +85,10 @@ export interface Core {
   biliRelations: BiliRelationWriter
   /** UP 主名片查询。 */
   biliProfile: BiliProfile
+  /** OpenAI 兼容的 LLM。总开关的闸门在 AiService 上，不在这里。 */
+  llm: Llm
+  /** ASR 连通性测试。按 provider 走 HTTP 或本地命令两条路。 */
+  probeAsr: () => Promise<ProbeResult>
   close(): void
 }
 
@@ -171,6 +184,23 @@ export function openCore(opts: CoreOptions): Core {
   const biliProfile = new BiliProfileClient(http)
   const biliReader = new BiliReaderClient(http, logger)
 
+  const netFetch = opts.fetch ?? globalThis.fetch
+  const llm = new OpenAiCompatLlm({
+    fetch: netFetch,
+    clock,
+    logger,
+    // 用时读：页面上改完 baseURL / model / apiKey，下一次调用就按新的来。
+    config: () => config.getSection('ai'),
+    apiKey: () => secrets.get(LLM_API_KEY),
+  })
+  const probeAsr = makeAsrProbe({
+    fetch: netFetch,
+    clock,
+    config: () => config.getSection('asr'),
+    apiKey: () => secrets.get(ASR_API_KEY),
+    commands: opts.commands ?? new ExecCommandRunner(),
+  })
+
   return {
     db,
     repos,
@@ -183,6 +213,8 @@ export function openCore(opts: CoreOptions): Core {
     biliReader,
     biliRelations,
     biliProfile,
+    llm,
+    probeAsr,
     close() {
       db.close()
     },
