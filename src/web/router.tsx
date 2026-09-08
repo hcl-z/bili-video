@@ -21,13 +21,12 @@ import { OverviewPage } from '@/pages/overview'
 import { RulesPage } from '@/pages/rules'
 import { SubsPage } from '@/pages/subs'
 import { SummariesPage } from '@/pages/summaries'
-import { SummaryDetailPage } from '@/pages/summary-detail'
 import { SystemPage } from '@/pages/system'
 import { TargetsPage } from '@/pages/targets'
 import { UpdatesPage } from '@/pages/updates'
 
 /**
- * 10 页（spec Q34）。SummaryDetail 是 Summaries 的子路由，不单独占一格导航。
+ * 10 页（spec Q34）。总结详情不是独立一页，而是 /summaries/:bvid 的右栏。
  *
  * 导航分三组：看什么发生了 / 管订阅与过滤 / 配置。分组是为了让「可观测性」那几页
  * 排在最前 —— 这个工作台的核心不是改配置。
@@ -61,7 +60,8 @@ export const router = createBrowserRouter([
       { path: 'overview', element: <OverviewPage /> },
       { path: 'updates', element: <UpdatesPage /> },
       { path: 'summaries', element: <SummariesPage /> },
-      { path: 'summaries/:bvid', element: <SummaryDetailPage /> },
+      // 同一个页面：选中项在 URL 里，左边索引不会因为选一条而重挂。
+      { path: 'summaries/:bvid', element: <SummariesPage /> },
       { path: 'jobs', element: <JobsPage /> },
       { path: 'subs', element: <SubsPage /> },
       { path: 'rules', element: <RulesPage /> },

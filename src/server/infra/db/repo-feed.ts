@@ -105,6 +105,14 @@ export class SqliteUpdateRepo implements UpdateRepo {
     return r ? toUpdate(r as Row) : null
   }
 
+  /** 同一个 bvid 理论上只有一条动态；真撞上就取最新那条。 */
+  getByBvid(bvid: string): Update | null {
+    const r = this.db
+      .prepare('SELECT * FROM updates WHERE bvid = ? ORDER BY pub_ts DESC LIMIT 1')
+      .get(bvid)
+    return r ? toUpdate(r as Row) : null
+  }
+
   list(q: { uid?: string; includeFiltered?: boolean; limit: number; before?: number }): Update[] {
     const where: string[] = []
     const args: (string | number)[] = []

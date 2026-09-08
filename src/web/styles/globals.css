@@ -26,6 +26,8 @@
 
   /* 单一强调色：B 站粉。 */
   --accent-brand: #fb7299;
+  /* 同一个粉压深一档，专门给小号文字和细边线用：#fb7299 压在白底上只有 2.6:1，过不了 AA。 */
+  --brand-ink: #d6396b;
 
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -66,8 +68,9 @@
 }
 
 .dark {
-  /* 暗色下把粉提亮一档，否则压在深底上会发闷。 */
+  /* 暗色下把粉提亮一档，否则压在深底上会发闷。提亮后本身就够 AA，不用再压深。 */
   --accent-brand: #ff89a9;
+  --brand-ink: var(--accent-brand);
 
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
@@ -123,6 +126,7 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-brand: var(--accent-brand);
+  --color-brand-ink: var(--brand-ink);
 
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);

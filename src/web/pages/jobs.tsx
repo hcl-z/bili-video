@@ -1,27 +1,19 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { CheckCircle2, Loader2, RotateCcw } from 'lucide-react'
-import { toast } from 'sonner'
 
 import type { JobsResponse } from '#shared/contract/api.ts'
-import type { JobStage, SummaryJob } from '#shared/contract/job.ts'
+import type { SummaryJob } from '#shared/contract/job.ts'
+import { JOB_STAGE_LABEL } from '#shared/contract/job.ts'
+import { videoUrl } from '#shared/format.ts'
 import { Page } from '@/components/page'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { api } from '@/lib/api'
-import { formatTime, videoUrl } from '@/lib/format'
+import { formatTime } from '@/lib/format'
 import { keys } from '@/lib/query'
-
-const STAGE_LABEL: Record<JobStage, string> = {
-  queued: '排队中',
-  subtitle: '取字幕',
-  download: '下音频',
-  asr: '转写',
-  chunk: '分段',
-  reduce: '总结',
-  persist: '落库',
-}
+import { useRetryJob } from '@/lib/use-retry-job'
 
 const GROUPS: ReadonlyArray<[SummaryJob['status'], string]> = [
   ['running', '进行中'],
@@ -79,15 +71,7 @@ function Group(props: { title: string; jobs: SummaryJob[]; videos: JobsResponse[
 
 function JobRow(props: { job: SummaryJob; video: { title: string; url: string } | undefined }) {
   const { job } = props
-  const qc = useQueryClient()
-  const retry = useMutation({
-    mutationFn: () => api.retryJob(job.id),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: keys.jobs })
-      toast.success('已重新排上队')
-    },
-    onError: (err: Error) => toast.error('重跑没成', { description: err.message }),
-  })
+  const retry = useRetryJob(job.id)
 
   return (
     <Card>
@@ -136,11 +120,11 @@ function StageBadge(props: { job: SummaryJob }) {
     return (
       <Badge variant="secondary" className="gap-1">
         <Loader2 className="size-3 animate-spin" />
-        {STAGE_LABEL[job.stage]}
+        {JOB_STAGE_LABEL[job.stage]}
       </Badge>
     )
   }
-  if (job.status === 'failed') return <Badge variant="destructive">卡在{STAGE_LABEL[job.stage]}</Badge>
+  if (job.status === 'failed') return <Badge variant="destructive">卡在{JOB_STAGE_LABEL[job.stage]}</Badge>
   if (job.status === 'done') {
     return (
       <Badge variant="outline" className="gap-1">
@@ -149,5 +133,5 @@ function StageBadge(props: { job: SummaryJob }) {
       </Badge>
     )
   }
-  return <Badge variant="outline">{STAGE_LABEL[job.stage]}</Badge>
+  return <Badge variant="outline">{JOB_STAGE_LABEL[job.stage]}</Badge>
 }

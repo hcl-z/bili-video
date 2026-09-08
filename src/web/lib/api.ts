@@ -12,6 +12,8 @@ import type {
   RulesResponse,
   SubscriptionResult,
   SubscriptionsResponse,
+  SummariesResponse,
+  SummaryDetailResponse,
   SystemResponse,
   TestRulesResponse,
   UpdatesResponse,
@@ -117,6 +119,11 @@ export const api = {
 
   testRules: (input: { sample: string; uid: string | null }) =>
     request<TestRulesResponse>('/rules/test', { method: 'POST', body: JSON.stringify(input) }),
+
+  // 索引一次拉齐（含被拦下的），阅读栏点一条拉一条。
+  summaries: () => request<SummariesResponse>('/summaries'),
+
+  summary: (bvid: string) => request<SummaryDetailResponse>(`/summaries/${bvid}`),
 
   jobs: () => request<JobsResponse>('/jobs'),
 

@@ -16,6 +16,14 @@ export type TranscriptSource = z.infer<typeof TranscriptSourceSchema>
 export const DegradePathSchema = z.enum(['subtitle', 'asr', 'meta-only', 'link-only'])
 export type DegradePath = z.infer<typeof DegradePathSchema>
 
+/** 降级路径的中文名。前后端同一份。 */
+export const DEGRADE_LABEL: Record<DegradePath, string> = {
+  subtitle: '官方字幕',
+  asr: '语音转写',
+  'meta-only': '仅凭简介',
+  'link-only': '仅给链接',
+}
+
 export const ChapterSchema = z.object({
   /** 秒。推送里渲染成 bilibili.com/video/BVxxx?t=<startSec>。 */
   startSec: z.number().int().min(0),

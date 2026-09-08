@@ -1,7 +1,8 @@
 import { z } from 'zod'
 import { AiConfigSchema, AppConfigSchema, AsrConfigSchema } from './config.ts'
-import { SummaryJobSchema } from './job.ts'
+import { DeliveryKindSchema, DeliveryStatusSchema, SummaryJobSchema } from './job.ts'
 import { ProbeResultSchema } from './probe.ts'
+import { DegradePathSchema, SummarySchema } from './summary.ts'
 import {
   FilterRuleSchema,
   RuleKindSchema,
@@ -129,10 +130,16 @@ export const UpdatesQuerySchema = z.object({
 })
 export type UpdatesQuery = z.infer<typeof UpdatesQuerySchema>
 
+/** uid → 昵称头像，页面要显示是谁发的。 */
+export const UpsMapSchema = z.record(
+  z.string(),
+  z.object({ name: z.string(), face: z.string().nullable() }),
+)
+export type UpsMap = z.infer<typeof UpsMapSchema>
+
 export const UpdatesResponseSchema = z.object({
   updates: z.array(UpdateSchema),
-  /** uid → 昵称头像，页面要显示是谁发的。 */
-  ups: z.record(z.string(), z.object({ name: z.string(), face: z.string().nullable() })),
+  ups: UpsMapSchema,
 })
 export type UpdatesResponse = z.infer<typeof UpdatesResponseSchema>
 
@@ -154,6 +161,85 @@ export const JobsResponseSchema = z.object({
   videos: z.record(z.string(), z.object({ title: z.string(), url: z.string() })),
 })
 export type JobsResponse = z.infer<typeof JobsResponseSchema>
+
+/** 索引里一行的状态。互斥且穷举 —— 每行都得有个明确标记，不能是空白。 */
+export const SummaryStateSchema = z.enum([
+  'done',
+  'running',
+  'pending',
+  'failed',
+  /** 被规则拦下，没调过 AI。 */
+  'filtered',
+  /** 没入队：这个 UP 的 AI 开关关着，或者 AI 总开关关着。 */
+  'none',
+])
+export type SummaryState = z.infer<typeof SummaryStateSchema>
+
+export const SUMMARY_STATE_LABEL: Record<SummaryState, string> = {
+  done: '已总结',
+  running: '处理中',
+  pending: '排队中',
+  failed: '失败',
+  filtered: '已拦下',
+  none: '未总结',
+}
+
+export const SummaryFeedItemSchema = z.object({
+  bvid: z.string(),
+  dynId: z.string(),
+  uid: z.string(),
+  title: z.string(),
+  cover: z.string().nullable(),
+  pubTs: z.number().int(),
+  state: SummaryStateSchema,
+  /** 有总结才有。索引里标「走了哪级降级」。 */
+  degradePath: DegradePathSchema.nullable(),
+  filterReason: z.string().nullable(),
+})
+export type SummaryFeedItem = z.infer<typeof SummaryFeedItemSchema>
+
+export const SummariesResponseSchema = z.object({
+  items: z.array(SummaryFeedItemSchema),
+  ups: UpsMapSchema,
+  /** 索引头上「N 条，其中 M 条被拦下」那句话。窗口内的计数，不是全库总数。 */
+  filteredCount: z.number().int().min(0),
+})
+export type SummariesResponse = z.infer<typeof SummariesResponseSchema>
+
+/** 一个视频花了多少。分段总结会调多次，所以是求和而不是单次。 */
+export const VideoUsageSchema = z.object({
+  calls: z.number().int().min(0),
+  inTokens: z.number().int().min(0),
+  outTokens: z.number().int().min(0),
+  ms: z.number().int().min(0),
+})
+export type VideoUsage = z.infer<typeof VideoUsageSchema>
+
+/**
+ * 阅读栏一次要齐的东西：文章本体 + byline + 底部四格。
+ *
+ * 分开四个请求会让「点一条索引」变成四次网络往返，而这四块在页面上是一个整体。
+ */
+export const SummaryDetailResponseSchema = z.object({
+  bvid: z.string(),
+  /** 和索引里那一行同一个判定，阅读栏不再自己推一遍。 */
+  state: SummaryStateSchema,
+  update: UpdateSchema.nullable(),
+  up: z.object({ name: z.string(), face: z.string().nullable() }).nullable(),
+  summary: SummarySchema.nullable(),
+  job: SummaryJobSchema.nullable(),
+  usage: VideoUsageSchema,
+  deliveries: z.array(
+    z.object({
+      channel: z.string(),
+      kind: DeliveryKindSchema,
+      status: DeliveryStatusSchema,
+      at: z.number().int(),
+      error: z.string().nullable(),
+    }),
+  ),
+})
+export type SummaryDetailResponse = z.infer<typeof SummaryDetailResponseSchema>
 
 export const RulesResponseSchema = z.object({
   rules: z.array(FilterRuleSchema),

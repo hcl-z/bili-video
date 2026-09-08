@@ -15,6 +15,17 @@ export const JobStageSchema = z.enum([
 ])
 export type JobStage = z.infer<typeof JobStageSchema>
 
+/** 阶段的中文名。队列页和阅读栏说的必须是同一套话。 */
+export const JOB_STAGE_LABEL: Record<JobStage, string> = {
+  queued: '排队中',
+  subtitle: '取字幕',
+  download: '下载音频',
+  asr: '语音转写',
+  chunk: '分段总结',
+  reduce: '合并成文',
+  persist: '落库',
+}
+
 export const SummaryJobSchema = z.object({
   id: z.number().int(),
   bvid: z.string(),

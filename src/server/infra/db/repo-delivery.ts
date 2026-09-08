@@ -1,5 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite'
 
+import type { VideoUsage } from '#shared/contract/api.ts'
 import type { DeliveryKind, DeliveryStatus } from '#shared/contract/job.ts'
 import type { DeliveryRecord, DeliveryRepo, LlmCallRepo } from '../../ports/repo.ts'
 import type { NotifyChannel } from '../../ports/notifier.ts'
@@ -113,6 +114,25 @@ export class SqliteLlmCallRepo implements LlmCallRepo {
       calls: num(r['calls']),
       inTokens: num(r['in_tokens']),
       outTokens: num(r['out_tokens']),
+    }
+  }
+
+  usageForVideo(bvid: string): VideoUsage {
+    const r = this.db
+      .prepare(
+        `SELECT COUNT(*) AS calls,
+                COALESCE(SUM(in_tokens), 0) AS in_tokens,
+                COALESCE(SUM(out_tokens), 0) AS out_tokens,
+                COALESCE(SUM(ms), 0) AS ms
+           FROM llm_calls WHERE bvid = ?`,
+      )
+      .get(bvid) as Row | undefined
+    if (!r) return { calls: 0, inTokens: 0, outTokens: 0, ms: 0 }
+    return {
+      calls: num(r['calls']),
+      inTokens: num(r['in_tokens']),
+      outTokens: num(r['out_tokens']),
+      ms: num(r['ms']),
     }
   }
 }

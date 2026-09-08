@@ -1,7 +1,11 @@
+import type { SummaryState } from '#shared/contract/api.ts'
 import type { Result } from '#shared/contract/failure.ts'
 import { fail, ok } from '#shared/contract/failure.ts'
+import type { SummaryJob } from '#shared/contract/job.ts'
 import type { Chapter, Cue, Summary, SummaryDraft } from '#shared/contract/summary.ts'
 import { SummaryDraftSchema } from '#shared/contract/summary.ts'
+import type { Update } from '#shared/contract/update.ts'
+import { chapterLink, hms, videoUrl } from '#shared/format.ts'
 
 import { fatalFailure } from './bili-error.ts'
 
@@ -14,13 +18,16 @@ export interface VideoMeta {
   upName: string | null
 }
 
-/** 秒 → `mm:ss`（超过一小时给 `h:mm:ss`）。 */
-export function hms(sec: number): string {
-  const s = Math.max(0, Math.trunc(sec))
-  const mm = String(Math.trunc(s / 60) % 60).padStart(2, '0')
-  const ss = String(s % 60).padStart(2, '0')
-  const h = Math.trunc(s / 3600)
-  return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`
+/**
+ * 一条视频在工作台上的状态。被拦下的优先 —— 它连队列都没进过。
+ *
+ * 任务比总结优先：重跑时库里既有旧总结又有 pending 任务，这时候该说「排队中」。
+ */
+export function feedState(u: Update | null, job: SummaryJob | null, hasSummary: boolean): SummaryState {
+  if (u?.filtered === true) return 'filtered'
+  if (job !== null && job.status !== 'done') return job.status
+  if (hasSummary) return 'done'
+  return 'none'
 }
 
 /** 字幕 → 带时间戳的纯文本。这份文本既进提示词，也原样存进 summaries.transcript。 */
@@ -82,20 +89,12 @@ function extractJson(reply: string): string | null {
   return reply.slice(start, end + 1)
 }
 
-/** 视频页地址。拼域名的地方只留这一处。 */
-export const videoUrl = (bvid: string): string => `https://www.bilibili.com/video/${bvid}`
-
 /** 动态那条记录可能已经不在了（清过库、换过 bvid），退回 bvid 本身而不是让调用方各写一遍。 */
 export function videoRef(
   bvid: string,
   update: { title: string | null; url: string } | null,
 ): { title: string; url: string } {
   return { title: update?.title ?? bvid, url: update?.url ?? videoUrl(bvid) }
-}
-
-/** 章节跳转链接。推送和 Markdown 都点这个直接跳到 B 站的对应时刻。 */
-export function chapterLink(bvid: string, startSec: number): string {
-  return `${videoUrl(bvid)}?t=${Math.max(0, Math.trunc(startSec))}`
 }
 
 const SOURCE_LABEL: Record<Summary['transcriptSource'], string> = {

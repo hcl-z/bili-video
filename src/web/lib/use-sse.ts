@@ -7,12 +7,12 @@ import { keys } from './query'
 /** 哪个事件让哪些查询失效。加事件就在这儿加一行。 */
 const AFFECTS: Record<AppEventType, readonly (readonly string[])[]> = {
   hello: [],
-  'update.new': [keys.updates],
-  'poll.finished': [keys.updates, keys.system],
+  'update.new': [keys.updates, keys.summaries],
+  'poll.finished': [keys.updates, keys.summaries, keys.system],
   'auth.changed': [keys.system],
   'config.changed': [keys.config, keys.ai],
-  'job.changed': [keys.jobs],
-  'summary.done': [keys.jobs],
+  'job.changed': [keys.jobs, keys.summaries],
+  'summary.done': [keys.jobs, keys.summaries],
 }
 
 /** 订阅 /api/events，按事件类型失效对应查询。EventSource 自己会重连，掉线不用管。 */

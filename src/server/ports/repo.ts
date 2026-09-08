@@ -1,3 +1,4 @@
+import type { VideoUsage } from '#shared/contract/api.ts'
 import type { FilterRule, RuleKind, Subscription } from '#shared/contract/subscription.ts'
 import type { Update, UpdateWithRaw } from '#shared/contract/update.ts'
 import type { DeliveryKind, DeliveryStatus, JobStage, SummaryJob } from '#shared/contract/job.ts'
@@ -43,6 +44,8 @@ export interface UpdateRepo {
   /** 已存在的 dynId 直接跳过，重复轮询不会重复入库。 */
   insertMany(updates: UpdateWithRaw[]): { inserted: string[]; skipped: string[] }
   get(dynId: string): Update | null
+  /** 总结是按 bvid 存的，阅读栏要反查这条视频的动态（封面、UP、被拦原因）。 */
+  getByBvid(bvid: string): Update | null
   list(q: { uid?: string; includeFiltered?: boolean; limit: number; before?: number }): Update[]
   /** 按**发布时间**数，不是入库时间 —— 24h 补推窗口与溢出阈值判的是「这段时间里发了多少」。 */
   countSince(ts: number): number
@@ -135,4 +138,5 @@ export interface LlmCallRepo {
     at: number
   }): void
   usageSince(ts: number): { calls: number; inTokens: number; outTokens: number }
+  usageForVideo(bvid: string): VideoUsage
 }

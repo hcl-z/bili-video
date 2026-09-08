@@ -77,10 +77,8 @@ export function AppShell() {
         </ScrollArea>
       </nav>
 
-      <main
-        className="px-6 py-6 md:pl-[calc(var(--index-w)+1.5rem)]"
-        style={{ paddingTop: 'calc(var(--appbar-h) + 1.5rem)' }}
-      >
+      {/* 内边距在 Page 里给，不在这儿 —— 总结页要通栏铺满，自己控制留白。 */}
+      <main className="md:pl-[var(--index-w)]" style={{ paddingTop: 'var(--appbar-h)' }}>
         <Outlet />
       </main>
     </div>

@@ -30,4 +30,5 @@ export const keys = {
   rules: ['rules'] as const,
   ai: ['ai'] as const,
   jobs: ['jobs'] as const,
+  summaries: ['summaries'] as const,
 }

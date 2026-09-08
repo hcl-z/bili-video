@@ -2,10 +2,10 @@ import type { ReactNode } from 'react'
 
 import { Card, CardContent } from '@/components/ui/card'
 
-/** 正文列。限宽是刻意的：这个工作台一半时间在读总结，通栏一行字看着累。 */
+/** 配置与列表页的正文列。限宽是刻意的，通栏一行字看着累；总结页通栏铺满，不走这里。 */
 export function Page(props: { title: string; hint?: string; children?: ReactNode }) {
   return (
-    <div className="mx-auto w-full max-w-[72ch]">
+    <div className="mx-auto w-full max-w-[72ch] px-6 py-6">
       <header className="mb-5">
         <h1 className="text-xl font-semibold tracking-tight">{props.title}</h1>
         {props.hint !== undefined && (
