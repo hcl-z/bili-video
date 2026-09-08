@@ -64,18 +64,29 @@ const MajorSchema = z
       .nullish(),
   })
 
+const DynModuleSchema = z.object({
+  desc: z.object({ text: z.string().default('') }).nullish(),
+  major: MajorSchema.nullish(),
+})
+
 const ItemSchema = z.object({
   id_str: z.string(),
   type: z.string(),
   modules: z.object({
     module_author: AuthorSchema,
-    module_dynamic: z
-      .object({
-        desc: z.object({ text: z.string().default('') }).nullable().default(null),
-        major: MajorSchema.nullable().default(null),
-      })
-      .default({}),
+    module_dynamic: DynModuleSchema.default({}),
   }),
+  /** 转发源。原动态被删时 modules 整段缺失，所以每层都得可选。 */
+  orig: z
+    .object({
+      modules: z
+        .object({
+          module_author: z.object({ name: z.string().default('') }).nullish(),
+          module_dynamic: DynModuleSchema.nullish(),
+        })
+        .nullish(),
+    })
+    .nullish(),
 })
 
 const FeedSchema = z.object({
@@ -86,6 +97,24 @@ const FeedSchema = z.object({
 })
 
 const UpdateNumSchema = z.object({ update_num: z.number().int().default(0) })
+
+const nz = (s: string | null | undefined): string | null => (s == null || s === '' ? null : s)
+
+/** 一层动态里的可读内容。同一套逻辑要对外层和转发源各跑一遍。 */
+function contentOf(dyn: z.infer<typeof DynModuleSchema> | null | undefined) {
+  const major = dyn?.major ?? {}
+  return {
+    text: nz(dyn?.desc?.text) ?? nz(major.opus?.summary?.text),
+    title: nz(major.archive?.title) ?? nz(major.article?.title) ?? nz(major.opus?.title),
+    desc: nz(major.archive?.desc) ?? nz(major.article?.desc),
+    cover:
+      nz(major.archive?.cover) ??
+      nz(major.article?.covers[0]) ??
+      nz(major.draw?.items[0]?.src) ??
+      nz(major.opus?.pics[0]?.url),
+    bvid: nz(major.archive?.bvid),
+  }
+}
 
 export class BiliReaderClient implements BiliReader {
   private readonly http: BiliHttp
@@ -167,34 +196,27 @@ export class BiliReaderClient implements BiliReader {
     if (type === undefined) return 'unsupported'
 
     const author = item.modules.module_author
-    const dyn = item.modules.module_dynamic
-    const major = dyn.major ?? {}
-    const text = dyn.desc?.text ?? major.opus?.summary?.text ?? null
+    const self = contentOf(item.modules.module_dynamic)
+    // 转发的正文只是转发语，内容在 orig 里。取过来，更新流才有封面标题，过滤规则才看得见被转的视频标题。
+    const from = type === 'FORWARD' ? contentOf(item.orig?.modules?.module_dynamic) : null
 
-    const title = major.archive?.title ?? major.article?.title ?? major.opus?.title ?? null
-    // 视频简介 / 专栏摘要。过滤规则的匹配范围里有它，所以要一路带下去。
-    const desc = major.archive?.desc ?? major.article?.desc ?? null
-    const cover =
-      major.archive?.cover ??
-      major.article?.covers[0] ??
-      major.draw?.items[0]?.src ??
-      major.opus?.pics[0]?.url ??
-      null
-    const bvid = major.archive?.bvid ?? null
+    // 有意不继承 orig 的 bvid：转发别人的视频不该触发我们的字幕总结链路。
+    const bvid = self.bvid
 
     return {
       dynId: item.id_str,
       uid: String(author.mid),
       uname: author.name,
-      face: author.face === '' ? null : author.face,
+      face: nz(author.face),
       type,
       pubTs: author.pub_ts,
-      title: title === '' ? null : title,
-      text: text === '' ? null : text,
-      desc: desc === '' ? null : desc,
-      cover: cover === '' ? null : cover,
-      bvid: bvid === '' ? null : bvid,
-      url: bvid != null && bvid !== '' ? `https://www.bilibili.com/video/${bvid}` : `https://t.bilibili.com/${item.id_str}`,
+      title: self.title ?? from?.title ?? null,
+      text: self.text,
+      // 视频简介 / 专栏摘要。过滤规则的匹配范围里有它，所以要一路带下去。
+      desc: self.desc ?? from?.desc ?? from?.text ?? null,
+      cover: self.cover ?? from?.cover ?? null,
+      bvid,
+      url: bvid != null ? `https://www.bilibili.com/video/${bvid}` : `https://t.bilibili.com/${item.id_str}`,
       raw,
     }
   }

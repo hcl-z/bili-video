@@ -42,6 +42,19 @@ function major(type: string, text: string): unknown {
   }
 }
 
+/** 转发源。原动态被删时整个 modules 都不在，所以这形状也得能过。 */
+function orig(kind: 'av' | 'tombstone'): unknown {
+  if (kind === 'tombstone') return { id_str: '800', type: 'DYNAMIC_TYPE_NONE' }
+  return {
+    id_str: '800',
+    type: 'DYNAMIC_TYPE_AV',
+    modules: {
+      module_author: { mid: 999, name: 'UP-999', pub_ts: '1700000000' },
+      module_dynamic: { desc: null, major: major('DYNAMIC_TYPE_AV', '') },
+    },
+  }
+}
+
 function dyn(id: string, uid: string, type: string, pubTs: number, text = `正文-${id}`): unknown {
   // 图文的正文不在 desc 里，真接口就是这样。
   const desc = type === 'DYNAMIC_TYPE_DRAW' || type === 'DYNAMIC_TYPE_ARTICLE' ? null : { text }
@@ -141,6 +154,29 @@ describe('轮询与解析', () => {
     assert.equal(fetch.countOf('feed/all?'), 2)
     assert.equal(h.core.repos.updates.list({ limit: 50, includeFiltered: true }).length, 5)
 
+    await h.close()
+  })
+
+  it('转发的标题封面取自 orig，原动态被删也不报错', async () => {
+    const forward = (id: string, kind: 'av' | 'tombstone'): unknown => ({
+      ...(dyn(id, '111', 'DYNAMIC_TYPE_FORWARD', 1_700_000_100) as object),
+      orig: orig(kind),
+    })
+    const fetch = bili(feed([forward('901', 'av'), forward('902', 'tombstone')]))
+    const h = await rig(fetch, ['111'])
+    assert.equal((await h.server.services.poll.pollOnce()).found, 2)
+
+    const stored = h.core.repos.updates.list({ limit: 10, includeFiltered: true })
+    const fwd = stored.find((u) => u.dynId === '901')
+    assert.equal(fwd?.title, '视频标题')
+    assert.equal(fwd?.cover, 'https://c/av.jpg')
+    // 转发语留在 text 里，不被原内容顶掉。
+    assert.equal(fwd?.text, '正文-901')
+    // 转发别人的视频不该进字幕总结链路。
+    assert.equal(fwd?.bvid, null)
+
+    const dead = stored.find((u) => u.dynId === '902')
+    assert.equal(dead?.title, null)
     await h.close()
   })
 
