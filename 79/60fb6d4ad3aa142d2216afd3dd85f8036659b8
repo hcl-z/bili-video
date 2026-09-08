@@ -1,0 +1,148 @@
+src/shared/contract/summary.ts
+  s_abc690da395c45::t_f349873511ba34 63-66
+src/server/infra/audio/yt-dlp.ts
+  s_abc690da395c45::t_6331348f596bb2 1-9,11-145
+  s_abc690da395c45::t_81d0ab1b614636 10
+src/server/infra/asr/mlx-whisper.ts
+  s_abc690da395c45::t_e841f4b886c1b9 10
+  s_abc690da395c45::t_1ace03ae87b334 1-9,11-55,57-68
+  s_abc690da395c45::t_5c3a40f59aa0b5 56
+src/server/infra/command/exec.ts
+  s_abc690da395c45::t_8baa227c2fc13f 42,49
+  s_abc690da395c45::t_f41e07649ddf1b 3,6-10,16,27-41,43-48,50-52
+src/server/build-server.ts
+  s_abc690da395c45::t_188b5e0be4a78f 85-86,89-90
+  s_abc690da395c45::t_a8ec15faa46a13 176-178,180
+  s_abc690da395c45::t_da0d7eeaa3548c 50-52
+  s_abc690da395c45::t_2395989e2cb33d 175,179
+src/web/components/summary-reader.tsx
+  s_abc690da395c45::t_fcb826c3d04f9e 217-238
+  s_abc690da395c45::t_a751e461d95a77 51-57
+  s_abc690da395c45::t_6aaef3b395fabe 136-137
+  s_abc690da395c45::t_3bbf9d0acf4731 239-240,242,244-245,248-302,312
+  s_abc690da395c45::t_c33f12bf092780 80
+test/ai.test.ts
+  s_abc690da395c45::t_46010b5600fdef 121-124
+test/domain/summary-format.test.ts
+  s_abc690da395c45::t_46010b5600fdef 60
+src/server/infra/command/tail.ts
+  s_abc690da395c45::t_311da9a544a137 1-8
+src/server/app/lane.ts
+  s_abc690da395c45::t_5f505f3ab7de4d 1-37
+src/server/domain/chunker.ts
+  s_abc690da395c45::t_dbc13c17edb7e6 78,81,84
+  s_abc690da395c45::t_44b3f4ddc1896c 20,22-23
+  s_abc690da395c45::t_9f20dd6d86dbf3 1-19,21,24-52,57-77,79-80,82-83,85-113,115
+  s_abc690da395c45::t_5f595aa76eaa1e 53-56
+  s_abc690da395c45::t_523b7ff47c476e 114
+src/server/app/summarize-video.ts
+  s_abc690da395c45::t_3f0b9ebb9b348b 154
+  s_abc690da395c45::t_6278fc0532e1b2 242
+  s_abc690da395c45::t_a362105fdbdfca 14
+  s_abc690da395c45::t_69ab1c5939723f 32,62,64-65,70,75,92,282
+  s_abc690da395c45::t_23b842204941ad 169-176
+  s_abc690da395c45::t_38b2c21cd5756d 28
+  s_abc690da395c45::t_092d693afb22c6 1-2,5,7-8,10-12,20,23-24,34,37-38,45-46,49-50,78-86,88-90,93-97,103,106-126,128-151,155-165,167-168,177-203,205-232,236-239,241,244-245,252,254-260,262-263,265-268,270-281,283-287,292,297,302,304-316
+  s_abc690da395c45::t_91c0736fc06d46 4
+  s_abc690da395c45::t_084169ac1223b0 127,166,204,303
+src/shared/contract/config.ts
+  s_abc690da395c45::t_8cbfbdfd3ca515 165
+test/domain/chunker.test.ts
+  s_abc690da395c45::t_ac52c355a087f9 1-78
+src/server/domain/token.ts
+  s_abc690da395c45::t_b08bf356fdd7e7 1-2,4-6
+  s_abc690da395c45::t_084169ac1223b0 3
+src/server/main.ts
+  s_abc690da395c45::t_f2c88dba5a08ce 65
+  s_abc690da395c45::t_e651c80a7ae4cb 73,75
+test/domain/degrade.test.ts
+  s_abc690da395c45::t_85ab95b403128e 1-40
+src/server/wiring.ts
+  s_abc690da395c45::t_8642c48d5d74f5 243
+  s_abc690da395c45::t_45e2aca9014672 259-260
+  s_abc690da395c45::t_943454e1d1e9bb 222-237
+  s_abc690da395c45::t_2f16d2522bd2e9 38-39
+  s_abc690da395c45::t_81491b8fcd57d7 103-106
+  s_abc690da395c45::t_5091d0cb977020 14-15
+src/server/infra/asr/openai-compat.ts
+  s_abc690da395c45::t_ea9c7cc5aa0b02 1-54
+test/support/harness.ts
+  s_abc690da395c45::t_50f64e1810eeca 111,113
+  s_abc690da395c45::t_3059b0620e0b59 60-65
+  s_abc690da395c45::t_165790a55025f4 8-9
+src/server/ports/command.ts
+  s_abc690da395c45::t_3f39580f306059 2,8-22
+scripts/demo.ts
+  s_abc690da395c45::t_447d7e152abf4b 123,125
+  s_abc690da395c45::t_c1db4b64cc0c5d 2
+  s_abc690da395c45::t_98731bf35bedc3 9-10,14
+  s_abc690da395c45::t_dde913a4e4d224 66-82
+test/jobs.test.ts
+  s_abc690da395c45::t_4b559f6a5a5ff4 53-54
+  s_abc690da395c45::t_5c560fc8c607dc 51,62-67,70
+  s_abc690da395c45::t_77931c2bbb3f9a 79-80
+  s_abc690da395c45::t_6d04a9e38fbf32 7
+  s_abc690da395c45::t_0fa261761d597f 52
+test/support/queue-rig.ts
+  s_abc690da395c45::t_b1a78cea8ac049 10,20,64-68,70-71
+  s_abc690da395c45::t_6d5afed4f35d21 11,28-30
+  s_abc690da395c45::t_4b6dd901c1868e 53
+  s_abc690da395c45::t_4b559f6a5a5ff4 75
+  s_abc690da395c45::t_21f91227191955 47-52,54-63,74
+  s_abc690da395c45::t_6ebe4a71237b87 1-9,12-19,21-27,31-46,69,72-73,76-109
+test/fakes/asr.ts
+  s_abc690da395c45::t_89cf6dac2d26cd 1
+  s_abc690da395c45::t_21715b0084db69 2-39
+README.md
+  s_abc690da395c45::t_099a0f76117363 34-37
+test/degrade-chain.test.ts
+  s_abc690da395c45::t_15362004c5d164 120-151
+  s_abc690da395c45::t_4b6dd901c1868e 7
+src/server/infra/asr/switch.ts
+  s_abc690da395c45::t_f857cdcc377bba 1-36
+src/server/ports/bili.ts
+  s_abc690da395c45::t_d70b10577fd3e4 101-102
+src/server/infra/bili/subtitle.ts
+  s_abc690da395c45::t_d70b10577fd3e4 26
+  s_abc690da395c45::t_0349965dd88634 65-72
+src/server/domain/summary-format.ts
+  s_abc690da395c45::t_128b12d96f07a4 228-230
+  s_abc690da395c45::t_a3ebee4c68affb 165-174
+  s_abc690da395c45::t_12ded5935c4dfa 215-227,232,234-246,249-250,252
+  s_abc690da395c45::t_2c7a4bd1d9dccd 124
+  s_abc690da395c45::t_fed9d8a4a127c9 94,97-98
+  s_abc690da395c45::t_23b842204941ad 133-137,146
+  s_abc690da395c45::t_1a3927f3769aa0 5-6
+  s_abc690da395c45::t_6e2d9f20809580 60
+  s_abc690da395c45::t_a76e0d031381f5 35-37,42,46-52,55-56,64,66,70-93,95-96,99-123,125-132,138-145,147-157,159-164,185
+  s_abc690da395c45::t_861afd87ea6fdf 19-20
+src/server/domain/degrade.ts
+  s_abc690da395c45::t_1998fc7f622119 4,6-7,9-33,39-41,46,48-49,52-54
+src/server/infra/asr/whisper-json.ts
+  s_abc690da395c45::t_af8bb22bf04745 1-16,18-21,28
+  s_abc690da395c45::t_0eeff86b26a4f5 17,22-27
+src/server/app/queue-runner.ts
+  s_abc690da395c45::t_9ea7766ee26a25 1
+  s_abc690da395c45::t_0767f907b00490 103-104,112,135-136
+  s_abc690da395c45::t_cc45283506da8b 134,138
+  s_abc690da395c45::t_671bda163f23af 10
+scripts/demo-data.ts
+  s_abc690da395c45::t_6958586466257f 15
+  s_abc690da395c45::t_ce5fc228a4c462 58-59,61-66,70-75
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.43-trip",
+  "base_commit_sha": "7960fb6d4ad3aa142d2216afd3dd85f8036659b8",
+  "prompts": {},
+  "sessions": {
+    "s_abc690da395c45": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "647309db-d279-406d-8284-62f4394affab",
+        "model": "claude-opus-5"
+      },
+      "human_author": "hcl-z <1401859664@qq.com>"
+    }
+  }
+}
