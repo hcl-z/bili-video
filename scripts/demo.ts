@@ -113,6 +113,7 @@ const ports: Ports = {
   state: core.state,
   cookies: core.cookies,
   markdown: core.markdown,
+  storage: core.storage,
   external: {
     notifiers: [],
     biliAuth: core.biliAuth,
@@ -143,7 +144,7 @@ console.log('  打开「更新流」点一次抓取，或等下面这轮自动�
 console.log('')
 
 const first = await server.services.poll.pollOnce()
-logger.info({ found: first.found }, 'demo 首轮抓取完成')
+logger.child({ mod: 'demo' }).info({ found: first.found }, 'demo 首轮抓取完成')
 
 let closing = false
 const shutdown = async (): Promise<void> => {

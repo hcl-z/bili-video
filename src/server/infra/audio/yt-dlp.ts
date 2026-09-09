@@ -48,7 +48,7 @@ export class YtDlpDownloader implements AudioDownloader {
     // 已下完的文件续传时的 416。
     const kept = await this.existing(bvid)
     if (kept !== null) {
-      this.deps.logger.info({ bvid, bytes: kept.bytes, path: kept.path }, '音频已在本地，跳过下载')
+      this.deps.logger.info({ bvid, bytes: kept.bytes, path: kept.path }, '音频已存在，跳过下载')
       return kept
     }
 
@@ -139,7 +139,7 @@ export class YtDlpDownloader implements AudioDownloader {
         // 并发删掉了或者读不到，都不值得让启动失败。
       }
     }
-    if (removed > 0) this.deps.logger.info({ removed }, '清理了过期的音频临时文件')
+    if (removed > 0) this.deps.logger.info({ removed }, '过期音频文件已清理')
     return removed
   }
 

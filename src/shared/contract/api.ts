@@ -55,6 +55,14 @@ export const AuthStateSchema = z.enum([
 ])
 export type AuthState = z.infer<typeof AuthStateSchema>
 
+export const AUTH_STATE_LABEL: Record<AuthState, string> = {
+  'logged-out': '未登录',
+  'waiting-scan': '等待扫码',
+  scanned: '已扫码，等确认',
+  'logged-in': '已登录',
+  'auth-lost': '登录已失效',
+}
+
 export const AuthSnapshotSchema = z.object({
   state: AuthStateSchema,
   uid: z.string().nullable(),
@@ -69,12 +77,22 @@ export const AuthSnapshotSchema = z.object({
   checkedAt: z.number().int().nullable(),
   /** 最近一次失败的原因，给人看的一句话。 */
   lastError: z.string().nullable(),
+  /** 当前那张待扫二维码的地址；null = 现在没有码在等人扫。 */
+  qrUrl: z.string().nullable(),
 })
 export type AuthSnapshot = z.infer<typeof AuthSnapshotSchema>
 
 /** auth-lost 是终态：cron 已经被摘掉，页面看到它就该催人重新登录。 */
 export const PollStatusSchema = z.enum(['idle', 'running', 'backoff', 'disabled', 'auth-lost'])
 export type PollStatus = z.infer<typeof PollStatusSchema>
+
+export const POLL_STATUS_LABEL: Record<PollStatus, string> = {
+  idle: '待下一轮',
+  running: '正在拉取',
+  backoff: '退避中',
+  disabled: '已关闭',
+  'auth-lost': '登录已失效',
+}
 
 export const PollSnapshotSchema = z.object({
   status: PollStatusSchema,
@@ -98,6 +116,119 @@ export const SystemResponseSchema = z.object({
   now: z.number().int(),
 })
 export type SystemResponse = z.infer<typeof SystemResponseSchema>
+
+/** 待扫的二维码。svg 由服务端渲染 —— 前端不为一张码再引一个编码库。 */
+export const QrResponseSchema = z.object({ url: z.string(), svg: z.string() })
+export type QrResponse = z.infer<typeof QrResponseSchema>
+
+export const LoginStartResponseSchema = z.object({
+  /** false = 已经有一张码在等人扫，这次没再出新的。 */
+  started: z.boolean(),
+  auth: AuthSnapshotSchema,
+})
+export type LoginStartResponse = z.infer<typeof LoginStartResponseSchema>
+
+/** 手动续期的结果。失败也是 200：这是「续期没成」，不是「这个请求错了」。 */
+export const RefreshResponseSchema = z.object({
+  ok: z.boolean(),
+  error: z.string().nullable(),
+  auth: AuthSnapshotSchema,
+})
+export type RefreshResponse = z.infer<typeof RefreshResponseSchema>
+
+/** 磁盘与条数。文件体积要 stat 磁盘，所以它不跟 /api/system 那份同步快照混在一起。 */
+export const StorageResponseSchema = z.object({
+  /** 数据库文件本体 + WAL/SHM。分开列没意义，它们一起决定「库占了多大」。 */
+  dbBytes: z.number().int().min(0),
+  audioBytes: z.number().int().min(0),
+  markdownBytes: z.number().int().min(0),
+  updates: z.number().int().min(0),
+  summaries: z.number().int().min(0),
+  /** 两个目录的真实位置，页面要显示「东西在哪儿」。 */
+  audioDir: z.string(),
+  markdownDir: z.string(),
+})
+export type StorageResponse = z.infer<typeof StorageResponseSchema>
+
+/** 三类故障。互斥且穷举 —— 每一类各自只推一条告警。 */
+export const FaultKindSchema = z.enum(['auth', 'poll', 'asr'])
+export type FaultKind = z.infer<typeof FaultKindSchema>
+
+export const FAULT_LABEL: Record<FaultKind, string> = {
+  auth: '登录已失效',
+  poll: '连续拉取失败',
+  asr: '连续转写失败',
+}
+
+export const FaultSchema = z.object({
+  kind: FaultKindSchema,
+  /** 给人看的一句话，直接进告警正文。 */
+  message: z.string(),
+  /** 这次故障是什么时候开始的。同一次故障期间不变，因此告警只发一条。 */
+  since: z.number().int(),
+})
+export type Fault = z.infer<typeof FaultSchema>
+
+export const HealthSnapshotSchema = z.object({
+  enabled: z.boolean(),
+  cron: z.string(),
+  /** 上一轮自查跑完的时刻；null = 本进程还没查过。 */
+  lastCheckAt: z.number().int().nullable(),
+  faults: z.array(FaultSchema),
+})
+export type HealthSnapshot = z.infer<typeof HealthSnapshotSchema>
+
+/** 一条队列的积压。只有一条总结队列，两级并发是它内部的泳道。 */
+export const QueueSnapshotSchema = z.object({
+  pending: z.number().int().min(0),
+  running: z.number().int().min(0),
+  failed: z.number().int().min(0),
+  done: z.number().int().min(0),
+  /** 在飞的任务分在哪条泳道：转写占 ASR 那条（并发 1），其余占 LLM 那条（并发 2）。 */
+  inflight: z.object({
+    asr: z.number().int().min(0),
+    llm: z.number().int().min(0),
+  }),
+})
+export type QueueSnapshot = z.infer<typeof QueueSnapshotSchema>
+
+export const TokenUsageSchema = z.object({
+  calls: z.number().int().min(0),
+  inTokens: z.number().int().min(0),
+  outTokens: z.number().int().min(0),
+})
+export type TokenUsage = z.infer<typeof TokenUsageSchema>
+
+/** 推送时间轴上的一条。title/url 从对应的更新反查，告警没有更新可查就是 null。 */
+export const DeliveryEntrySchema = z.object({
+  updateId: z.string(),
+  channel: z.string(),
+  kind: DeliveryKindSchema,
+  status: DeliveryStatusSchema,
+  at: z.number().int(),
+  error: z.string().nullable(),
+  title: z.string().nullable(),
+  url: z.string().nullable(),
+})
+export type DeliveryEntry = z.infer<typeof DeliveryEntrySchema>
+
+/**
+ * 概览页一次要齐的东西。拆成七八个端点会让「一屏看出系统是否正常」变成七八次往返，
+ * 而它们在页面上本来就是同一屏。
+ */
+export const OverviewResponseSchema = z.object({
+  auth: AuthSnapshotSchema,
+  poll: PollSnapshotSchema,
+  queue: QueueSnapshotSchema,
+  health: HealthSnapshotSchema,
+  usage: z.object({ today: TokenUsageSchema, month: TokenUsageSchema }),
+  deliveries: z.array(DeliveryEntrySchema),
+  version: z.string(),
+  startedAt: z.number().int(),
+  uptimeMs: z.number().int().min(0),
+  now: z.number().int(),
+})
+export type OverviewResponse = z.infer<typeof OverviewResponseSchema>
 
 export const SubscriptionsResponseSchema = z.object({
   subs: z.array(SubscriptionSchema),

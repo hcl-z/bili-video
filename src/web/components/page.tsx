@@ -1,11 +1,24 @@
 import type { ReactNode } from 'react'
 
 import { Card, CardContent } from '@/components/ui/card'
+import { cn } from '@/lib/utils'
 
-/** 配置与列表页的正文列。限宽是刻意的，通栏一行字看着累；总结页通栏铺满，不走这里。 */
-export function Page(props: { title: string; hint?: string; children?: ReactNode }) {
+/**
+ * 配置与列表页的正文列。限宽是刻意的，通栏一行字看着累；总结页通栏铺满，不走这里。
+ *
+ * `wide` 是给日志这类「一行是记录不是句子」的页面留的口子：日志行有时间、级别、模块、
+ * 字段四段，压进 72ch 会全部折行。
+ */
+export function Page(props: {
+  title: string
+  hint?: string
+  wide?: boolean
+  children?: ReactNode
+}) {
   return (
-    <div className="mx-auto w-full max-w-[72ch] px-6 py-6">
+    <div
+      className={cn('mx-auto w-full px-6 py-6', props.wide === true ? 'max-w-none' : 'max-w-[72ch]')}
+    >
       <header className="mb-5">
         <h1 className="text-xl font-semibold tracking-tight">{props.title}</h1>
         {props.hint !== undefined && (

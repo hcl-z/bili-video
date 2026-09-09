@@ -42,7 +42,7 @@ export class ChatAudioAsr implements Asr {
 
     const seg = cfg.segmentSec
     const { dir, files } = await splitAudio(this.deps.commands, audioPath, seg)
-    this.deps.logger.info({ parts: files.length, segmentSec: seg }, '音频已切段，开始逐段转写')
+    this.deps.logger.info({ parts: files.length, segmentSec: seg }, '音频已切段')
 
     try {
       const cues: Cue[] = []

@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import { pino, type Logger as PinoLogger } from 'pino'
 
 import type { LogLine } from '#shared/contract/events.ts'
+import { toLogLine } from './log-fields.ts'
 import type { Logger, LogLevel } from './ports/logger.ts'
 
 export interface LoggerOptions {
@@ -78,15 +79,19 @@ export function createLogger(opts: LoggerOptions): Logger {
 class PinoLoggerAdapter implements Logger {
   private readonly p: PinoLogger
   private readonly sink: ((line: LogLine) => void) | undefined
+  /** bindings 再存一份：pino 不把它们回吐出来，而 sink 要靠 `mod` 认出这行是谁打的。 */
+  private readonly bindings: object
 
-  constructor(p: PinoLogger, sink: ((line: LogLine) => void) | undefined) {
+  constructor(p: PinoLogger, sink: ((line: LogLine) => void) | undefined, bindings: object = {}) {
     this.p = p
     this.sink = sink
+    this.bindings = bindings
   }
 
   #write(level: LogLevel, obj: object, msg?: string): void {
     this.p[level](obj, msg)
-    this.sink?.({ at: Date.now(), level, msg: msg ?? '' })
+    if (this.sink === undefined) return
+    this.sink(toLogLine(Date.now(), level, { ...this.bindings, ...obj }, msg ?? ''))
   }
 
   trace(obj: object, msg?: string): void {
@@ -109,7 +114,10 @@ class PinoLoggerAdapter implements Logger {
   }
 
   child(bindings: object): Logger {
-    return new PinoLoggerAdapter(this.p.child(bindings), this.sink)
+    return new PinoLoggerAdapter(this.p.child(bindings), this.sink, {
+      ...this.bindings,
+      ...bindings,
+    })
   }
 
   async close(): Promise<void> {

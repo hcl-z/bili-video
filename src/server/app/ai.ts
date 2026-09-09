@@ -79,7 +79,7 @@ export class AiService {
       this.deps.llm?.ping() ?? notWired('LLM'),
       this.deps.probeAsr?.() ?? notWired('ASR'),
     ])
-    this.logger.info({ llm: llm.ok, asr: asr.ok }, '连通性测试跑完')
+    this.logger.info({ llm: llm.ok, asr: asr.ok, llmMs: llm.ms, asrMs: asr.ms }, '连通性测试完成')
     return { llm, asr }
   }
 

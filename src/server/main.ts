@@ -6,6 +6,7 @@ import { buildServer } from './build-server.ts'
 import { SystemClock } from './infra/clock/system-clock.ts'
 import { InMemoryEventBus } from './infra/event-bus/in-memory.ts'
 import { createLogger } from './log.ts'
+import { errFields } from './log-fields.ts'
 import type { Ports } from './ports/index.ts'
 import { openCore, type Core } from './wiring.ts'
 
@@ -46,7 +47,7 @@ try {
   })
 } catch (err) {
   // master key 缺失/损坏这类问题必须响亮地死，不能带着半个内核继续跑。
-  logger.fatal({ err: String(err) }, '启动失败')
+  logger.child({ mod: 'boot' }).fatal(errFields(err), '启动失败')
   await logger.close()
   process.exit(1)
 }
@@ -62,6 +63,7 @@ const ports: Ports = {
   state: core.state,
   cookies: core.cookies,
   markdown: core.markdown,
+  storage: core.storage,
   // 后面几票把剩下的 null 换成真适配器（通知渠道）。
   external: {
     notifiers: [],
@@ -90,7 +92,7 @@ let closing = false
 async function shutdown(signal: string): Promise<void> {
   if (closing) return
   closing = true
-  logger.info({ signal }, '正在退出')
+  logger.child({ mod: 'boot' }).info({ signal }, '进程关停中')
   clock.stopAll()
   await server.stop()
   core.close()

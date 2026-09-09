@@ -2,6 +2,7 @@ import type { Failure } from '#shared/contract/failure.ts'
 import type { PollResult, PollSnapshot } from '#shared/contract/api.ts'
 import type { UpdateWithRaw } from '#shared/contract/update.ts'
 import { nextAnchors, type AnchorItem } from '../domain/anchor.ts'
+import { errFields, failureFields, tookMs } from '../log-fields.ts'
 import type { BiliReader, ParsedDynamic } from '../ports/bili.ts'
 import type { Cancel, Clock } from '../ports/clock.ts'
 import type { ConfigStore } from '../ports/config-store.ts'
@@ -60,7 +61,7 @@ export class Poller {
   }
 
   start(): void {
-    this.logger.info({ floorTs: this.floorTs }, '只抓这一刻之后发布的内容')
+    this.logger.info({ floorTs: this.floorTs }, '抓取地板已确定')
     this.schedule()
     this.cancelConfig = this.deps.config.onChange((section) => {
       if (section === 'poll') this.schedule()
@@ -120,12 +121,23 @@ export class Poller {
       this.lastRunAt = this.deps.clock.now()
       this.lastOk = result.ok
       this.lastError = result.ok ? null : result.reason
+      if (result.ok) {
+        // 空轮一小时几十条，压到 debug；抓到东西的那几轮才值得占 info。
+        const fields = {
+          found: result.found,
+          skipped: result.skipped,
+          blocked: result.blocked,
+          ...tookMs(now, this.lastRunAt),
+        }
+        if (result.found > 0) this.logger.info(fields, '轮询完成')
+        else this.logger.debug(fields, '轮询完成')
+      }
       this.deps.events.emit({ type: 'poll.finished', ok: result.ok, found: result.found })
       return result
     } catch (err) {
       // 到这儿说明是 bug（仓储抛了之类），不是业务失败。记下来但别让 cron 崩。
       const reason = err instanceof Error ? err.message : String(err)
-      this.logger.error({ err: reason }, '轮询内部出错')
+      this.logger.error(errFields(err), '轮询异常')
       this.lastRunAt = this.deps.clock.now()
       this.lastOk = false
       this.lastError = reason
@@ -213,7 +225,10 @@ export class Poller {
         marks.push({ uid: item.uid, pubTs: item.pubTs, ok: true })
       } catch (err) {
         // 这一条处理不了：锚点就卡在它前面，下一轮再试，别把它跳过去。
-        this.logger.error({ dynId: item.dynId, err: String(err) }, '条目处理失败，锚点不越过它')
+        this.logger.error(
+          { dynId: item.dynId, uid: item.uid, type: item.type, ...errFields(err) },
+          '条目处理失败，锚点不越过它',
+        )
         marks.push({ uid: item.uid, pubTs: item.pubTs, ok: false })
       }
     }
@@ -231,9 +246,6 @@ export class Poller {
       this.deps.anchors.advance(uid, ts, at)
     }
 
-    if (inserted.length > 0) {
-      this.logger.info({ inserted: inserted.length, blocked }, '抓到新动态')
-    }
     return { ok: true, found: inserted.length, skipped: skipped.length, blocked, reason: null }
   }
 
@@ -247,7 +259,7 @@ export class Poller {
     try {
       this.deps.onVideo({ bvid: row.bvid, updateId: row.dynId })
     } catch (err) {
-      this.logger.error({ bvid: row.bvid, err: String(err) }, '入队失败，不影响这一轮抓取')
+      this.logger.error({ bvid: row.bvid, dynId: row.dynId, ...errFields(err) }, '入队失败')
     }
   }
 
@@ -258,7 +270,7 @@ export class Poller {
       this.cancelCron?.()
       this.cancelCron = null
       this.deps.events.emit({ type: 'auth.changed', loggedIn: false })
-      this.logger.error({ msg: failure.message }, '鉴权失效，停止轮询，等重新登录')
+      this.logger.error(failureFields(failure), '鉴权失效，轮询已停止')
     } else {
       this.backoff(failure)
     }
@@ -272,7 +284,10 @@ export class Poller {
     if (base === 0) return
     const wait = Math.min(base * 2 ** (this.consecutiveFailures - 1), MAX_BACKOFF_MS)
     this.resumeAt = this.deps.clock.now() + wait
-    this.logger.warn({ kind: failure.kind, waitMs: wait, n: this.consecutiveFailures }, '退避')
+    this.logger.warn(
+      { ...failureFields(failure), waitMs: wait, consecutiveFailures: this.consecutiveFailures },
+      '轮询退避',
+    )
   }
 
   private status(): PollSnapshot['status'] {

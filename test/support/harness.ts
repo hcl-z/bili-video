@@ -100,6 +100,7 @@ export async function createHarness(opts: HarnessOptions = {}): Promise<Harness>
     cookies: core.cookies,
     // 真 writer，写进临时 dataDir —— 「落盘了没有」才测得到。
     markdown: core.markdown,
+    storage: core.storage,
     external: {
       notifiers: [notifier],
       biliAuth: core.biliAuth,

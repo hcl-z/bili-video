@@ -11,7 +11,13 @@ import type {
 import type { DegradePath, Summary, TranscriptSource } from '#shared/contract/summary.ts'
 import type { ArtifactKind } from '../../domain/pipeline.ts'
 import { atOrAfter, stepIndex } from '../../domain/pipeline.ts'
-import type { JobArtifact, JobArtifactRepo, JobRepo, SummaryRepo } from '../../ports/repo.ts'
+import type {
+  JobArtifact,
+  JobArtifactRepo,
+  JobRepo,
+  JobStepOutcome,
+  SummaryRepo,
+} from '../../ports/repo.ts'
 import { num, str, strOrNull, type Row } from './sqlite.ts'
 
 const toStep = (r: Row): JobStep => ({
@@ -156,6 +162,38 @@ export class SqliteJobRepo implements JobRepo {
     return rows.map((r) => toJob(r as Row, steps.get(num((r as Row)['id'])) ?? []))
   }
 
+  counts(): Record<JobStatus, number> {
+    const out: Record<JobStatus, number> = { pending: 0, running: 0, failed: 0, done: 0 }
+    for (const r of this.db.prepare('SELECT status, COUNT(*) AS n FROM summary_jobs GROUP BY status').all()) {
+      const status = str((r as Row)['status']) as JobStatus
+      if (status in out) out[status] = num((r as Row)['n'])
+    }
+    return out
+  }
+
+  runningStages(): JobStage[] {
+    return this.db
+      .prepare(`SELECT stage FROM summary_jobs WHERE status = 'running'`)
+      .all()
+      .map((r) => str((r as Row)['stage']) as JobStage)
+  }
+
+  /** 只回真跑过的：skipped（有字幕、没接适配器）不是一次失败，不该把连败计数清掉。 */
+  recentSteps(step: PipelineStep, limit: number): JobStepOutcome[] {
+    return this.db
+      .prepare(
+        `SELECT status, note, at FROM job_steps
+          WHERE step = ? AND status IN ('done', 'failed')
+          ORDER BY at DESC, job_id DESC LIMIT ?`,
+      )
+      .all(step, limit)
+      .map((r) => ({
+        status: str((r as Row)['status']) as StepStatus,
+        note: strOrNull((r as Row)['note']),
+        at: num((r as Row)['at']),
+      }))
+  }
+
   private hydrate(r: Row): SummaryJob {
     const id = num(r['id'])
     const steps = this.db
@@ -298,5 +336,10 @@ export class SqliteSummaryRepo implements SummaryRepo {
             )
             .all(q.before, q.limit)
     return rows.map((r) => toSummary(r as Row))
+  }
+
+  count(): number {
+    const r = this.db.prepare('SELECT COUNT(*) AS n FROM summaries').get()
+    return r ? num((r as Row)['n']) : 0
   }
 }

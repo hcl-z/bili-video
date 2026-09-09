@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { api } from '@/lib/api'
+import { formatSpan } from '@/lib/format'
 import { keys } from '@/lib/query'
 import { cn } from '@/lib/utils'
 
@@ -17,7 +18,7 @@ export function HealthDot() {
   const state = isError ? 'down' : data === undefined ? 'unknown' : 'up'
   const label =
     state === 'up'
-      ? `已连接 · v${data!.version} · 已运行 ${formatUptime(data!.uptimeMs)}`
+      ? `已连接 · v${data!.version} · 已运行 ${formatSpan(data!.uptimeMs)}`
       : state === 'down'
         ? '连不上后端：确认 pnpm dev:server 起着'
         : '正在连接后端'
@@ -41,14 +42,4 @@ export function HealthDot() {
       <TooltipContent>{label}</TooltipContent>
     </Tooltip>
   )
-}
-
-function formatUptime(ms: number): string {
-  const s = Math.floor(ms / 1000)
-  if (s < 60) return `${s} 秒`
-  const m = Math.floor(s / 60)
-  if (m < 60) return `${m} 分钟`
-  const h = Math.floor(m / 60)
-  if (h < 24) return `${h} 小时 ${m % 60} 分`
-  return `${Math.floor(h / 24)} 天 ${h % 24} 小时`
 }

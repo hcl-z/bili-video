@@ -87,5 +87,12 @@ export type SummaryJob = z.infer<typeof SummaryJobSchema>
 export const DeliveryKindSchema = z.enum(['discover', 'summary', 'alert', 'digest'])
 export type DeliveryKind = z.infer<typeof DeliveryKindSchema>
 
+export const DELIVERY_KIND_LABEL: Record<DeliveryKind, string> = {
+  discover: '发现',
+  summary: '总结',
+  alert: '告警',
+  digest: '汇总',
+}
+
 export const DeliveryStatusSchema = z.enum(['pending', 'sent', 'failed'])
 export type DeliveryStatus = z.infer<typeof DeliveryStatusSchema>

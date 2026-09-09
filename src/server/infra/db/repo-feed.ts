@@ -138,4 +138,9 @@ export class SqliteUpdateRepo implements UpdateRepo {
     const r = this.db.prepare('SELECT COUNT(*) AS n FROM updates WHERE pub_ts >= ?').get(ts)
     return r ? num((r as Row)['n']) : 0
   }
+
+  count(): number {
+    const r = this.db.prepare('SELECT COUNT(*) AS n FROM updates').get()
+    return r ? num((r as Row)['n']) : 0
+  }
 }

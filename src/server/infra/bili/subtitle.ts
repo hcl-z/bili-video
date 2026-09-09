@@ -88,7 +88,7 @@ export class BiliSubtitleClient implements SubtitleFetcher {
     const tracks = parsedPlayer.data.subtitle?.subtitles ?? []
     const picked = pickTrack(tracks)
     if (picked === null) {
-      this.logger.info({ bvid, tracks: tracks.length }, '这个视频没有可用字幕')
+      this.logger.info({ bvid, tracks: tracks.length }, '无可用字幕')
       return ok(null)
     }
 
@@ -107,7 +107,7 @@ export class BiliSubtitleClient implements SubtitleFetcher {
     const cues: Cue[] = parsedBody.data.body
       .map((c) => ({ from: c.from, to: c.to, text: c.content.trim() }))
       .filter((c) => c.text !== '')
-    this.logger.info({ bvid, lan: picked.lan, cues: cues.length }, '取到字幕')
+    this.logger.info({ bvid, lan: picked.lan, cues: cues.length }, '字幕已获取')
     return ok(cues.length === 0 ? null : cues)
   }
 }

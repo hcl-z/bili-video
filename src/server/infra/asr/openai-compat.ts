@@ -5,6 +5,7 @@ import type { AsrConfig } from '#shared/contract/config.ts'
 import type { Cue } from '#shared/contract/summary.ts'
 import type { Asr } from '../../ports/asr.ts'
 import type { Logger } from '../../ports/logger.ts'
+import { errFields } from '../../log-fields.ts'
 import { joinUrl } from '../ai/openai-compat.ts'
 import { maskSecret } from '../secret/secret-box.ts'
 import { parseWhisperJson } from './whisper-json.ts'
@@ -67,7 +68,7 @@ export class OpenAiCompatAsr implements Asr {
       })
     } catch (err) {
       // 连不上、DNS 不对、超时都走这里，日志里要能看出是打哪个地址失败的。
-      this.deps.logger.warn({ url, err: String(err) }, '云端转写请求没成功发出')
+      this.deps.logger.warn({ url, ...errFields(err) }, '转写请求发送失败')
       throw err
     }
     const body = await res.text()

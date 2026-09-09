@@ -92,7 +92,7 @@ export class UpFeedService {
         createdAt: at,
       },
     ])
-    this.logger.info({ uid, bvid: dyn.bvid }, '手动排一条解析')
+    this.logger.info({ uid, bvid: dyn.bvid, dynId: dyn.dynId }, '手动解析已入队')
 
     // 已经有任务的走重跑，免得同一个视频攒出两条任务，也免得「重新解析」点了没反应。
     const existing = this.deps.jobs.getByBvid(dyn.bvid)

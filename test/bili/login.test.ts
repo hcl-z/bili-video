@@ -28,14 +28,14 @@ function rig(cookies: Record<string, string> = {}, opts: RigOptions = {}) {
     fetch: fetch.fetch,
     identity: createBrowserIdentity(() => 0.5),
     cookies: jar,
-    clock: { now: () => now, sleep: async () => {}, schedule: () => () => {} },
+    clock: { now: () => now, sleep: async () => {}, schedule: () => () => {}, checkCron: () => null },
     logger,
     config: () => ({ wbiMixinTable: TABLE, ticket: { keyId: 'ec02', hmacKey: 'hmac' } }),
   })
   const auth = new BiliAuthClient({
     http,
     cookies: jar,
-    clock: { now: () => now, sleep: async () => {}, schedule: () => () => {} },
+    clock: { now: () => now, sleep: async () => {}, schedule: () => () => {}, checkCron: () => null },
     logger,
     config: () => ({ correspondPublicKeyPem: opts.pem ?? '' }),
     tokens: {

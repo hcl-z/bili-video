@@ -4,6 +4,7 @@ import { parseUid } from '../domain/subscription.ts'
 import type { BiliProfile, BiliRelationWriter } from '../ports/bili.ts'
 import type { Clock } from '../ports/clock.ts'
 import type { Logger } from '../ports/logger.ts'
+import { failureFields } from '../log-fields.ts'
 import type { SubscriptionRepo } from '../ports/repo.ts'
 
 export interface SubscriptionDeps {
@@ -96,7 +97,7 @@ export class SubscriptionService {
   remove(uid: string): void {
     // 只删订阅，不取消关注：取关是另一个写请求，删一行本地记录不值得去碰风控面。
     this.deps.subs.remove(uid)
-    this.logger.info({ uid }, '已删除订阅（B 站上的关注保持不变）')
+    this.logger.info({ uid }, '订阅已删除')
   }
 
   setToggles(uid: string, patch: TogglePatch): Subscription | null {
@@ -146,7 +147,7 @@ export class SubscriptionService {
 
     const known = await relations.getRelations(uids)
     if (!known.ok) {
-      this.logger.warn({ uids, msg: known.failure.message }, '查关系失败，这一轮不补关注')
+      this.logger.warn({ uids: uids.length, ...failureFields(known.failure) }, '关注关系查询失败')
       return { followed: [], notice: `查关注关系失败：${known.failure.message}` }
     }
 
@@ -157,7 +158,7 @@ export class SubscriptionService {
       if (known.value.get(uid) === true) {
         // 已经关注了，一个写请求都不发。这正是先查再写的全部意义。
         this.deps.subs.markFollowed(uid, this.deps.clock.now())
-        this.logger.debug({ uid }, '已在关注列表里，跳过写请求')
+        this.logger.debug({ uid }, '已关注，跳过写请求')
         continue
       }
       const done = await relations.follow(uid)
@@ -186,7 +187,7 @@ export class SubscriptionService {
     if (profile !== null) {
       const card = await profile.fetchCard(uid)
       if (card.ok) return { name: card.value.name, face: card.value.face }
-      this.logger.warn({ uid, msg: card.failure.message }, '查 UP 主名片失败，先用 uid 占位')
+      this.logger.warn({ uid, ...failureFields(card.failure) }, 'UP 主名片查询失败')
     }
     return { name: existing?.name ?? `UID ${uid}`, face: existing?.face ?? null }
   }

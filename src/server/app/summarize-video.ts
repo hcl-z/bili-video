@@ -41,6 +41,7 @@ import type {
   UpdateRepo,
 } from '../ports/repo.ts'
 import { Lane } from './lane.ts'
+import { errFields } from '../log-fields.ts'
 
 /** 转写结果。走到哪一级由 step 说，为什么走到这一级由 reasons 说。 */
 export interface Transcript {
@@ -149,7 +150,7 @@ export class SummarizeVideo {
     }
     state = degrade(state, cues.failure.message)
 
-    this.logger.warn({ bvid, reasons: state.reasons }, '没拿到语音内容，退到简介兜底')
+    this.logger.warn({ bvid, degradeTo: state.step, reasons: state.reasons }, '转写降级')
     return this.remember(bvid, { cues: [], step: state.step, reasons: state.reasons })
   }
 
@@ -251,7 +252,7 @@ export class SummarizeVideo {
     if (!reply.ok) return this.reduceFailed(hook, reply.failure)
     const article = parseArticle(reply.value)
     if (!article.ok) return this.reduceFailed(hook, article.failure)
-    this.logger.info({ bvid: job.bvid, chunks: notes.length }, '分段总结已汇总')
+    this.logger.info({ bvid: job.bvid, chunks: notes.length }, '分段总结已合并')
     hook('reduce', 'done', `${article.value.length} 字`)
     return article
   }
@@ -331,7 +332,16 @@ export class SummarizeVideo {
     const path = await this.deps.markdown.write(summaryFileName(job.bvid), summary.fullMd)
 
     this.deps.events.emit({ type: 'summary.done', bvid: job.bvid })
-    this.logger.info({ bvid: job.bvid, path, degrade: summary.degradePath }, '总结完成')
+    this.logger.info(
+      {
+        bvid: job.bvid,
+        degradePath: summary.degradePath,
+        confidence: summary.confidence,
+        chars: summary.article.length,
+        path,
+      },
+      '总结已生成',
+    )
     return ok(summary)
   }
 
@@ -442,9 +452,9 @@ export class SummarizeVideo {
     try {
       const parsed = schema.safeParse(JSON.parse(row.payload))
       if (parsed.success) return parsed.data
-      this.logger.warn({ bvid, kind }, '存下来的产物形状不对，这一步重跑')
+      this.logger.warn({ bvid, artifact: kind }, '产物校验失败')
     } catch (err) {
-      this.logger.warn({ bvid, kind, err: message(err) }, '产物解不开，这一步重跑')
+      this.logger.warn({ bvid, artifact: kind, ...errFields(err) }, '产物解析失败')
     }
     return null
   }

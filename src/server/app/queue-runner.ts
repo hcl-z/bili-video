@@ -2,6 +2,7 @@ import type { Failure } from '#shared/contract/failure.ts'
 import type { JobStage, PipelineStep, SummaryJob } from '#shared/contract/job.ts'
 import { fatalFailure } from '../domain/bili-error.ts'
 import { staleArtifacts } from '../domain/pipeline.ts'
+import { errFields, failureFields } from '../log-fields.ts'
 import type { Clock } from '../ports/clock.ts'
 import type { ConfigStore } from '../ports/config-store.ts'
 import type { EventBus } from '../ports/event-bus.ts'
@@ -47,7 +48,7 @@ export class SummaryQueue {
     this.started = true
     // 崩在中途的 running 会永远占着位子，启动时先放回 pending。
     const revived = this.deps.jobs.resetRunning(this.deps.clock.now())
-    if (revived > 0) this.logger.info({ revived }, '重置中断的任务')
+    if (revived > 0) this.logger.info({ revived }, '中断的任务已复位')
 
     // 订阅配置本身而不是 config.changed 事件：后者只有两条 HTTP 路径手动发。
     this.unsubscribe = this.deps.config.onChange((section) => {
@@ -110,7 +111,7 @@ export class SummaryQueue {
     const deadline = timeoutMs === undefined ? null : Date.now() + timeoutMs
     while (this.running.size > 0) {
       if (deadline !== null && Date.now() >= deadline) {
-        this.logger.warn({ inflight: this.running.size }, '还有任务没收尾，不再等了')
+        this.logger.warn({ inflight: this.running.size, timeoutMs }, '关停超时，仍有任务在飞')
         return
       }
       await Promise.all([...this.running.values()])
@@ -177,10 +178,10 @@ export class SummaryQueue {
       this.emit(job, 'failed', at)
     } catch (err) {
       // 库都写不进去（多半是关停时连接已关），只剩日志这条路。
-      this.logger.error({ id: job.id, err: String(err) }, '任务失败状态没写进库')
+      this.logger.error({ jobId: job.id, bvid: job.bvid, ...errFields(err) }, '任务状态写库失败')
     }
     this.logger.warn(
-      { id: job.id, bvid: job.bvid, stage: at, kind: failure.kind, error: failure.message },
+      { jobId: job.id, bvid: job.bvid, stage: at, attempts: job.attempts, ...failureFields(failure) },
       '任务失败',
     )
   }

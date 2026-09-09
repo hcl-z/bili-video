@@ -6,6 +6,7 @@ import { llmFailure, llmTransient } from '../../domain/llm-error.ts'
 import type { Clock } from '../../ports/clock.ts'
 import type { Llm, LlmCompletion, LlmMessage, LlmOptions } from '../../ports/llm.ts'
 import type { Logger } from '../../ports/logger.ts'
+import { failureFields } from '../../log-fields.ts'
 
 export interface OpenAiCompatDeps {
   fetch: typeof fetch
@@ -47,7 +48,7 @@ export class OpenAiCompatLlm implements Llm {
       const body = await res.text()
       if (!res.ok) {
         const failure = llmFailure(res.status, body)
-        this.logger.warn({ kind: failure.kind, detail: failure.message }, 'LLM 调用失败')
+        this.logger.warn(failureFields(failure), 'LLM 调用失败')
         return fail(failure)
       }
 
@@ -84,7 +85,7 @@ export class OpenAiCompatLlm implements Llm {
       const ms = this.deps.clock.now() - started
       if (res.ok) return probeOk(ms)
       const { stage, detail } = classifyProbe(res.status, body)
-      this.logger.warn({ stage, detail }, 'LLM 连通性测试没过')
+      this.logger.warn({ stage, detail }, 'LLM 连通性测试失败')
       return { ok: false, ms, stage, detail }
     } catch (err) {
       return networkProbe(err, this.deps.clock.now() - started)

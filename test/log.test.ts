@@ -5,6 +5,7 @@ import { join } from 'node:path'
 import { after, describe, it } from 'node:test'
 
 import type { LogLine } from '#shared/contract/events.ts'
+import { errFields } from '../src/server/log-fields.ts'
 import { buildTargets, createLogger } from '../src/server/log.ts'
 
 const dirs: string[] = []
@@ -96,6 +97,33 @@ describe('日志', () => {
       ],
     )
     assert.ok(seen.every((l) => l.at > 0))
+  })
+
+  it('sink 带上模块 tag、结构化字段与错误摘要，堆栈只留在文件里', async () => {
+    const seen: LogLine[] = []
+    const logger = createLogger({
+      level: 'info',
+      dir: null,
+      retentionDays: 7,
+      json: true,
+      stdout: false,
+      sink: (line) => seen.push(line),
+    })
+
+    logger
+      .child({ mod: 'queue' })
+      .error(
+        { bvid: 'BV1x', stage: 'asr', ...errFields(new TypeError('炸了')) },
+        '任务失败',
+      )
+    await logger.close()
+
+    const line = seen[0]!
+    assert.equal(line.mod, 'queue')
+    assert.equal(line.err, 'TypeError: 炸了')
+    assert.deepEqual(line.data, { bvid: 'BV1x', stage: 'asr' })
+    // 堆栈几十行，推到浏览器只会把日志页刷爆。
+    assert.ok(!Object.hasOwn(line.data, 'stack'))
   })
 
   it('child 带上 bindings 并共用同一个 sink', async () => {

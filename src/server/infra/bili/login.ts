@@ -7,6 +7,7 @@ import type { AuthStatus, BiliAuth, QrLogin, QrLoginState } from '../../ports/bi
 import type { Clock } from '../../ports/clock.ts'
 import type { CookieJar } from '../../ports/cookie-jar.ts'
 import type { Logger } from '../../ports/logger.ts'
+import { failureFields } from '../../log-fields.ts'
 
 // NAV_URL 只定义一处：http 层取 WBI key 时也要用它，两份常量必然有一天对不上。
 import { NAV_URL, type BiliHttp } from './http-client.ts'
@@ -108,7 +109,7 @@ export class BiliAuthClient implements BiliAuth {
       this.tokens.set(parsed.data.refresh_token)
     } else {
       // 不是致命问题：登录能用，只是到期后续不了，只能重新扫码。说清楚就行。
-      this.logger.warn({}, '登录成功但没拿到 refresh_token，cookie 到期后需要重新扫码')
+      this.logger.warn({}, '登录成功但缺少 refresh_token，到期后须重新扫码')
     }
 
     const who = await this.whoAmI()
@@ -216,7 +217,7 @@ export class BiliAuthClient implements BiliAuth {
     )
     if (!confirmed.ok) {
       // 新 cookie 已经能用了，只是旧 token 没吊销。记一笔，不把整次续期判为失败。
-      this.logger.warn({ failure: confirmed.failure }, '确认续期这一步失败，旧 token 未吊销')
+      this.logger.warn(failureFields(confirmed.failure), '续期确认失败，旧 token 未吊销')
     }
     this.logger.info({ expiresAt: this.deps.cookies.earliestExpiry() }, 'cookie 续期完成')
     return ok(undefined)

@@ -5,6 +5,8 @@ import { serveStatic } from '@hono/node-server/serve-static'
 
 import type { AiService } from '../app/ai.ts'
 import type { AuthLifecycle } from '../app/auth-lifecycle.ts'
+import type { BackupService } from '../app/backup.ts'
+import type { HealthMonitor } from '../app/health.ts'
 import type { Poller } from '../app/poller.ts'
 import type { SummaryQueue } from '../app/queue-runner.ts'
 import type { RuleService } from '../app/rules.ts'
@@ -16,6 +18,8 @@ import { aiRoutes } from './routes/ai.ts'
 import { configRoutes } from './routes/config.ts'
 import { healthRoutes } from './routes/health.ts'
 import { jobRoutes } from './routes/jobs.ts'
+import { logRoutes, type LogBuffer } from './routes/logs.ts'
+import { overviewRoutes } from './routes/overview.ts'
 import { ruleRoutes } from './routes/rules.ts'
 import { subscriptionRoutes } from './routes/subscriptions.ts'
 import { summaryRoutes } from './routes/summaries.ts'
@@ -37,6 +41,10 @@ export interface HttpOptions {
   ai: AiService
   queue: SummaryQueue
   ups: UpFeedService
+  health: HealthMonitor
+  backup: BackupService
+  /** 最近若干行日志。日志页接上时先补历史，否则刷一下页面就是空的。 */
+  logs: LogBuffer
 }
 
 /**
@@ -50,7 +58,24 @@ export function createHttpApp(ports: Ports, opts: HttpOptions): Hono {
 
   const api = new Hono()
   api.route('/health', healthRoutes(ports, opts.startedAt))
-  api.route('/system', systemRoutes(ports, opts.startedAt, opts.auth, opts.poll))
+  api.route(
+    '/system',
+    systemRoutes(ports, {
+      startedAt: opts.startedAt,
+      auth: opts.auth,
+      poll: opts.poll,
+      backup: opts.backup,
+    }),
+  )
+  api.route(
+    '/overview',
+    overviewRoutes(ports, {
+      startedAt: opts.startedAt,
+      auth: opts.auth,
+      poll: opts.poll,
+      health: opts.health,
+    }),
+  )
   api.route('/config', configRoutes(ports))
   api.route('/subscriptions', subscriptionRoutes(opts.subs))
   api.route('/updates', updateRoutes(ports, opts.poll))
@@ -60,6 +85,8 @@ export function createHttpApp(ports: Ports, opts: HttpOptions): Hono {
   api.route('/ups', upRoutes(ports, opts.ups))
   api.route('/ai', aiRoutes(opts.ai))
   api.route('/events', eventRoutes(ports))
+  // 日志独立一条流：它一秒能刷几十行，混进主流量会把队列进度挤到看不见。
+  api.route('/logs', logRoutes(ports.events, opts.logs))
   // /api 下没命中的一律结构化 404，绝不落到静态资源的 index.html 上去。
   api.all('*', (c) => c.json(errorBody('not-found', `没有这个端点：${c.req.path}`), 404))
   app.route('/api', api)

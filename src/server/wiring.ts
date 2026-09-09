@@ -22,6 +22,7 @@ import { BiliReaderClient } from './infra/bili/reader.ts'
 import { BiliRelationsClient } from './infra/bili/relations.ts'
 import { BiliSubtitleClient } from './infra/bili/subtitle.ts'
 import { ExecCommandRunner } from './infra/command/exec.ts'
+import { FsStorageStats } from './infra/fs/disk-usage.ts'
 import { FsMarkdownWriter } from './infra/fs/markdown-writer.ts'
 import { migrate } from './infra/db/migrations.ts'
 import { SqliteStateRepo } from './infra/db/repo-state.ts'
@@ -49,6 +50,7 @@ import type {
   SubtitleFetcher,
 } from './ports/bili.ts'
 import type { MarkdownWriter } from './ports/markdown.ts'
+import type { StorageStats } from './ports/storage.ts'
 import type { Clock } from './ports/clock.ts'
 import type { CommandRunner } from './ports/command.ts'
 import type { Llm } from './ports/llm.ts'
@@ -110,6 +112,8 @@ export interface Core {
   asr: Asr
   /** 总结 Markdown 落盘。 */
   markdown: MarkdownWriter
+  /** 数据库与产物目录的磁盘占用。 */
+  storage: StorageStats
   /** OpenAI 兼容的 LLM。总开关的闸门在 AiService 上，不在这里。 */
   llm: Llm
   /** ASR 连通性测试。按 provider 走 HTTP 或本地命令两条路。 */
@@ -118,10 +122,13 @@ export interface Core {
 }
 
 export function openCore(opts: CoreOptions): Core {
-  const { dataDir, clock, logger } = opts
+  const { dataDir, clock } = opts
+  // 组装根这几行也打 tag：日志页上每一行都该能说清是哪个模块写的。
+  const logger = opts.logger.child({ mod: 'core' })
   const now = () => clock.now()
 
-  const db = openDatabase(opts.dbFile ?? join(dataDir, 'app.db'))
+  const dbFile = opts.dbFile ?? join(dataDir, 'app.db')
+  const db = openDatabase(dbFile)
   const applied = migrate(db, clock.now())
   if (applied.length > 0) logger.info({ versions: applied }, '数据库迁移已应用')
 
@@ -143,7 +150,7 @@ export function openCore(opts: CoreOptions): Core {
   if (master.created) {
     logger.warn(
       { source: master.source },
-      '已生成新的 master key。它加密了所有 cookie 与 apiKey —— 丢了就全部不可恢复，请立刻纳入备份。',
+      '已生成新的 master key，它加密了所有 cookie 与 apiKey，丢失后不可恢复，请纳入备份',
     )
   }
 
@@ -214,6 +221,12 @@ export function openCore(opts: CoreOptions): Core {
     dataDir,
     dir: () => config.getSection('output').markdownDir,
   })
+  const storage = new FsStorageStats({
+    dataDir,
+    dbFile,
+    audioDir: join(dataDir, 'audio'),
+    markdownDir: () => config.getSection('output').markdownDir,
+  })
 
   const netFetch = opts.fetch ?? globalThis.fetch
   const llm = new OpenAiCompatLlm({
@@ -264,6 +277,7 @@ export function openCore(opts: CoreOptions): Core {
     audio,
     asr,
     markdown,
+    storage,
     llm,
     probeAsr,
     close() {
@@ -283,10 +297,10 @@ function loadOrCreateIdentity(state: StateRepo, logger: Logger): BrowserIdentity
   if (stored !== null) {
     const parsed = parseIdentity(stored)
     if (parsed !== null) return parsed
-    logger.warn({}, '存下来的浏览器身份读不出来，重新生成一份')
+    logger.warn({}, '浏览器身份解析失败，已重新生成')
   }
   const fresh = createBrowserIdentity()
   state.set('browser-identity', serializeIdentity(fresh))
-  logger.info({ ua: fresh.userAgent }, '已生成浏览器身份（之后每次启动都用这一份）')
+  logger.info({ ua: fresh.userAgent }, '浏览器身份已生成')
   return fresh
 }

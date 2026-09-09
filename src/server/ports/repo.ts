@@ -57,6 +57,7 @@ export interface UpdateRepo {
   list(q: { uid?: string; includeFiltered?: boolean; limit: number; before?: number }): Update[]
   /** 按**发布时间**数，不是入库时间 —— 24h 补推窗口与溢出阈值判的是「这段时间里发了多少」。 */
   countSince(ts: number): number
+  count(): number
 }
 
 export interface JobRepo {
@@ -71,10 +72,26 @@ export interface JobRepo {
   /** 启动时把崩在中途的 running 重置为 pending 续跑。 */
   resetRunning(at: number): number
   list(q: { status?: SummaryJob['status']; limit: number }): SummaryJob[]
+  /** 各状态各几条。概览页要的是数字，不该为了数一下把几千行拉回来。 */
+  counts(): Record<SummaryJob['status'], number>
+  /** 在跑的任务停在哪几步。概览页据此把在飞的分到两条泳道上。 */
+  runningStages(): JobStage[]
 
   /** 一步的状态。重跑时只复位 from 及其之后的几步，前面的留着给人看「上次到哪了」。 */
   setStep(jobId: number, step: PipelineStep, status: StepStatus, note: string | null, at: number): void
   resetStepsFrom(jobId: number, from: PipelineStep, at: number): void
+  /**
+   * 某一步最近几次的结果，新的在前。健康自查用它数「连续失败几次」。
+   *
+   * 落库而不是在内存里记计数：重启不该把「转写已经连着失败三次了」这件事忘掉。
+   */
+  recentSteps(step: PipelineStep, limit: number): JobStepOutcome[]
+}
+
+export interface JobStepOutcome {
+  status: StepStatus
+  note: string | null
+  at: number
 }
 
 /**
@@ -102,6 +119,7 @@ export interface SummaryRepo {
   /** 完整字幕/转写全文。同样单独读，别让列表页顺手把几万字捎出来。 */
   transcript(bvid: string): string | null
   list(q: { limit: number; before?: number }): Summary[]
+  count(): number
 }
 
 export interface DeliveryRepo {

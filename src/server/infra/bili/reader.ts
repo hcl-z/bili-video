@@ -182,8 +182,8 @@ export class BiliReaderClient implements BiliReader {
       else if (one === 'unsupported') unsupported += 1
       else items.push(one)
     }
-    if (unparsed > 0) this.logger.warn({ unparsed }, '有动态的 payload 形状不认识，这一页没吃全')
-    if (unsupported > 0) this.logger.debug({ unsupported }, '跳过了不关心的动态类型')
+    if (unparsed > 0) this.logger.warn({ unparsed }, '动态 payload 解析失败')
+    if (unsupported > 0) this.logger.debug({ unsupported }, '跳过不支持的动态类型')
 
     return ok({
       items,

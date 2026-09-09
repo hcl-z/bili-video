@@ -74,7 +74,7 @@ export class RuleService {
   validateAll(): FilterRule[] {
     const broken = this.deps.rules.list().filter((r) => badPattern(r.kind, r.pattern) !== null)
     if (broken.length > 0) {
-      this.logger.error({ ids: broken.map((r) => r.id) }, '有正则规则编译不过')
+      this.logger.error({ ids: broken.map((r) => r.id), count: broken.length }, '正则规则编译失败')
     }
     return broken
   }
@@ -87,7 +87,7 @@ export class RuleService {
       if (!hit.timedOut) continue
       const n = (this.timeouts.get(hit.rule.id) ?? 0) + 1
       this.timeouts.set(hit.rule.id, n)
-      this.logger.warn({ id: hit.rule.id, pattern: hit.rule.pattern, count: n }, '正则超时被中断')
+      this.logger.warn({ ruleId: hit.rule.id, pattern: hit.rule.pattern, timeouts: n }, '正则执行超时')
     }
     return result
   }

@@ -70,7 +70,7 @@ describe('扫码登录全流程（主测试缝）', () => {
       assert.equal(h.fetch.countOf('qrcode/poll'), 3)
       // 起点本来就是 logged-out，所以只有三次变化。
       const states = h.logger.lines
-        .filter((l) => l.msg === '登录状态变化')
+        .filter((l) => l.msg === '登录态变更')
         .map((l) => (l.obj as { to: string }).to)
       assert.deepEqual(states, ['waiting-scan', 'scanned', 'logged-in'])
       // 每次变化都发了事件，否则页面上的登录态会停在旧值。

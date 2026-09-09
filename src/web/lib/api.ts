@@ -5,13 +5,19 @@ import type {
   ConfigResponse,
   ErrorResponse,
   HealthResponse,
+  HealthSnapshot,
   JobsResponse,
+  LoginStartResponse,
+  OverviewResponse,
   PatchAiSettingsRequest,
   PatchSubscriptionRequest,
   PollResult,
+  QrResponse,
   ReaderItemResponse,
+  RefreshResponse,
   RulesResponse,
   RunAllSummariesResponse,
+  StorageResponse,
   SubscriptionResult,
   SubscriptionsResponse,
   SummariesResponse,
@@ -83,6 +89,22 @@ export const api = {
     }),
 
   system: () => request<SystemResponse>('/system'),
+
+  /** 概览页一次要齐的东西。全是本地读，刷它不会打任何外部请求。 */
+  overview: () => request<OverviewResponse>('/overview'),
+
+  /** 手动跑一轮健康自查。cron 半小时一次，等不及的时候点它。 */
+  checkHealth: () => request<HealthSnapshot>('/overview/check', { method: 'POST' }),
+
+  // 开一轮扫码。不等人扫完：返回时码可能还没出来，靠 SSE 的登录态变化再来取。
+  startLogin: () => request<LoginStartResponse>('/system/login', { method: 'POST' }),
+
+  /** 当前那张待扫的码。没有码在等人扫时后端回 404。 */
+  qr: () => request<QrResponse>('/system/qr'),
+
+  refreshCookie: () => request<RefreshResponse>('/system/refresh', { method: 'POST' }),
+
+  storage: () => request<StorageResponse>('/system/storage'),
 
   subs: () => request<SubscriptionsResponse>('/subscriptions'),
 

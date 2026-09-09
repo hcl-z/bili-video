@@ -26,6 +26,7 @@ export function seedConfig(
   now: number,
   logger: Logger,
 ): SeedOutcome {
+  const log = logger.child({ mod: 'config' })
   const present = new Set(
     db
       .prepare('SELECT key FROM app_config')
@@ -36,7 +37,7 @@ export function seedConfig(
   if (missing.length === 0) return { from: null, filled: [] }
 
   const usable = seedFile !== null && existsSync(seedFile) ? seedFile : null
-  const raw = usable === null ? {} : readSeed(usable, logger)
+  const raw = usable === null ? {} : readSeed(usable, log)
   const config = AppConfigSchema.parse(raw)
 
   const stmt = db.prepare('INSERT INTO app_config (key, value_json, updated_at) VALUES (?, ?, ?)')
@@ -53,9 +54,9 @@ export function seedConfig(
 
   const first = present.size === 0
   if (first) {
-    logger.info({ from: usable, sections: missing.length }, '首次启动：配置已 seed 进数据库')
+    log.info({ from: usable, sections: missing.length }, '配置已从种子文件导入')
   } else {
-    logger.info({ from: usable, filled: missing }, '库里缺这几段配置，按种子补上')
+    log.info({ from: usable, filled: missing }, '缺失配置段已按种子补齐')
   }
   return { from: first ? usable : null, filled: missing }
 }
@@ -71,7 +72,7 @@ function readSeed(file: string, logger: Logger): unknown {
     (k) => !(CONFIG_SECTION_NAMES as string[]).includes(k),
   )
   if (unknown.length > 0) {
-    logger.warn({ file, unknown }, '种子文件里有无法识别的顶层字段，已忽略')
+    logger.warn({ file, unknown }, '种子文件含未知顶层字段，已忽略')
   }
   return parsed
 }

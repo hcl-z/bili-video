@@ -5,6 +5,8 @@ import type { Hono } from 'hono'
 
 import { AiService } from './app/ai.ts'
 import { AuthLifecycle } from './app/auth-lifecycle.ts'
+import { BackupService } from './app/backup.ts'
+import { HealthMonitor } from './app/health.ts'
 import { Poller } from './app/poller.ts'
 import { SummaryQueue } from './app/queue-runner.ts'
 import { RuleService } from './app/rules.ts'
@@ -12,7 +14,9 @@ import { SubscriptionService } from './app/subscriptions.ts'
 import { SummarizeVideo } from './app/summarize-video.ts'
 import { UpFeedService } from './app/up-feed.ts'
 import { createHttpApp } from './http/app.ts'
+import { LogBuffer } from './http/routes/logs.ts'
 import { renderQr } from './infra/bili/qr-terminal.ts'
+import { errFields } from './log-fields.ts'
 import { TimedRegex } from './infra/regex/timed-regex.ts'
 import type { Ports } from './ports/index.ts'
 
@@ -47,6 +51,8 @@ export interface Services {
   ai: AiService
   queue: SummaryQueue
   ups: UpFeedService
+  health: HealthMonitor
+  backup: BackupService
 }
 
 /** 超过一天的音频文件当孤儿清掉。 */
@@ -60,6 +66,7 @@ export interface BuildOptions {
 
 export function buildServer(ports: Ports, opts: BuildOptions = {}): Server {
   const startedAt = ports.clock.now()
+  const log = ports.logger.child({ mod: 'server' })
   const auth = makeAuthLifecycle(ports, opts)
   const timedRegex = new TimedRegex(
     () => ports.config.getSection('filter').regexTimeoutMs,
@@ -107,6 +114,21 @@ export function buildServer(ports: Ports, opts: BuildOptions = {}): Server {
     logger: ports.logger,
     events: ports.events,
   })
+  const poll = new Poller({
+    reader: ports.external.biliReader,
+    subs: ports.repos.subscriptions,
+    updates: ports.repos.updates,
+    anchors: ports.repos.anchors,
+    state: ports.state,
+    rules,
+    config: ports.config,
+    clock: ports.clock,
+    logger: ports.logger,
+    events: ports.events,
+    // 没装 auth 适配器时当「不能干活」，别对着空 cookie 打一串请求。
+    loggedIn: () => auth?.isUsable() ?? false,
+    onVideo: (v) => queue.enqueue(v),
+  })
   const services: Services = {
     auth,
     subs: new SubscriptionService({
@@ -118,21 +140,7 @@ export function buildServer(ports: Ports, opts: BuildOptions = {}): Server {
       autoFollow: () => ports.config.getSection('bili').write.autoFollow,
     }),
     rules,
-    poll: new Poller({
-      reader: ports.external.biliReader,
-      subs: ports.repos.subscriptions,
-      updates: ports.repos.updates,
-      anchors: ports.repos.anchors,
-      state: ports.state,
-      rules,
-      config: ports.config,
-      clock: ports.clock,
-      logger: ports.logger,
-      events: ports.events,
-      // 没装 auth 适配器时当「不能干活」，别对着空 cookie 打一串请求。
-      loggedIn: () => auth?.isUsable() ?? false,
-      onVideo: (v) => queue.enqueue(v),
-    }),
+    poll,
     ai,
     queue,
     ups: new UpFeedService({
@@ -145,10 +153,33 @@ export function buildServer(ports: Ports, opts: BuildOptions = {}): Server {
       clock: ports.clock,
       logger: ports.logger,
     }),
+    health: new HealthMonitor({
+      auth: () => auth?.snapshot() ?? null,
+      poll: () => poll.snapshot(),
+      jobs: ports.repos.jobs,
+      deliveries: ports.repos.deliveries,
+      notifiers: ports.external.notifiers,
+      config: ports.config,
+      clock: ports.clock,
+      logger: ports.logger,
+      events: ports.events,
+    }),
+    backup: new BackupService({
+      config: ports.config,
+      subs: ports.repos.subscriptions,
+      rules: ports.repos.rules,
+      updates: ports.repos.updates,
+      summaries: ports.repos.summaries,
+      clock: ports.clock,
+      version: ports.version,
+    }),
   }
+  // 日志缓冲装在这里而不是路由里：它订阅了事件总线，得有人在关停时取消订阅。
+  const logs = new LogBuffer(ports.events)
   const app = createHttpApp(ports, {
     startedAt,
     webRoot: opts.webRoot ?? null,
+    logs,
     auth: services.auth,
     subs: services.subs,
     poll: services.poll,
@@ -156,6 +187,8 @@ export function buildServer(ports: Ports, opts: BuildOptions = {}): Server {
     ai: services.ai,
     queue: services.queue,
     ups: services.ups,
+    health: services.health,
+    backup: services.backup,
   })
 
   let listening: ServerType | null = null
@@ -169,7 +202,7 @@ export function buildServer(ports: Ports, opts: BuildOptions = {}): Server {
       const { host, port } = ports.config.getSection('server')
       return await new Promise<AddressInfo>((resolve, reject) => {
         const srv = serve({ fetch: app.fetch, hostname: host, port }, (info) => {
-          ports.logger.info({ ...info, version: ports.version }, '工作台已启动')
+          log.info({ ...info, version: ports.version }, 'HTTP 服务已监听')
           resolve(info)
         })
         srv.once('error', reject)
@@ -180,47 +213,50 @@ export function buildServer(ports: Ports, opts: BuildOptions = {}): Server {
     async bootstrap(): Promise<void> {
       // 正则在这里预编译一遍。坏规则运行时只是「不命中」，不报出来就永远查不到。
       for (const bad of services.rules.validateAll()) {
-        ports.logger.error(
-          { id: bad.id, scope: bad.scope, kind: bad.kind, pattern: bad.pattern },
-          '过滤规则里的正则编译不过，这一条不会生效',
+        log.error(
+          { ruleId: bad.id, scope: bad.scope, kind: bad.kind, pattern: bad.pattern },
+          '过滤规则正则编译失败，该规则不会生效',
         )
       }
       services.poll.start()
       services.queue.start()
+      services.health.start()
       // 上次跑挂了留下的音频没人删，攒着能把磁盘吃光。
       try {
         await ports.external.audio?.sweepOrphans(ORPHAN_AUDIO_MS)
       } catch (err) {
-        ports.logger.warn({ err: String(err) }, '清理音频临时文件失败')
+        log.warn(errFields(err), '音频临时文件清理失败')
       }
 
       const auth = services.auth
       if (auth === null) {
-        ports.logger.warn({}, 'B 站适配器未接入，跳过登录态核对')
+        log.warn({ reason: 'biliAuth 未装配' }, '登录态核对已跳过')
         return
       }
       try {
         const checked = await auth.ensureFresh()
         // 需要重新登录才出码。已经登录着的进程重启不该再打一张没人扫的码。
         if (checked.ok && checked.value.action === 'relogin') {
-          ports.logger.info({ reason: checked.value.reason }, '需要扫码登录')
+          log.info({ reason: checked.value.reason }, '需要重新扫码登录')
           await auth.loginByQr()
         }
         // 登录上了才补关注：没登录时查关系必然失败，白打一串请求。
         if (auth.snapshot().state === 'logged-in') {
           const synced = await services.subs.syncFollows()
           if (synced.followed > 0 || synced.notice !== null) {
-            ports.logger.info(synced, '启动期补关注')
+            log.info(synced, '启动期关注同步完成')
           }
         }
       } catch (err) {
-        ports.logger.error({ err: String(err) }, '启动期核对登录态出错')
+        log.error(errFields(err), '启动期登录态核对异常')
       }
     },
 
     async stop(): Promise<void> {
       services.poll.stop()
       services.queue.stop()
+      services.health.stop()
+      logs.close()
       // 在飞的任务还在写库，等它们收尾再让调用方关连接。超过 10 秒就不等了（HTTP 那层自己有超时）。
       await services.queue.drain(10_000)
       const srv = listening

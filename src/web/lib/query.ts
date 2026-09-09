@@ -25,6 +25,10 @@ export const keys = {
   health: ['health'] as const,
   config: ['config'] as const,
   system: ['system'] as const,
+  overview: ['overview'] as const,
+  /** 磁盘占用。要 stat 文件，所以不跟着 SSE 失效，进系统页时取一次。 */
+  storage: ['storage'] as const,
+  qr: ['qr'] as const,
   subs: ['subs'] as const,
   updates: ['updates'] as const,
   rules: ['rules'] as const,

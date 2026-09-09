@@ -7,6 +7,7 @@ import {
   type AuthAction,
 } from '../domain/auth.ts'
 import type { BiliAuth } from '../ports/bili.ts'
+import { errFields, failureFields } from '../log-fields.ts'
 import type { Clock } from '../ports/clock.ts'
 import type { CookieJar } from '../ports/cookie-jar.ts'
 import type { EventBus } from '../ports/event-bus.ts'
@@ -49,6 +50,10 @@ export class AuthLifecycle {
   private state: AuthState
   private lastError: string | null = null
   private checkedAt: number | null = null
+  /** 当前那张待扫码的地址。系统页靠它把码画出来，不必回终端。 */
+  private qrUrl: string | null = null
+  /** 有一轮扫码正在等人。第二个请求不再出第二张码。 */
+  private loggingIn = false
 
   constructor(deps: AuthLifecycleDeps) {
     this.deps = deps
@@ -68,7 +73,51 @@ export class AuthLifecycle {
       refreshFailures: this.refreshFailures(),
       checkedAt: this.checkedAt,
       lastError: this.lastError,
+      qrUrl: this.qrUrl,
     }
+  }
+
+  /**
+   * 从页面上开一轮扫码。不 await 登录本身 —— 扫码要等人，HTTP 请求不该挂在那儿。
+   *
+   * 页面之后靠 /api/system 的 state 和 qrUrl 看进展（登录态变化都会发 SSE 事件）。
+   */
+  beginLogin(): 'started' | 'in-progress' {
+    if (this.loggingIn) return 'in-progress'
+    void this.loginByQr().catch((err: unknown) => {
+      this.logger.error(errFields(err), '扫码登录异常')
+    })
+    return 'started'
+  }
+
+  /**
+   * 手动续期。不走 decideAuthAction —— 那是「该不该续」，这里是人已经点了「续一下」。
+   *
+   * 续不动的原因照原样返回，页面要显示它；成功后剩余有效期由快照给出。
+   */
+  async refreshNow(): Promise<Result<AuthSnapshot>> {
+    if (this.deps.cookies.isEmpty()) {
+      const message = '本地没有 cookie，先扫码登录'
+      this.lastError = message
+      return fail({ kind: 'auth-lost', code: null, message, retryAfterMs: null })
+    }
+    this.logger.info({ trigger: 'manual' }, 'cookie 续期开始')
+    const refreshed = await this.deps.auth.refreshCookies()
+    if (!refreshed.ok) {
+      const failures = this.refreshFailures() + 1
+      this.deps.state.set('refresh-failures', String(failures))
+      this.lastError = refreshed.failure.message
+      this.logger.warn(
+        { trigger: 'manual', failures, ...failureFields(refreshed.failure) },
+        'cookie 续期失败',
+      )
+      return fail(refreshed.failure)
+    }
+    this.deps.state.set('refresh-failures', '0')
+    this.lastError = null
+    this.checkedAt = this.deps.clock.now()
+    this.transition('logged-in', '手动续期成功')
+    return ok(this.snapshot())
   }
 
   /** 登录态是否可用。轮询任务每轮开始前问它一次，false 就直接跳过这一轮。 */
@@ -86,7 +135,7 @@ export class AuthLifecycle {
     if (!status.ok) {
       // 问不出来 ≠ 没登录。保持原状态，记下原因，让下一轮再试。
       this.lastError = status.failure.message
-      this.logger.warn({ failure: status.failure }, '核对登录态失败，保持原状态')
+      this.logger.warn(failureFields(status.failure), '登录态核对失败')
       return fail(status.failure)
     }
     this.checkedAt = this.deps.clock.now()
@@ -125,12 +174,28 @@ export class AuthLifecycle {
    * 轮询用注入的时钟 sleep，所以测试里推假响应就能走完全程，不用真等。
    */
   async loginByQr(): Promise<Result<AuthSnapshot>> {
+    // 一次只出一张码：启动流程和页面上的「重新扫码」撞上时，后来的那个直接被挡回去。
+    if (this.loggingIn) {
+      return fail({ kind: 'transient', code: null, message: '已经有一张码在等人扫', retryAfterMs: null })
+    }
+    this.loggingIn = true
+    try {
+      return await this.runQrLogin()
+    } finally {
+      this.loggingIn = false
+    }
+  }
+
+  private async runQrLogin(): Promise<Result<AuthSnapshot>> {
     for (let round = 0; round < MAX_QR_ROUNDS; round += 1) {
       const started = await this.deps.auth.startQrLogin()
       if (!started.ok) {
         this.lastError = started.failure.message
+        this.qrUrl = null
         return fail(started.failure)
       }
+      // 先记下地址再转状态：页面看到 waiting-scan 时码必须已经能取到。
+      this.qrUrl = started.value.url
       this.transition('waiting-scan', '二维码已生成')
       this.deps.showQr(await this.deps.renderQr(started.value.url), started.value.url)
 
@@ -139,7 +204,8 @@ export class AuthLifecycle {
         const polled = await this.deps.auth.pollQrLogin(started.value.qrcodeKey)
         if (!polled.ok) {
           this.lastError = polled.failure.message
-          this.logger.warn({ failure: polled.failure }, '轮询扫码状态失败')
+          this.qrUrl = null
+          this.logger.warn(failureFields(polled.failure), '扫码状态轮询失败')
           return fail(polled.failure)
         }
         switch (polled.value.state) {
@@ -149,12 +215,13 @@ export class AuthLifecycle {
             this.transition('scanned', '已扫码，等手机上确认')
             break
           case 'expired':
-            this.logger.info({ round }, '二维码过期，换一张')
+            this.logger.info({ round }, '二维码已过期，重新出码')
             break
           case 'confirmed':
             this.rememberWho(polled.value.uid, polled.value.uname)
             this.deps.state.set('refresh-failures', '0')
             this.lastError = null
+            this.qrUrl = null
             this.checkedAt = this.deps.clock.now()
             this.transition('logged-in', `登录成功：${polled.value.uname}`)
             return ok(this.snapshot())
@@ -166,12 +233,13 @@ export class AuthLifecycle {
 
     const message = `扫码超时：换过 ${MAX_QR_ROUNDS} 张码都没有完成确认`
     this.lastError = message
+    this.qrUrl = null
     this.transition(this.deps.cookies.isEmpty() ? 'logged-out' : 'auth-lost', message)
     return fail({ kind: 'transient', code: null, message, retryAfterMs: null })
   }
 
   private async runRefresh(action: AuthAction): Promise<Result<AuthAction>> {
-    this.logger.info({ reason: action.reason }, '开始续 cookie')
+    this.logger.info({ trigger: 'auto', reason: action.reason }, 'cookie 续期开始')
     const refreshed = await this.deps.auth.refreshCookies()
     if (refreshed.ok) {
       this.deps.state.set('refresh-failures', '0')
@@ -183,7 +251,7 @@ export class AuthLifecycle {
     const failures = this.refreshFailures() + 1
     this.deps.state.set('refresh-failures', String(failures))
     this.lastError = refreshed.failure.message
-    this.logger.warn({ failures, failure: refreshed.failure }, '续期失败')
+    this.logger.warn({ trigger: 'auto', failures, ...failureFields(refreshed.failure) }, 'cookie 续期失败')
 
     // 到上限就转终态。继续重试只会一直失败，而「一直在重试」看起来像还活着。
     if (failures >= MAX_REFRESH_ATTEMPTS || refreshed.failure.kind === 'auth-lost') {
@@ -208,7 +276,7 @@ export class AuthLifecycle {
     if (this.state === next) return
     const from = this.state
     this.state = next
-    this.logger.info({ from, to: next, reason }, '登录状态变化')
+    this.logger.info({ from, to: next, reason }, '登录态变更')
     this.deps.events.emit({ type: 'auth.changed', loggedIn: next === 'logged-in' })
   }
 

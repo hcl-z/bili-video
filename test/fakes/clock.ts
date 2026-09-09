@@ -1,3 +1,4 @@
+import { checkCronExpression } from '../../src/server/infra/clock/system-clock.ts'
 import type { Cancel, Clock } from '../../src/server/ports/clock.ts'
 
 /**
@@ -32,6 +33,11 @@ export class FakeClock implements Clock {
       const i = this.scheduled.indexOf(entry)
       if (i >= 0) this.scheduled.splice(i, 1)
     }
+  }
+
+  /** 排程不解析 cron，但校验必须是真的：非法表达式当场被拒是要测的行为之一。 */
+  checkCron(cron: string): string | null {
+    return checkCronExpression(cron)
   }
 
   /** 把时间往前推，不触发任何任务。 */

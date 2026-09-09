@@ -7,6 +7,7 @@ import type { BiliRelationWriter } from '../../ports/bili.ts'
 import type { Clock } from '../../ports/clock.ts'
 import type { CookieJar } from '../../ports/cookie-jar.ts'
 import type { Logger } from '../../ports/logger.ts'
+import { failureFields } from '../../log-fields.ts'
 import type { WriteAuditRepo } from '../../ports/repo.ts'
 import type { BiliHttp } from './http-client.ts'
 
@@ -80,7 +81,7 @@ export class BiliRelationsClient implements BiliRelationWriter {
       // 没法验证 B 站到底回 `{}` 还是 `null`（社区文档仓库已下架），所以选前者，
       // 但不让它静默 —— 日志里连着出现就说明猜错了。
       if (res.value === undefined || res.value === null) {
-        this.logger.warn({ count: batch.length }, 'relation/relations 没给 data，按都没关注处理')
+        this.logger.warn({ count: batch.length }, '关注关系响应缺少 data，按未关注处理')
       }
       const parsed = RelationsSchema.safeParse(res.value ?? {})
       if (!parsed.success) return fail(shapeFailure('relation/relations', res.value))
@@ -132,10 +133,10 @@ export class BiliRelationsClient implements BiliRelationWriter {
 
     this.record(uid, res)
     if (!res.ok) {
-      this.logger.warn({ uid, kind: res.failure.kind, msg: res.failure.message }, '关注失败')
+      this.logger.warn({ uid, ...failureFields(res.failure) }, '关注失败')
       return res
     }
-    this.logger.info({ uid }, '已关注')
+    this.logger.info({ uid }, '关注成功')
     return ok(undefined)
   }
 

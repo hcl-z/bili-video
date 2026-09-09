@@ -13,3 +13,19 @@ declare module 'qrcode-terminal' {
   }
   export default qrcode
 }
+
+/**
+ * 它内部那份编码器。直接用它是为了不再装第二个 QR 依赖 ——
+ * 终端字符画和 SVG 的区别只在渲染，模块矩阵是同一份。
+ */
+declare module 'qrcode-terminal/vendor/QRCode/index.js' {
+  class QRCode {
+    /** typeNumber < 1 = 按内容自动选版本；errorCorrectLevel: L=1 M=0 Q=3 H=2。 */
+    constructor(typeNumber: number, errorCorrectLevel: number)
+    addData(data: string): void
+    make(): void
+    getModuleCount(): number
+    isDark(row: number, col: number): boolean
+  }
+  export default QRCode
+}

@@ -13,12 +13,14 @@ import { patchUpFeedItem } from './reader-cache'
  */
 const AFFECTS: Record<AppEventType, readonly (readonly string[])[]> = {
   hello: [],
-  'update.new': [keys.updates, keys.summaries],
-  'poll.finished': [keys.updates, keys.summaries, keys.system],
-  'auth.changed': [keys.system],
-  'config.changed': [keys.config, keys.ai],
-  'job.changed': [keys.jobs, keys.summaries],
-  'summary.done': [keys.jobs, keys.summaries],
+  'update.new': [keys.updates, keys.summaries, keys.overview],
+  'poll.finished': [keys.updates, keys.summaries, keys.system, keys.overview],
+  // 登录态变了也要重取二维码：转到 waiting-scan 的那一刻码才存在。
+  'auth.changed': [keys.system, keys.overview, keys.qr],
+  'config.changed': [keys.config, keys.ai, keys.overview],
+  'job.changed': [keys.jobs, keys.summaries, keys.overview],
+  'summary.done': [keys.jobs, keys.summaries, keys.overview],
+  'health.checked': [keys.overview],
 }
 
 /** 订阅 /api/events，按事件类型失效对应查询。EventSource 自己会重连，掉线不用管。 */

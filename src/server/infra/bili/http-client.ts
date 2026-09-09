@@ -10,6 +10,7 @@ import {
 import type { Clock } from '../../ports/clock.ts'
 import type { CookieJar } from '../../ports/cookie-jar.ts'
 import type { Logger } from '../../ports/logger.ts'
+import { errFields, failureFields } from '../../log-fields.ts'
 
 import type { BrowserIdentity } from './browser-identity.ts'
 import { keyFromUrl, signWbi, type WbiKeys } from './wbi.ts'
@@ -145,12 +146,12 @@ export class BiliHttp {
     const first = await attempt()
     if (first.ok || first.failure.kind !== 'risk-control' || opts.noRetry === true) return first
 
-    this.logger.warn({ failure: first.failure }, '命中风控，清空签名 key 并重取 ticket 后重试一次')
+    this.logger.warn(failureFields(first.failure), '命中风控，重取 ticket 后重试一次')
     this.resetSigning()
     const refreshed = await this.refreshTicket()
     if (!refreshed.ok) {
       // 重取失败不改变结论：原始的风控失败才是调用方要退避的依据。
-      this.logger.warn({ failure: refreshed.failure }, '重取 ticket 没成功，沿用原始风控失败')
+      this.logger.warn(failureFields(refreshed.failure), 'ticket 重取失败，沿用原始风控失败')
       return first
     }
     return attempt()
@@ -194,7 +195,7 @@ export class BiliHttp {
     try {
       res = await this.deps.fetch(url, init)
     } catch (err) {
-      this.logger.warn({ url, err: String(err) }, '请求发不出去')
+      this.logger.warn({ url, ...errFields(err) }, '请求发送失败')
       return fail(classifyThrown(err))
     }
 
@@ -328,7 +329,7 @@ export class BiliHttp {
     if (!parsed.ok) return parsed
     this.ticket = parsed.value
     if (parsed.value.keys !== null) this.wbiKeys = parsed.value.keys
-    this.logger.info({ expiresAt: parsed.value.expiresAt }, '已换取 bili_ticket')
+    this.logger.info({ expiresAt: parsed.value.expiresAt }, 'bili_ticket 已获取')
     return parsed
   }
 }

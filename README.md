@@ -69,13 +69,13 @@ src/shared/contract/   前后端共享的 zod schema 与类型
 src/server/
   ports/               端口（接口）：Clock / Logger / EventBus / 9 个仓储 / B站 / ASR / LLM / Notifier …
   domain/              纯逻辑，零 IO：B站错误码分类、登录态决策、uid 识别、锚点推进、过滤判定、
-                       流水线步序与产物作废规则
+                       流水线步序与产物作废规则、三类故障判定
   app/                 编排：登录生命周期（扫码 → 续期 → 失效）、订阅与自动关注、轮询、过滤规则、
-                       总结队列、UP 空间流（阅读页翻历史 + 手动排解析）
+                       总结队列、UP 空间流（阅读页翻历史 + 手动排解析）、健康自查与告警、备份导出
   infra/               适配器：SQLite、secret-box、事件总线、真时钟、带超时的正则、
                        B站（签名/登录/续期/关注/聚合流/空间流）
   config/              YAML seed → DB，DB 为真相 + 热重载
-  http/                Hono 装配与路由，含 SSE（/api/events）
+  http/                Hono 装配与路由，两条 SSE（/api/events 与 /api/logs/stream）
   build-server.ts      ★ 组装根：buildServer(ports)，唯一 new 具体实现的地方
   main.ts              薄入口：构造真实 infra，交给 buildServer
 src/web/               Vite + React + Tailwind v4 + shadcn/ui

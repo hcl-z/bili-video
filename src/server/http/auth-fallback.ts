@@ -1,0 +1,24 @@
+import type { AuthSnapshot } from '#shared/contract/api.ts'
+import { remainingMs } from '../domain/auth.ts'
+import type { Ports } from '../ports/index.ts'
+
+export const ADAPTER_MISSING = 'B 站适配器未接入（本进程没有装配 biliAuth）'
+
+/**
+ * B 站适配器还没接上时的登录态。不是「没登录」，而是「这个能力没装」——
+ * 但对页面来说结论一样：不能干活，且原因写在 lastError 里，不留白。
+ */
+export function adapterMissingAuth(ports: Ports, now: number): AuthSnapshot {
+  const expiresAt = ports.cookies.earliestExpiry()
+  return {
+    state: 'logged-out',
+    uid: ports.state.get('auth-uid'),
+    uname: ports.state.get('auth-uname'),
+    expiresAt,
+    remainingMs: remainingMs(expiresAt, now),
+    refreshFailures: 0,
+    checkedAt: null,
+    lastError: ADAPTER_MISSING,
+    qrUrl: null,
+  }
+}

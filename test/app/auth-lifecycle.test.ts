@@ -140,7 +140,7 @@ describe('app/auth-lifecycle 扫码登录全流程', () => {
 
     // 状态迁移必须是这三步，一步都不能少也不能乱。
     const states = r.logger.lines
-      .filter((l) => l.msg === '登录状态变化')
+      .filter((l) => l.msg === '登录态变更')
       .map((l) => (l.obj as { to: string }).to)
     assert.deepEqual(states, ['waiting-scan', 'scanned', 'logged-in'])
     assert.deepEqual(r.emitted, [false, false, true])

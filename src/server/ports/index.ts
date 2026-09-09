@@ -15,6 +15,7 @@ import type { Llm } from './llm.ts'
 import type { Logger } from './logger.ts'
 import type { MarkdownWriter } from './markdown.ts'
 import type { Notifier } from './notifier.ts'
+import type { StorageStats } from './storage.ts'
 import type {
   AnchorRepo,
   DeliveryRepo,
@@ -46,6 +47,7 @@ export type * from './markdown.ts'
 export type * from './notifier.ts'
 export type * from './repo.ts'
 export type * from './secret-store.ts'
+export type * from './storage.ts'
 
 /** 窄仓储打成一包只是为了少写一串构造参数；它们仍然是各自独立的接口。 */
 export interface Repos {
@@ -108,5 +110,7 @@ export interface Ports {
   cookies: CookieJar
   /** 总结落盘。不进 external 是因为它没有「这一票还没做」这个状态，永远在。 */
   markdown: MarkdownWriter
+  /** 磁盘占用。系统页要显示库和产物一共吃了多少。 */
+  storage: StorageStats
   external: ExternalPorts
 }
