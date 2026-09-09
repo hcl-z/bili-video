@@ -1,0 +1,29 @@
+test/config.test.ts
+  s_052c7bc0f0a0d2::t_233796b26145ef 8,15,25-27,31,38-40,48-49,51,156-157,159
+src/server/config/load.ts
+  s_052c7bc0f0a0d2::t_b77f653a919c7e 3,6-50,56,67,83,85,87
+src/shared/contract/config.ts
+  s_052c7bc0f0a0d2::t_2d2e09469d4777 3
+src/server/http/routes/config.ts
+  s_052c7bc0f0a0d2::t_8c2646304a86a0 11
+src/server/wiring.ts
+  s_052c7bc0f0a0d2::t_5bce5b6e31202a 148
+src/web/pages/system.tsx
+  s_052c7bc0f0a0d2::t_2afe4eaab193cb 282
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.44-trip",
+  "base_commit_sha": "89bc7ced32ed3183a798e1b39bb4e18e1f181e34",
+  "prompts": {},
+  "sessions": {
+    "s_052c7bc0f0a0d2": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a085f3-4a6f-748a-9547-6ffc1a21b46c",
+        "model": "gpt-5-6-terra"
+      },
+      "human_author": "hcl-z <1401859664@qq.com>"
+    }
+  }
+}
