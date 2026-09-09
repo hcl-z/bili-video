@@ -64,9 +64,8 @@ const ports: Ports = {
   cookies: core.cookies,
   markdown: core.markdown,
   storage: core.storage,
-  // 后面几票把剩下的 null 换成真适配器（通知渠道）。
   external: {
-    notifiers: [],
+    notifiers: core.notifiers,
     biliAuth: core.biliAuth,
     biliReader: core.biliReader,
     biliRelations: core.biliRelations,

@@ -33,6 +33,7 @@ export const keys = {
   updates: ['updates'] as const,
   rules: ['rules'] as const,
   ai: ['ai'] as const,
+  notify: ['notify'] as const,
   jobs: ['jobs'] as const,
   summaries: ['summaries'] as const,
   /** 空间流。**不挂 SSE** —— 对无限查询做失效会把已加载的每一页都重新打一次 B 站。 */

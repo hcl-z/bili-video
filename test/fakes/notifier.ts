@@ -27,13 +27,10 @@ export class RecordingNotifier implements Notifier {
   }
 
   async test(): Promise<DeliveryResult> {
-    return this.send({
-      kind: 'alert',
-      title: 'test',
-      body: 'test',
-      url: null,
-      group: null,
-    })
+    if (this.failWith !== null) {
+      return { ok: false, externalId: null, error: this.failWith }
+    }
+    return { ok: true, externalId: 'fake-test', error: null }
   }
 
   titles(): string[] {

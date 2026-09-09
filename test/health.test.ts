@@ -19,6 +19,12 @@ async function rig(fetch: FakeFetch): Promise<Harness> {
     fetch,
     cookies: ['SESSDATA=fake; Path=/; Domain=.bilibili.com'],
   })
+  h.core.config.setSection('notify', {
+    wxpusher: { enabled: false, uids: [] },
+    ntfy: { enabled: true, server: 'https://ntfy.sh', topic: 'test_topic' },
+    feishu: { enabled: false, appId: '', receiveIdType: 'open_id', receiveId: '' },
+    webhook: { enabled: false, url: '' },
+  })
   h.core.repos.subscriptions.upsert({
     uid: '111',
     name: 'UP-111',

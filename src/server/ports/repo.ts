@@ -131,6 +131,8 @@ export interface DeliveryRepo {
     at: number,
   ): void
   listForUpdate(updateId: string): DeliveryRecord[]
+  /** 静默时段结束后再推；失败投递由下一轮显式 claim 增加 attempts 后重试。 */
+  retryable(limit: number): DeliveryRecord[]
   recent(limit: number): DeliveryRecord[]
 }
 

@@ -8,8 +8,11 @@ import type {
   HealthSnapshot,
   JobsResponse,
   LoginStartResponse,
+  NotifySettingsResponse,
+  NotifyTestResponse,
   OverviewResponse,
   PatchAiSettingsRequest,
+  PatchNotifySettingsRequest,
   PatchSubscriptionRequest,
   PollResult,
   QrResponse,
@@ -189,4 +192,15 @@ export const api = {
     request<AiSettingsResponse>('/ai', { method: 'PATCH', body: JSON.stringify(patch) }),
 
   testAi: () => request<AiTestResponse>('/ai/test', { method: 'POST' }),
+
+  notifySettings: () => request<NotifySettingsResponse>('/notify'),
+
+  patchNotifySettings: (patch: PatchNotifySettingsRequest) =>
+    request<NotifySettingsResponse>('/notify', {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
+    }),
+
+  testNotify: (channel: 'wxpusher' | 'ntfy' | 'feishu' | 'webhook') =>
+    request<NotifyTestResponse>(`/notify/${channel}/test`, { method: 'POST' }),
 }

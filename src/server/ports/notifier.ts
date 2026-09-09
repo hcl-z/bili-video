@@ -8,7 +8,7 @@ export interface Notifier {
   test(): Promise<DeliveryResult>
 }
 
-export type NotifyChannel = 'wxpusher' | 'ntfy'
+export type NotifyChannel = 'wxpusher' | 'ntfy' | 'feishu' | 'webhook'
 
 export interface NotifyMessage {
   kind: DeliveryKind

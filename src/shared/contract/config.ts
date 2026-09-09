@@ -132,14 +132,36 @@ export const NotifyConfigSchema = z.object({
     .object({
       enabled: z.boolean().default(false),
       /** appToken 加密存 secrets 表，不在这里。 */
-      uids: z.array(z.string()).default([]),
+      uids: z
+        .array(z.string().min(1))
+        .transform((values) => [...new Set(values)])
+        .default([]),
     })
     .default({}),
   ntfy: z
     .object({
       enabled: z.boolean().default(false),
-      server: z.string().default('https://ntfy.sh'),
-      topic: z.string().default(''),
+      server: z.string().url().default('https://ntfy.sh'),
+      topic: z
+        .string()
+        .regex(/^$|^[-_A-Za-z0-9]{1,64}$/, 'topic 只能包含字母、数字、短横线和下划线，最长 64 位')
+        .default(''),
+    })
+    .default({}),
+  feishu: z
+    .object({
+      enabled: z.boolean().default(false),
+      appId: z.string().default(''),
+      receiveIdType: z
+        .enum(['open_id', 'union_id', 'user_id', 'email', 'chat_id'])
+        .default('open_id'),
+      receiveId: z.string().default(''),
+    })
+    .default({}),
+  webhook: z
+    .object({
+      enabled: z.boolean().default(false),
+      url: z.union([z.literal(''), z.string().url()]).default(''),
     })
     .default({}),
 })
@@ -181,6 +203,7 @@ export type AiConfig = z.infer<typeof AiConfigSchema>
 export type AsrConfig = z.infer<typeof AsrConfigSchema>
 export type ChunkConfig = z.infer<typeof ChunkConfigSchema>
 export type OutputConfig = z.infer<typeof OutputConfigSchema>
+export type NotifyConfig = z.infer<typeof NotifyConfigSchema>
 
 /** section 名 → 该 section 的 schema。配置的按段读写都过这张表。 */
 export const CONFIG_SECTIONS = {

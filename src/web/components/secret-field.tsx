@@ -45,8 +45,9 @@ export function SecretField(props: {
       </div>
       <Input
         id={props.id}
+        name={props.id}
         type="password"
-        autoComplete="off"
+        autoComplete="new-password"
         value={props.value}
         onChange={(e) => props.onChange(e.target.value)}
         placeholder={state.configured ? '留空表示不修改' : 'sk-…'}

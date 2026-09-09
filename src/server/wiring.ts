@@ -35,6 +35,7 @@ import {
 } from './infra/db/repo-summary.ts'
 import { SqliteFilterRuleRepo, SqliteSubscriptionRepo } from './infra/db/repo-subscriptions.ts'
 import { SqliteWriteAuditRepo } from './infra/db/repo-write-audit.ts'
+import { makePushNotifiers } from './infra/notify/push-all-in-one.ts'
 import { openDatabase } from './infra/db/sqlite.ts'
 import { loadMasterKey } from './infra/secret/key-manager.ts'
 import { open, parseBox, seal } from './infra/secret/secret-box.ts'
@@ -60,6 +61,12 @@ import type { EventBus } from './ports/event-bus.ts'
 import type { Logger } from './ports/logger.ts'
 import type { StateRepo } from './ports/state.ts'
 import type { Repos } from './ports/index.ts'
+import {
+  FEISHU_APP_SECRET,
+  NTFY_AUTH,
+  WEBHOOK_AUTHORIZATION,
+  WXPUSHER_APP_TOKEN,
+} from './app/notify.ts'
 
 /**
  * 真实的持久化内核：SQLite + migrations + 8 个仓储 + secret-box + 配置。
@@ -118,6 +125,8 @@ export interface Core {
   llm: Llm
   /** ASR 连通性测试。按 provider 走 HTTP 或本地命令两条路。 */
   probeAsr: () => Promise<ProbeResult>
+  /** WxPusher 与 ntfy。配置和密钥都用时读取，页面保存后下一条即生效。 */
+  notifiers: ReturnType<typeof makePushNotifiers>
   close(): void
 }
 
@@ -260,6 +269,15 @@ export function openCore(opts: CoreOptions): Core {
     apiKey: () => secrets.get(ASR_API_KEY),
     commands,
   })
+  const notifiers = makePushNotifiers({
+    config: () => config.getSection('notify'),
+    wxpusherToken: () => secrets.get(WXPUSHER_APP_TOKEN),
+    ntfyAuth: () => secrets.get(NTFY_AUTH),
+    feishuSecret: () => secrets.get(FEISHU_APP_SECRET),
+    webhookAuthorization: () => secrets.get(WEBHOOK_AUTHORIZATION),
+    fetch: netFetch,
+    logger,
+  })
 
   return {
     db,
@@ -280,6 +298,7 @@ export function openCore(opts: CoreOptions): Core {
     storage,
     llm,
     probeAsr,
+    notifiers,
     close() {
       db.close()
     },

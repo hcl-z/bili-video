@@ -29,8 +29,8 @@ export function AppShell() {
         className="bg-background/85 fixed inset-x-0 top-0 z-20 flex items-center gap-3 border-b px-4 backdrop-blur"
         style={{ height: 'var(--appbar-h)' }}
       >
-        <span className="bg-brand size-2.5 rounded-full" aria-hidden />
-        <span className="text-sm font-semibold tracking-tight">B 站监听工作台</span>
+        <img src="/app-icon.png" alt="" className="size-7 rounded-md" />
+        <span className="text-sm font-semibold tracking-tight">B站动态雷达</span>
         <div className="flex-1" />
         <HealthDot />
         <Tooltip>

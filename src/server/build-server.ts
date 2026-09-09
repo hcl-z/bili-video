@@ -6,7 +6,9 @@ import type { Hono } from 'hono'
 import { AiService } from './app/ai.ts'
 import { AuthLifecycle } from './app/auth-lifecycle.ts'
 import { BackupService } from './app/backup.ts'
+import { DeliveryService } from './app/delivery.ts'
 import { HealthMonitor } from './app/health.ts'
+import { NotifyService } from './app/notify.ts'
 import { Poller } from './app/poller.ts'
 import { SummaryQueue } from './app/queue-runner.ts'
 import { RuleService } from './app/rules.ts'
@@ -49,6 +51,8 @@ export interface Services {
   rules: RuleService
   poll: Poller
   ai: AiService
+  notify: NotifyService
+  delivery: DeliveryService
   queue: SummaryQueue
   ups: UpFeedService
   health: HealthMonitor
@@ -129,6 +133,24 @@ export function buildServer(ports: Ports, opts: BuildOptions = {}): Server {
     loggedIn: () => auth?.isUsable() ?? false,
     onVideo: (v) => queue.enqueue(v),
   })
+  const delivery = new DeliveryService({
+    updates: ports.repos.updates,
+    summaries: ports.repos.summaries,
+    subscriptions: ports.repos.subscriptions,
+    deliveries: ports.repos.deliveries,
+    notifiers: ports.external.notifiers,
+    config: ports.config,
+    clock: ports.clock,
+    events: ports.events,
+    logger: ports.logger,
+  })
+  const notify = new NotifyService({
+    config: ports.config,
+    secrets: ports.secrets,
+    notifiers: ports.external.notifiers,
+    events: ports.events,
+    logger: ports.logger,
+  })
   const services: Services = {
     auth,
     subs: new SubscriptionService({
@@ -142,6 +164,8 @@ export function buildServer(ports: Ports, opts: BuildOptions = {}): Server {
     rules,
     poll,
     ai,
+    notify,
+    delivery,
     queue,
     ups: new UpFeedService({
       reader: ports.external.biliReader,
@@ -185,6 +209,7 @@ export function buildServer(ports: Ports, opts: BuildOptions = {}): Server {
     poll: services.poll,
     rules: services.rules,
     ai: services.ai,
+    notify: services.notify,
     queue: services.queue,
     ups: services.ups,
     health: services.health,
@@ -219,6 +244,7 @@ export function buildServer(ports: Ports, opts: BuildOptions = {}): Server {
         )
       }
       services.poll.start()
+      services.delivery.start()
       services.queue.start()
       services.health.start()
       // 上次跑挂了留下的音频没人删，攒着能把磁盘吃光。
@@ -254,11 +280,12 @@ export function buildServer(ports: Ports, opts: BuildOptions = {}): Server {
 
     async stop(): Promise<void> {
       services.poll.stop()
+      services.delivery.stop()
       services.queue.stop()
       services.health.stop()
       logs.close()
       // 在飞的任务还在写库，等它们收尾再让调用方关连接。超过 10 秒就不等了（HTTP 那层自己有超时）。
-      await services.queue.drain(10_000)
+      await Promise.all([services.queue.drain(10_000), services.delivery.drain()])
       const srv = listening
       listening = null
       if (srv !== null) {

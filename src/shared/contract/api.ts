@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { AiConfigSchema, AppConfigSchema, AsrConfigSchema } from './config.ts'
+import { AiConfigSchema, AppConfigSchema, AsrConfigSchema, NotifyConfigSchema } from './config.ts'
 import {
   DeliveryKindSchema,
   DeliveryStatusSchema,
@@ -521,6 +521,80 @@ export type PatchAiSettingsRequest = z.infer<typeof PatchAiSettingsRequestSchema
 
 export const AiTestResponseSchema = z.object({ llm: ProbeResultSchema, asr: ProbeResultSchema })
 export type AiTestResponse = z.infer<typeof AiTestResponseSchema>
+
+export const NotifyTargetStateSchema = z.object({
+  enabled: z.boolean(),
+  configured: z.boolean(),
+  ready: z.boolean(),
+})
+export type NotifyTargetState = z.infer<typeof NotifyTargetStateSchema>
+
+export const NotifySettingsResponseSchema = z.object({
+  notify: NotifyConfigSchema,
+  wxpusherToken: SecretStateSchema,
+  ntfyAuth: SecretStateSchema,
+  feishuSecret: SecretStateSchema,
+  webhookAuthorization: SecretStateSchema,
+  targets: z.object({
+    wxpusher: NotifyTargetStateSchema,
+    ntfy: NotifyTargetStateSchema,
+    feishu: NotifyTargetStateSchema,
+    webhook: NotifyTargetStateSchema,
+  }),
+})
+export type NotifySettingsResponse = z.infer<typeof NotifySettingsResponseSchema>
+
+export const PatchNotifySettingsRequestSchema = z.object({
+  notify: z
+    .object({
+      wxpusher: z
+        .object({
+          enabled: z.boolean().optional(),
+          uids: z.array(z.string().min(1)).optional(),
+        })
+        .optional(),
+      ntfy: z
+        .object({
+          enabled: z.boolean().optional(),
+          server: z.string().url().optional(),
+          topic: z
+            .string()
+            .regex(/^$|^[-_A-Za-z0-9]{1,64}$/, 'topic 只能包含字母、数字、短横线和下划线，最长 64 位')
+            .optional(),
+        })
+        .optional(),
+      feishu: z
+        .object({
+          enabled: z.boolean().optional(),
+          appId: z.string().optional(),
+          receiveIdType: z.enum(['open_id', 'union_id', 'user_id', 'email', 'chat_id']).optional(),
+          receiveId: z.string().optional(),
+        })
+        .optional(),
+      webhook: z
+        .object({
+          enabled: z.boolean().optional(),
+          url: z.union([z.literal(''), z.string().url()]).optional(),
+        })
+        .optional(),
+    })
+    .optional(),
+  wxpusherToken: z.string().nullable().optional(),
+  ntfyAuth: z.string().nullable().optional(),
+  feishuSecret: z.string().nullable().optional(),
+  webhookAuthorization: z.string().nullable().optional(),
+})
+export type PatchNotifySettingsRequest = z.infer<typeof PatchNotifySettingsRequestSchema>
+
+export const NotifyTestResponseSchema = z.object({
+  channel: z.enum(['wxpusher', 'ntfy', 'feishu', 'webhook']),
+  result: z.object({
+    ok: z.boolean(),
+    externalId: z.string().nullable(),
+    error: z.string().nullable(),
+  }),
+})
+export type NotifyTestResponse = z.infer<typeof NotifyTestResponseSchema>
 
 export const ErrorResponseSchema = z.object({
   error: z.object({

@@ -79,6 +79,7 @@ output:
   markdownDir: summaries
 
 notify:
+  # appToken 由推送目标页加密保存。
   wxpusher:
     enabled: false
     uids: []
@@ -86,6 +87,17 @@ notify:
     enabled: false
     server: https://ntfy.sh
     topic: ''
+    # 私有 ntfy 的 Authorization（Bearer/Basic）由推送目标页加密保存。
+  feishu:
+    enabled: false
+    appId: ''
+    receiveIdType: open_id
+    receiveId: ''
+    # appSecret 由推送目标页加密保存。
+  webhook:
+    enabled: false
+    url: ''
+    # Authorization 由推送目标页加密保存。
 
 catchup:
   # 睡眠/停机唤醒后补推的时间窗，更老的只入库不推。

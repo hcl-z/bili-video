@@ -7,6 +7,7 @@ import type { AiService } from '../app/ai.ts'
 import type { AuthLifecycle } from '../app/auth-lifecycle.ts'
 import type { BackupService } from '../app/backup.ts'
 import type { HealthMonitor } from '../app/health.ts'
+import type { NotifyService } from '../app/notify.ts'
 import type { Poller } from '../app/poller.ts'
 import type { SummaryQueue } from '../app/queue-runner.ts'
 import type { RuleService } from '../app/rules.ts'
@@ -19,6 +20,7 @@ import { configRoutes } from './routes/config.ts'
 import { healthRoutes } from './routes/health.ts'
 import { jobRoutes } from './routes/jobs.ts'
 import { logRoutes, type LogBuffer } from './routes/logs.ts'
+import { notifyRoutes } from './routes/notify.ts'
 import { overviewRoutes } from './routes/overview.ts'
 import { ruleRoutes } from './routes/rules.ts'
 import { subscriptionRoutes } from './routes/subscriptions.ts'
@@ -39,6 +41,7 @@ export interface HttpOptions {
   poll: Poller
   rules: RuleService
   ai: AiService
+  notify: NotifyService
   queue: SummaryQueue
   ups: UpFeedService
   health: HealthMonitor
@@ -84,6 +87,7 @@ export function createHttpApp(ports: Ports, opts: HttpOptions): Hono {
   api.route('/summaries', summaryRoutes(ports, opts.queue))
   api.route('/ups', upRoutes(ports, opts.ups))
   api.route('/ai', aiRoutes(opts.ai))
+  api.route('/notify', notifyRoutes(opts.notify))
   api.route('/events', eventRoutes(ports))
   // 日志独立一条流：它一秒能刷几十行，混进主流量会把队列进度挤到看不见。
   api.route('/logs', logRoutes(ports.events, opts.logs))
