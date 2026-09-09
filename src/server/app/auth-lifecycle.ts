@@ -14,19 +14,13 @@ import type { EventBus } from '../ports/event-bus.ts'
 import type { Logger } from '../ports/logger.ts'
 import type { StateRepo } from '../ports/state.ts'
 
-/**
- * 登录态的生命周期：扫码进来、到期前续上、续不上就明确转成「登录已失效」。
- *
- * 这里是整个系统里最不该「悄悄失败」的地方。登录挂了而没人知道，表现是推送
- * 慢慢就没了 —— 所以每一次状态变化都落一条日志、发一个事件、更新一份快照，
- * 三者缺一都会让排查变成猜。
- */
+/** 登录态生命周期：扫码、续期与失效处理；状态变化同步记录日志、事件和快照。 */
 
 /** 2 秒一轮足够灵敏，又不至于把 passport 打疼。 */
 export const POLL_INTERVAL_MS = 2_000
 /** 一次登录最多换两张码；再不扫就该让人重新来一次，而不是无限刷。 */
 export const MAX_QR_ROUNDS = 2
-/** 二维码 180 秒有效。轮到这儿还没结果就换码，不再对着一张死码继续问。 */
+/** 二维码有效期为 180 秒，超时后更换。 */
 const QR_TIMEOUT_MS = 180_000
 
 export interface AuthLifecycleDeps {
@@ -141,8 +135,7 @@ export class AuthLifecycle {
     this.checkedAt = this.deps.clock.now()
     this.rememberWho(status.value.uid, status.value.uname)
 
-    // 有 cookie 但 B 站说没登录：纯函数看不见这一层，必须在这里显式判掉，
-    // 否则会因为「到期时间还早」判成 idle，然后带着废 cookie 一直轮询。
+    // B 站确认未登录时直接失效，避免未过期的无效 cookie 被判为 idle。
     if (!this.deps.cookies.isEmpty() && !status.value.loggedIn) {
       return this.giveUp('B 站说这套 cookie 没有登录，需要重新扫码')
     }
@@ -260,12 +253,7 @@ export class AuthLifecycle {
     return fail(refreshed.failure)
   }
 
-  /**
-   * 转「等人扫码」的终态：只有重新扫码能走出去。
-   *
-   * 一份 cookie 都没有时是 logged-out 而不是 auth-lost —— 全新安装什么都没丢，
-   * 页面上写「登录已失效」会让人以为出了故障，然后去查一个不存在的问题。
-   */
+  /** 转为等待扫码的终态；无 cookie 时使用 logged-out，已有 cookie 失效时使用 auth-lost。 */
   private giveUp(reason: string): Result<AuthAction> {
     this.lastError = reason
     this.transition(this.deps.cookies.isEmpty() ? 'logged-out' : 'auth-lost', reason)

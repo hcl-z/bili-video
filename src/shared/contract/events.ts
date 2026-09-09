@@ -26,7 +26,6 @@ export const AppEventSchema = z.discriminatedUnion('type', [
 export type AppEvent = z.infer<typeof AppEventSchema>
 export type AppEventType = AppEvent['type']
 
-/** 由低到高。 */
 export const LOG_LEVELS = ['trace', 'debug', 'info', 'warn', 'error', 'fatal'] as const
 export type LogLevelName = (typeof LOG_LEVELS)[number]
 

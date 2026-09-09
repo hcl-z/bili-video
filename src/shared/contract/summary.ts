@@ -16,7 +16,6 @@ export type TranscriptSource = z.infer<typeof TranscriptSourceSchema>
 export const DegradePathSchema = z.enum(['subtitle', 'asr', 'meta-only', 'link-only'])
 export type DegradePath = z.infer<typeof DegradePathSchema>
 
-/** 降级路径的中文名。前后端同一份。 */
 export const DEGRADE_LABEL: Record<DegradePath, string> = {
   subtitle: '官方字幕',
   asr: '语音转写',

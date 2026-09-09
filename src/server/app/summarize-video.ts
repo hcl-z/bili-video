@@ -89,12 +89,7 @@ export interface SummarizeDeps {
   events: EventBus
 }
 
-/**
- * 一个视频的总结管线，拆成「转写」和「总结」两段，队列那边分别调度。
- *
- * 并发 1 的闸门只锁住本机转写这一步（就一份 whisper），取字幕不锁 ——
- * 否则一条要转写一小时的视频会把有字幕的视频一起堵在门外。
- */
+/** 视频总结分为转写和总结两段；仅本机转写受 ASR 并发通道限制。 */
 export class SummarizeVideo {
   private readonly deps: SummarizeDeps
   private readonly logger: Logger
@@ -106,15 +101,7 @@ export class SummarizeVideo {
     this.asrLane = new Lane(() => deps.asrConfig().concurrency)
   }
 
-  /**
-   * 第一段：拿到带时间戳的文本，拿不到就顺着降级链往下退。
-   *
-   * 不返回 Result —— 内容取不到从来不是「这条任务失败」，而是「这条总结降一级」。
-   * 真正的失败只发生在总结那一段。
-   *
-   * from 在转写之后（chunk/reduce/persist）时直接复用上次的产物：那正是
-   * 「从第 N 步重跑」要省掉的活。产物不在了（清过库、或这条是老任务）就照常重跑。
-   */
+  /** 获取带时间戳的文本并按降级链处理；从转写后步骤重跑时复用可用转写产物。 */
   async transcribe(bvid: string, from: PipelineStep, hook: StepHook): Promise<Transcript> {
     if (!needsTranscript(from)) {
       const cached = this.cachedTranscript(bvid)
@@ -222,9 +209,9 @@ export class SummarizeVideo {
     } else {
       const made: ChunkNote[] = []
       for (const c of chunks) {
-        // 每段报一次：一次 LLM 调用要几十秒，不报的话这一步看着像卡住了。
+        // 每段更新状态，避免长时间 LLM 调用显示停滞。
         hook('chunk', 'running', `第 ${c.index + 1}/${chunks.length} 段`)
-        // 顺序跑：并发发出去的话，LLM 那条通道的并发上限就形同虚设了。
+        // 顺序处理分段，保持 LLM 通道并发限制。
         const prompt = chunkPrompt(meta, {
           index: c.index,
           total: chunks.length,
@@ -287,11 +274,7 @@ export class SummarizeVideo {
     return article
   }
 
-  /**
-   * 最后一级：库里留一条只有标题、封面、链接和失败原因的记录，任务本身还是失败。
-   *
-   * 两者都要：推送那边得有东西可推，队列页也得留着重跑的入口，不能把失败藏起来。
-   */
+  /** 最终降级时保存标题、封面、链接和失败原因，但任务仍标记失败以支持重跑。 */
   private async linkOnly(
     job: SummaryJob,
     t: Transcript,
@@ -327,7 +310,7 @@ export class SummarizeVideo {
     }
     summary.fullMd = renderMarkdown(meta, { ...summary, reasons: parts.reasons })
 
-    // 先落库再落盘：库是真相，文件是给人读的副本。反过来会出现「有文件没记录」。
+    // 先写入数据库再落盘，数据库为数据源，文件为副本。
     this.deps.summaries.upsert(summary, parts.transcript)
     const path = await this.deps.markdown.write(summaryFileName(job.bvid), summary.fullMd)
 
@@ -445,7 +428,7 @@ export class SummarizeVideo {
     return row === null || row.payload.trim() === '' ? null : row.payload
   }
 
-  /** 形状对不上就当没有：宁可多跑一步，也不能拿半个旧产物拼出一份总结。 */
+  /** 产物形状无效时视为不存在，避免复用不完整数据。 */
   private cached<T>(bvid: string, kind: ArtifactKind, schema: { safeParse: SafeParse<T> }): T | null {
     const row = this.deps.artifacts.get(bvid, kind)
     if (row === null) return null

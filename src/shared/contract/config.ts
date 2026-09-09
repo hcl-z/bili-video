@@ -1,11 +1,8 @@
 import { z } from 'zod'
 
 /**
- * 配置的唯一真相是数据库的 `app_config` 表；`config.example.yaml` 只在首次启动时 seed。
- * 这里的 schema 是 YAML 与 DB 两处的共同入口 —— 「Parse, don't validate」的三处边界之一。
- *
- * 每个 section 是 `app_config` 里的一行（key = section 名，value_json = 该对象），
- * 因此改一个 section 不会覆写别的 section。
+ * 配置真相为数据库 `app_config`；`config.example.yaml` 仅首次启动时 seed。
+ * schema 是 YAML 与 DB 的共同入口；每个 section 对应一行，更新一段不会覆写其他段。
  */
 
 export const ServerConfigSchema = z.object({
@@ -42,10 +39,8 @@ export const ChunkConfigSchema = z.object({
 })
 
 /**
- * WBI 签名的 64 位混淆表：把 `imgKey + subKey` 的 64 个字符按这张表重排，取前 32 位当密钥。
- *
- * 留空 = 未配置。需要 WBI 的接口会明确报错并说清缺什么，而不是发一个签名错的请求
- * 换回 -352 —— 那会被当成风控，白白触发退避。
+ * WBI 签名的 64 位混淆表：按表重排 `imgKey + subKey` 的 64 个字符，取前 32 位为密钥。
+ * 留空时需要 WBI 的接口明确报错，避免错误签名触发 -352 风控退避。
  */
 const MixinTableSchema = z
   .array(z.number().int().min(0).max(63))
@@ -69,10 +64,7 @@ export const BiliConfigSchema = z.object({
     .default({}),
   /** cookie 续期链里 `correspond/1` 用的 RSA 公钥（PEM）。空 = 不做自动续期，到期只能重新扫码。 */
   correspondPublicKeyPem: z.string().default(''),
-  /**
-   * 写接口（只有「自动关注」）的独立限流。和读接口的轮询节奏完全无关 ——
-   * 写接口的风控严得多，3–5 个订阅一次加完就没事了，所以给得很保守。
-   */
+  /** 自动关注这一唯一写接口的独立限流，与读接口轮询无关；写接口风控更严，限额保守。 */
   write: z
     .object({
       /** 刹车。关掉后订阅照样能加，只是不再自动关注，得自己去 B 站点关注。 */
@@ -92,10 +84,7 @@ export const AiConfigSchema = z.object({
   temperature: z.number().min(0).max(2).default(0.3),
   chunk: ChunkConfigSchema.default({}),
   llmConcurrency: z.number().int().min(1).max(8).default(2),
-  /**
-   * 单次调用的总超时。阅读版总结一次要吐上万 token，按 30–40 token/s 算就是好几分钟，
-   * 给小了会在快写完的时候被自己掐死。流式下还有一道 90s 的空闲超时管「假死」。
-   */
+  /** 阅读版总结可能输出上万 token，调用需数分钟；流式另有 90s 空闲超时处理假死。 */
   timeoutMs: z.number().int().min(10_000).max(1_800_000).default(600_000),
 })
 
@@ -113,12 +102,7 @@ export const AsrConfigSchema = z.object({
   language: z.string().default('zh'),
   /** ASR 是分钟级重活，并发 1 —— 免得把 16GB 内存吃满。 */
   concurrency: z.literal(1).default(1),
-  /**
-   * chat-audio 专用：切成多长一段送过去（秒）。
-   *
-   * 这类接口没有时间轴，切段是唯一能拿到时间戳的办法，段长就是时间戳的精度；
-   * 同时它们多半有请求体上限（MiMo 是 base64 后 10MB），段太长会被拒。
-   */
+  /** chat-audio 分段时长（秒）；分段是取得时间戳的唯一方式，段长决定精度，且需满足请求体上限。 */
   segmentSec: z.number().int().min(30).max(1800).default(120),
 })
 

@@ -6,7 +6,6 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { queryClient } from '@/lib/query'
 import { router } from './router'
 
-/** 只装providers，不放任何业务。 */
 export function App() {
   return (
     <QueryClientProvider client={queryClient}>

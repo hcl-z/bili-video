@@ -24,11 +24,7 @@ export interface QueueDeps {
   events: EventBus
 }
 
-/**
- * 总结队列。它和轮询完全解耦：轮询只管入队，抓取速度不受总结拖累。
- *
- * 没有定时器 —— 入队、启动、AI 配置变更这三处各踢一次 pump 就够了。
- */
+/** 总结队列与轮询解耦；入队、启动和 AI 配置变更时触发 pump。 */
 export class SummaryQueue {
   private readonly deps: QueueDeps
   private readonly logger: Logger
@@ -79,12 +75,7 @@ export class SummaryQueue {
     return job
   }
 
-  /**
-   * 重跑一条：把 failed/done 放回 pending。已完成的重跑会覆盖原来的总结。
-   *
-   * from 指定从哪一步起跑（缺省从头）：这一步及其之后的产物全部作废重算，
-   * 前面几步的产物照用 —— 那正是「不用再跑一遍前面的重活」的实现。
-   */
+  /** 重跑 failed/done 任务；指定 from 时作废该步骤及后续产物，复用此前产物。 */
   retry(id: number, from?: PipelineStep): 'ok' | 'missing' | 'busy' {
     const job = this.deps.jobs.get(id)
     if (job === null) return 'missing'

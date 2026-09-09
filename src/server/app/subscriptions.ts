@@ -13,12 +13,7 @@ export interface SubscriptionDeps {
   logger: Logger
   /** null = 关注适配器还没接上（或本进程不装）。订阅照样能加，只是关不上。 */
   relations: BiliRelationWriter | null
-  /**
-   * 自动关注的总开关，用时读（页面上改完下一次就生效）。
-   *
-   * 适配器里也挡了一道 —— 那道是防「换个调用方绕过去」的硬闸，
-   * 这道是为了连查关系那个读请求都省掉，并且给一句不像故障的提示。
-   */
+  /** 自动关注总开关，调用时读取；适配器另行强制校验。 */
   autoFollow: () => boolean
   /** null = 查不到昵称头像，退回用 uid 当名字，不因此拒绝订阅。 */
   profile: BiliProfile | null
@@ -31,13 +26,7 @@ export interface TogglePatch {
   enableAi?: boolean
 }
 
-/**
- * 订阅 = 登录小号的关注列表，所以「加订阅」是两件事：入库 + 关注。
- *
- * 两件事都可能单独失败，而它们的重要性不一样：入库失败等于什么都没发生；
- * 关注失败只是「暂时收不到这个人的动态」，订阅本身还在，稍后重试即可。
- * 所以 add 的返回值把这两层分开 —— sub 是结果，notice 是「还差一步」。
- */
+/** 添加订阅包含入库和关注；关注失败不回滚订阅，通过 notice 返回。 */
 export interface AddOutcome {
   sub: Subscription
   /** 关注没成功时的人话原因；成功就是 null。 */
@@ -128,12 +117,7 @@ export class SubscriptionService {
     return { followed: r.followed.length, notice: r.notice }
   }
 
-  /**
-   * 判据 3 与 7 都落在这个方法上：**先批量查一次关系，只对确实没关注的发写请求**。
-   *
-   * 反过来（先发关注、错了再说）会把系统里唯一的写接口调用次数放大好几倍，
-   * 而写接口的风控比读严得多 —— 这是参考实现里专门留了注释的一条。
-   */
+  /** 批量查询关注关系后，仅对未关注用户发送关注请求，以减少写请求和风控风险。 */
   async ensureFollowed(uids: string[]): Promise<{ followed: string[]; notice: string | null }> {
     if (uids.length === 0) return { followed: [], notice: null }
 
@@ -173,12 +157,7 @@ export class SubscriptionService {
     return { followed, notice }
   }
 
-  /**
-   * 查名片。失败就退回已有的那份 —— 订阅本身比昵称重要。
-   *
-   * 头像和昵称一起退回：upsert 是无条件覆盖 face 的，只退回昵称的话，
-   * 名片接口抽风时重复粘一次已有订阅就会把头像清空。
-   */
+  /** 查询名片失败时回退已有昵称和头像，避免 upsert 清空头像。 */
   private async fetchCard(
     uid: string,
     existing: Subscription | null,

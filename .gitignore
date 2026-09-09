@@ -1,4 +1,3 @@
-# deps & build output
 node_modules/
 dist/
 *.tsbuildinfo
@@ -16,12 +15,10 @@ data/logs/
 # demo 试跑的数据（假 B 站，随时可删）
 .demo-data/
 
-# 本地环境
 .env
 .env.local
 .DS_Store
 
-# 工作草稿（票、临时产物）
 .scratch/
 
 # 参考实现（只读，不进构建）

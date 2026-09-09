@@ -6,7 +6,6 @@ import { formatSpan } from '@/lib/format'
 import { keys } from '@/lib/query'
 import { cn } from '@/lib/utils'
 
-/** 顶栏那颗点：后端在不在。也是「数据层装配好了」的活证据。 */
 export function HealthDot() {
   const { data, isError } = useQuery({
     queryKey: keys.health,

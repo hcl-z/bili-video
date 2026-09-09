@@ -3,12 +3,8 @@ import { randomBytes } from 'node:crypto'
 import { dirname } from 'node:path'
 
 /**
- * master key 的来源与生成。
- *
- * 丢了它，所有已加密的 cookie 与 apiKey 一次性不可恢复 —— 所以：
- * 1. 生成走「临时文件 + rename」原子写，不会留半个文件；
- * 2. 文件存在但读不出来时**直接抛**，绝不悄悄生成一把新的（那等于静默丢数据）；
- * 3. 首次生成会返回 created: true，调用方要据此检查库里有没有旧密文。
+ * master key 丢失会使已加密的 cookie 与 apiKey 不可恢复。
+ * 生成使用临时文件加 rename；已有文件无效时直接抛错而不重新生成；首次生成以 `created: true` 供调用方检查旧密文。
  */
 export interface MasterKey {
   key: string

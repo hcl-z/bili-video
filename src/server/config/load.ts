@@ -6,12 +6,8 @@ import { AppConfigSchema, CONFIG_SECTION_NAMES } from '#shared/contract/config.t
 import type { Logger } from '../ports/logger.ts'
 
 /**
- * `config.example.yaml` 只是**首次启动的种子**。一旦某个 section 落了库，YAML 对它就再也不看了 ——
- * 页面上要写明这件事，否则三个月后改了 YAML 会以为「没生效」是 bug。
- *
- * 判断按 section 逐个来，不是「表里有东西就整段跳过」：schema 后加的 section 在老库里
- * 没有对应行，整段跳过的话它永远等不到种子，而 store 会用默认值把它补齐 ——
- * 于是「混淆表明明填了却报未配置」这种事只能靠读代码才查得出来。
+ * `config.example.yaml` 仅为首次启动和缺失 section 提供种子；section 落库后不再读取 YAML。
+ * 必须逐 section 填充：旧库新增 section 时应获得种子值，而非被 store 的默认值覆盖。
  */
 export interface SeedOutcome {
   /** 全新库的种子来源；null = 这次启动不是首次 seed。页面上那句「YAML 不再生效」看它。 */

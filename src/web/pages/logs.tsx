@@ -268,7 +268,6 @@ function Action(props: { onClick: () => void; icon: LucideIcon; label: string; a
   )
 }
 
-/** 命中的片段标出来。搜出一屏还得自己找位置的话，这个搜索框就只做了一半。 */
 function Mark(props: { text: string; query: string }) {
   if (props.query === '') return props.text
   const hay = props.text.toLowerCase()

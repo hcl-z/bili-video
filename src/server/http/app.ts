@@ -51,8 +51,7 @@ export interface HttpOptions {
 }
 
 /**
- * Hono 实例装配。没有鉴权中间件 —— 服务只听 127.0.0.1，安全边界是文件系统权限
- * 而不是自写的登录（spec Q31a）。改 host 之前先把这句话读一遍。
+ * Hono 装配：服务仅监听 127.0.0.1，安全边界是文件系统权限而非自写登录（spec Q31a）；改 host 前须重审此假设。
  */
 export function createHttpApp(ports: Ports, opts: HttpOptions): Hono {
   const app = new Hono()
@@ -89,17 +88,17 @@ export function createHttpApp(ports: Ports, opts: HttpOptions): Hono {
   api.route('/ai', aiRoutes(opts.ai))
   api.route('/notify', notifyRoutes(opts.notify))
   api.route('/events', eventRoutes(ports))
-  // 日志独立一条流：它一秒能刷几十行，混进主流量会把队列进度挤到看不见。
+  // 日志使用独立流，避免每秒数十行日志挤掉队列进度。
   api.route('/logs', logRoutes(ports.events, opts.logs))
-  // /api 下没命中的一律结构化 404，绝不落到静态资源的 index.html 上去。
+  // 未匹配的 /api 路径统一返回结构化 404，不回退到静态 index.html。
   api.all('*', (c) => c.json(errorBody('not-found', `没有这个端点：${c.req.path}`), 404))
   app.route('/api', api)
 
   if (opts.webRoot !== null) {
-    // @hono/node-server 的 serveStatic 只认**相对 cwd** 的 root，给绝对路径会静默什么都不伺服。
+    // @hono/node-server 的 serveStatic root 必须相对 cwd；绝对路径会静默不伺服任何内容。
     const root = relative(process.cwd(), opts.webRoot) || '.'
     app.use('/*', serveStatic({ root }))
-    // 前端是单页应用，深链接要回 index.html 让 react-router 接手。
+    // 前端为单页应用，深链接回退到 index.html 交由 react-router 处理。
     app.get('*', serveStatic({ root, path: 'index.html' }))
   }
 

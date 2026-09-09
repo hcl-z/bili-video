@@ -69,10 +69,8 @@ import {
 } from './app/notify.ts'
 
 /**
- * 真实的持久化内核：SQLite + migrations + 8 个仓储 + secret-box + 配置。
- *
- * 它在测试里也是**真的**（临时目录里的真库、真加密），只有进程边界外的东西才换假件。
- * 拆出这个函数是为了让 main.ts 和测试用同一段装配代码 —— 否则测的就不是生产那套接线了。
+ * 真实持久化内核：SQLite、迁移、8 个仓储、secret-box 和配置。
+ * 测试也使用真实临时库与加密，仅替换进程边界外的依赖。
  */
 export interface CoreOptions {
   dataDir: string
@@ -101,31 +99,18 @@ export interface Core {
   config: ConfigStore
   cookies: CookieJar
   state: StateRepo
-  /** 本实例的浏览器身份。第一次启动时生成并存下来，之后每次启动读回同一份。 */
   identity: BrowserIdentity
-  /** 扫码登录与 cookie 续期的适配器。 */
   biliAuth: BiliAuth
-  /** 聚合流读取。 */
   biliReader: BiliReader
-  /** 唯一的写接口：查关系 + 关注。限流与审计都在它内部。 */
   biliRelations: BiliRelationWriter
-  /** UP 主名片查询。 */
   biliProfile: BiliProfile
-  /** 官方字幕（含 AI 字幕）。 */
   subtitles: SubtitleFetcher
-  /** yt-dlp 取音频。 */
   audio: AudioDownloader
-  /** 转写。provider 在这一层之下切，编排层看不见区别。 */
   asr: Asr
-  /** 总结 Markdown 落盘。 */
   markdown: MarkdownWriter
-  /** 数据库与产物目录的磁盘占用。 */
   storage: StorageStats
-  /** OpenAI 兼容的 LLM。总开关的闸门在 AiService 上，不在这里。 */
   llm: Llm
-  /** ASR 连通性测试。按 provider 走 HTTP 或本地命令两条路。 */
   probeAsr: () => Promise<ProbeResult>
-  /** WxPusher 与 ntfy。配置和密钥都用时读取，页面保存后下一条即生效。 */
   notifiers: ReturnType<typeof makePushNotifiers>
   close(): void
 }
@@ -147,8 +132,7 @@ export function openCore(opts: CoreOptions): Core {
   })
   const secrets = new SqliteSecretStore(db, master.key, now)
 
-  // 新生成的 key + 库里已有密文 = key 丢了。继续跑只会在第一次解密时炸得莫名其妙，
-  // 所以在这里停下来，把「怎么恢复」说清楚。
+  // 新 key 配现有密文表示原 key 丢失；立即停止并说明恢复方式，避免首次解密时才失败。
   if (master.created && secrets.countStored() > 0) {
     db.close()
     throw new Error(

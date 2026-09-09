@@ -1,12 +1,8 @@
 import { useEffect, useState } from 'react'
 
 /**
- * 亮暗双主题跟随系统。
- *
- * 只有一个 `.dark` class（shadcn 的组件都按这个写的），存不存 localStorage 是「手动覆盖」的开关：
- * 没存过 = 跟随系统，存过 = 用户显式选了，系统再变也不跟。
- *
- * 首屏的那次判定在 index.html 的内联脚本里做，避免亮色闪一下。这里只负责后续变化。
+ * 亮暗主题共用 shadcn 所需的 `.dark` class。
+ * localStorage 无记录时跟随系统；有记录时使用用户显式选择。首屏由 index.html 内联脚本决定以避免闪白。
  */
 export type ThemeChoice = 'light' | 'dark' | 'system'
 export type ResolvedTheme = 'light' | 'dark'
@@ -54,7 +50,7 @@ export function useTheme() {
       if (next === 'system') localStorage.removeItem(KEY)
       else localStorage.setItem(KEY, next)
     } catch {
-      // 隐私模式下写不进去：内存里照样切，只是刷新后回到跟随系统。
+      // 隐私模式无法写入时仍在内存切换，刷新后恢复为跟随系统。
     }
     setChoice(next)
   }

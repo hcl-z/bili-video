@@ -7,11 +7,8 @@ import { shapeFailure } from '../../domain/bili-error.ts'
 import { keyFromUrl, type WbiKeys } from './wbi.ts'
 
 /**
- * `bili_ticket`：一条有 TTL 的 cookie，风控链路上的「我是个正常 web 端」凭据。
- * 命中 -352 时的标准动作之一就是重取它（见 domain/bili-error 的分类说明）。
- *
- * keyId 与 hmacKey 是 B 站 web 端 JS 里的公开常量，不是密钥，所以走配置而不是 secrets。
- * 不在代码里写死：写错了就永远换不到 ticket，而那是静默失败。
+ * `bili_ticket` 是带 TTL 的 Web 凭据；命中 -352 时需重取。
+ * keyId 与 hmacKey 是公开 JS 常量，配置而非 secrets；不写死以避免错误导致静默换取失败。
  */
 
 export const TICKET_URL =

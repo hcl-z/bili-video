@@ -12,7 +12,7 @@ import type { AnchorRepo, SubscriptionRepo, UpdateRepo } from '../ports/repo.ts'
 import type { StateRepo } from '../ports/state.ts'
 import type { RuleService } from './rules.ts'
 
-/** 一轮最多翻几页。停机久了要补的量由 catchup 那一票管，这里只保证不无限翻。 */
+/** 单轮最大翻页数，避免无限翻页；停机补偿由 catchup 处理。 */
 const MAX_PAGES = 3
 /** 分级退避的上限。再久就该人来看一眼了，继续加倍没意义。 */
 const MAX_BACKOFF_MS = 30 * 60_000
@@ -37,10 +37,7 @@ export interface PollDeps {
 export class Poller {
   private readonly deps: PollDeps
   private readonly logger: Logger
-  /**
-   * 抓取地板（秒）：只抓比它新的。每次进程启动重算 —— 停机期间发的不补，
-   * 历史投稿在阅读页按 UP 翻空间流、手动排解析。
-   */
+  /** 抓取时间下限（秒）；进程启动时重算，不补抓停机期间内容。 */
   private readonly floorTs: number
   private running = false
   private cancelCron: Cancel | null = null
@@ -101,11 +98,9 @@ export class Poller {
     this.schedule()
   }
 
-  /**
-   * 一轮轮询。**永不抛**：cron 的回调没人 catch，抛出去就是一次静默的进程级未处理拒绝。
-   */
+  /** 执行一轮轮询；捕获全部异常以避免 cron 未处理拒绝。 */
   async pollOnce(): Promise<PollResult> {
-    // 单轮加锁：上一轮没跑完这次直接跳过，不排队 —— 排队只会在慢的时候雪崩。
+    // 上一轮未完成时跳过，避免轮询积压。
     if (this.running) return skip('上一轮还没跑完，这次跳过')
     const reader = this.deps.reader
     if (reader === null) return skip('读接口未接入')
@@ -171,8 +166,7 @@ export class Poller {
         this.backoff(res.failure)
         break
       }
-      // baseline 只有第一页给的那个是「最新位置」，后面几页的是往前翻的游标。
-      // 有条目没解析出来就不推进：心跳一旦越过它们，它们就再也不会被拉回来。
+      // 仅第一页 baseline 表示最新位置；存在未解析条目时不推进，避免永久遗漏。
       if (page === 0 && res.value.baseline !== null && res.value.unparsed === 0) {
         this.deps.state.set('feed-baseline', res.value.baseline)
       }
@@ -249,10 +243,7 @@ export class Poller {
     return { ok: true, found: inserted.length, skipped: skipped.length, blocked, reason: null }
   }
 
-  /**
-   * 要不要总结这一条。AI 总开关不在这里判 —— 那是队列的事，
-   * 这里只管「视频、没被拦、这个 UP 开了总结」。
-   */
+  /** 判断条目是否可入总结队列；AI 总开关由队列处理。 */
   private offerToQueue(row: UpdateWithRaw): void {
     if (row.type !== 'AV' || row.bvid === null || row.filtered) return
     if (this.deps.subs.get(row.uid)?.enableAi !== true) return

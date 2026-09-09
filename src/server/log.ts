@@ -21,12 +21,6 @@ export interface LoggerOptions {
 }
 
 /**
- * pino + pino-roll：按天轮转、保留 7 天。
- *
- * 包一层是因为 pino 的 transport 会起 worker 线程 —— 测试里换成收集型实现，
- * 进程才不会因为悬着的 worker 不退出。
- */
-/**
  * transport 目标表。单独导出是为了能直接断言「保留天数换算成保留份数」这类意图 ——
  * 这些参数错了不会报错，只会安静地把磁盘写满或把日志提前删掉。
  */

@@ -59,7 +59,6 @@ export interface Services {
   backup: BackupService
 }
 
-/** 超过一天的音频文件当孤儿清掉。 */
 const ORPHAN_AUDIO_MS = 24 * 3_600_000
 
 export interface BuildOptions {

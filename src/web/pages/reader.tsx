@@ -171,7 +171,6 @@ function Split(props: { uid: string; ups: UpsMap; selected: string | null }) {
   )
 }
 
-/** 只有头像；选中的那个才把名字展开。 */
 function UpChip(props: { to: string; active: boolean; name: string; face: string | null }) {
   return (
     <Link
@@ -205,7 +204,6 @@ function UpChip(props: { to: string; active: boolean; name: string; face: string
   )
 }
 
-/** 无限查询里这一栏用得到的那几个字段。 */
 interface FeedQuery {
   isPending: boolean
   isError: boolean

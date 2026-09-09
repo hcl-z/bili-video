@@ -3,11 +3,8 @@ import type { LogLevel } from './ports/logger.ts'
 import type { LogLine } from '#shared/contract/events.ts'
 
 /**
- * 日志字段的固定写法。零依赖的叶子模块，所以 app 与 infra 都能用它而不破坏依赖方向。
- *
- * 存在的理由是「同一件事在各处长得一样」：错误在哪儿都是 `err` + `stack`，
- * 失败在哪儿都是 `kind` + `code` + `err`。手写字面量的话每个调用点都会长出一套字段名，
- * 于是没法按字段查日志 —— 那正是结构化日志唯一的用处。
+ * 日志字段的零依赖叶模块，供 app 与 infra 共享而不破坏依赖方向。
+ * 错误使用 `err` + `stack`，失败使用 `kind` + `code` + `err`，便于按字段查询。
  */
 
 /** 抛出来的东西 → 日志字段。堆栈也带上：它只进文件，不进 SSE。 */

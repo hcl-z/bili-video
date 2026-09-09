@@ -1,6 +1,6 @@
 import type { FakeFetch, FakeResponse } from '../test/fakes/bili-fetch.ts'
 
-/** demo 用的假 B 站数据。改这里就能造出你想复现的分支。 */
+/** demo 的假 B 站数据；修改此处可构造要复现的分支。 */
 
 export const DEMO_UP = { uid: '2233', name: '演示 UP 主', face: null }
 
@@ -12,10 +12,10 @@ interface DemoVideo {
   cid: number
   title: string
   desc: string
-  /** 'human' 人工字幕 / 'ai' 只有 AI 字幕 / 'none' 没字幕，退到语音转写。 */
+  /** 'human' 人工字幕；'ai' 仅 AI 字幕；'none' 无字幕并降级为语音转写。 */
   subtitle: 'human' | 'ai' | 'none'
   cues: Array<[number, string]>
-  /** 只出现在空间流里，不在聚合流里 —— 用来演「地板之前的历史，手动点解析」。 */
+  /** 仅在空间流中出现，用于演示抓取地板之前的历史投稿可手动解析。 */
   historyOnly?: boolean
 }
 
@@ -82,7 +82,7 @@ const VIDEOS: DemoVideo[] = [
   },
 ]
 
-/** 没字幕那条走转写：demo 里由假转写吐这些句子，省掉 yt-dlp 与本地模型。 */
+/** 无字幕视频由假转写返回这些句子，省去 yt-dlp 和本地模型。 */
 export function demoAsrCues(bvid: string): Array<{ from: number; to: number; text: string }> {
   const v = byBvid.get(bvid)
   if (v === undefined) return []
@@ -93,7 +93,7 @@ export const demoVideos = (): DemoVideo[] => VIDEOS.filter((v) => v.historyOnly 
 
 const byBvid = new Map(VIDEOS.map((v) => [v.bvid, v]))
 
-/** 轮询有抓取地板：要被抓到就得发布在启动之后，老投稿则相反。 */
+/** 轮询只抓启动后发布的内容；老投稿则发布在启动前。 */
 const pubTs = (v: DemoVideo, i: number): number => {
   const now = Math.trunc(Date.now() / 1000)
   return v.historyOnly === true ? now - 86_400 : now + (i + 1) * 60
@@ -139,7 +139,7 @@ const tracksFor = (v: DemoVideo): unknown[] => {
 /** 取第一个小句，别在词中间切断。 */
 const clause = (text: string): string => text.split(/[。，、：]/)[0]!.slice(0, 18)
 
-/** 编排好的假回答：Markdown 正文，小节标题带时间戳，看着像真的阅读版本。 */
+/** 预编排的 Markdown 假回答，小节标题带时间戳以模拟阅读版。 */
 function fakeCompletion(body: string | null): FakeResponse {
   const prompt = body ?? ''
   const video = VIDEOS.find((v) => prompt.includes(v.title)) ?? VIDEOS[0]!

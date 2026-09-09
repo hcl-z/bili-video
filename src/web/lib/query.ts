@@ -3,9 +3,8 @@ import { QueryClient } from '@tanstack/react-query'
 import { ApiError } from './api'
 
 /**
- * 单用户、本地服务：没有网络抖动，也没有多端并发。
- * 所以关掉窗口聚焦重取（每次切回浏览器都打一串请求太吵），只在明确失效时重取。
- * 真正需要「实时」的地方走 SSE（/events），不靠轮询。
+ * 单用户本地服务无需处理网络抖动或多端并发。
+ * 禁用窗口聚焦重取，仅在明确失效时刷新；实时数据通过 SSE（/events）更新，不轮询。
  */
 export const queryClient = new QueryClient({
   defaultOptions: {

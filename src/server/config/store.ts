@@ -9,10 +9,7 @@ import {
 import type { Cancel } from '../ports/clock.ts'
 import type { ConfigStore } from '../ports/config-store.ts'
 
-/**
- * 数据库是配置的唯一真相。写入即热生效：内存里的那份重新解析、订阅者收到通知，
- * 不需要重启 —— 前提是消费方在**用的时候**调 get()，而不是在启动时抓一份存起来。
- */
+/** 数据库是配置唯一真相；写入后重新解析并通知订阅者。消费方须按需调用 get()，不能在启动时缓存配置。 */
 export class SqliteConfigStore implements ConfigStore {
   #config: AppConfig
   readonly #handlers = new Set<(section: ConfigSection, config: AppConfig) => void>()

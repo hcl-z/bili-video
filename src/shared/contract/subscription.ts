@@ -25,7 +25,6 @@ export const RuleKindSchema = z.enum([
 ])
 export type RuleKind = z.infer<typeof RuleKindSchema>
 
-/** 规则类型的中文名。前后端同一份，免得两边各写一遍还写歪。 */
 export const RULE_KIND_LABEL: Record<RuleKind, string> = {
   'keyword-deny': '关键词黑名单',
   'keyword-allow': '关键词白名单',

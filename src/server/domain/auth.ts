@@ -2,11 +2,7 @@ import type { Failure } from '#shared/contract/failure.ts'
 import { classifyBiliCode } from './bili-error.ts'
 
 /**
- * 登录态的纯逻辑：扫码轮询码分类 + 「该续期还是该重新扫码」的决策。零 IO。
- *
- * 把决策抽成纯函数是因为它的分支比它看起来多（服务端说要续 / 本地算快到期 / 已经过期 /
- * 续了几次都失败），而每条分支走错的代价都是「监听静默停摆」——
- * 那种 bug 要等到三天没收到推送才会被发现。
+ * 登录态纯逻辑：分类扫码轮询结果，并决策续期或重新扫码。
  */
 
 /** 扫码轮询的四种状态。confirmed 之后 cookie 就在响应头里了。 */
@@ -28,7 +24,7 @@ export function classifyQrPoll(code: number, message: string): QrPollResult {
     case 86038:
       return { state: 'expired' }
     default:
-      // 不认识的码绝不当成 pending：那会让登录页永远转圈，最难查的一类 bug。
+      // 未知状态码视为失败，避免登录页持续等待。
       return {
         state: 'failed',
         failure: classifyBiliCode(code, message) ?? {
@@ -47,7 +43,7 @@ export function remainingMs(expiresAt: number | null, now: number): number | nul
   return Math.max(0, expiresAt - now)
 }
 
-/** 提前 15 天开始续。B 站的 SESSDATA 有效期是月级，15 天给足了重试与「人在休假」的余量。 */
+/** 提前 15 天续期，为重试预留时间。 */
 export const DEFAULT_REFRESH_THRESHOLD_MS = 15 * 86_400_000
 
 /** 连续失败这么多次就认定续期这条路走不通，转「登录已失效」等人重新扫码。 */
@@ -58,7 +54,7 @@ export type AuthAction =
   | { action: 'idle'; reason: string }
   /** 走 cookie/info → correspond/1 → cookie/refresh → confirm/refresh 那条链。 */
   | { action: 'refresh'; reason: string }
-  /** 登录态没了，等人扫码。**不再自动重试** —— 重试废 cookie 只会加深风控。 */
+  /** 登录失效后等待扫码，不自动重试无效 cookie。 */
   | { action: 'relogin'; reason: string }
 
 export interface AuthInput {

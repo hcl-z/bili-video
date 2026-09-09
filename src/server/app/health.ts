@@ -25,13 +25,7 @@ export interface HealthDeps {
   events: EventBus
 }
 
-/**
- * 定时自查 + 告警。
- *
- * 「只推一条」不是靠记「上次推过没」，而是靠**故障期**这个概念：一类故障从出现到消失
- * 是一段，一段只推一条，段结束再推一条恢复。故障期在内存里 —— 重启后重新告警是对的，
- * 那时候人确实需要再被提醒一次。
- */
+/** 定时自查与告警；每个内存中的故障期仅发送一次故障通知和一次恢复通知。 */
 export class HealthMonitor {
   private readonly deps: HealthDeps
   private readonly logger: Logger
@@ -132,12 +126,7 @@ export class HealthMonitor {
     return { consecutiveFailures: n, lastError: n === 0 ? null : (recent[0]?.note ?? null) }
   }
 
-  /**
-   * 一条告警发给每个渠道。投递表那条唯一索引是第二道闸：并发跑两轮自查也不会重复发。
-   *
-   * updateId 是编出来的（`alert:类型:故障开始时刻`），因为告警没有对应的动态；
-   * 同一段故障算出来的是同一个 key，所以「只推一条」在库这一层也成立。
-   */
+  /** 向各渠道投递告警；以 `alert:类型:故障开始时刻` 作为唯一键防止重复投递。 */
   private async push(fault: Fault, phase: 'down' | 'up'): Promise<void> {
     const label = FAULT_LABEL[fault.kind]
     const title = phase === 'down' ? `【故障】${label}` : `【已恢复】${label}`

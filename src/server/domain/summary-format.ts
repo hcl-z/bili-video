@@ -29,12 +29,7 @@ export function parseState(job: SummaryJob | null, hasSummary: boolean): ParseSt
   return 'none'
 }
 
-/**
- * 总结索引与阅读栏的口径：多一个「已拦下」。
- *
- * 它只表示「因为规则，这条压根没进过队列」—— 手动排过队或已经有总结之后，
- * 就按解析状态说话，否则手动解析被拦下的那条会看到一个「没调用 AI」的空状态。
- */
+/** 仅当过滤条目未入队且无总结时显示「已拦下」；否则按解析状态显示。 */
 export function feedState(
   u: Update | null,
   job: SummaryJob | null,
@@ -50,12 +45,7 @@ export type ReaderItemBase = Pick<
   'dynId' | 'uid' | 'type' | 'pubTs' | 'title' | 'text' | 'desc' | 'cover' | 'pics' | 'bvid' | 'url'
 >
 
-/**
- * 显示字段 + 本地库那点状态 → 阅读页一行。
- *
- * 这里**刻意不看 `filtered`**：规则拦的是自动解析与推送这两个动作，不是这条视频。
- * 被拦下的条目在阅读页照样是「未解析」，手动点一下就能解析。
- */
+/** 将显示字段和本地状态合成为阅读页条目；filtered 不影响手动解析状态。 */
 export function readerItem(
   base: ReaderItemBase,
   local: { update: Update | null; summary: Summary | null; job: SummaryJob | null },
@@ -71,21 +61,12 @@ export function readerItem(
   }
 }
 
-/**
- * 提示词里的一条字幕。时间戳和正文之间不留空格、内部连续空白压成一个 ——
- * 一万行字幕省下的就是上万个 token，而阅读栏那边的解析对空格是可选的。
- *
- * 分段的 token 计数也按这个形状算，免得算的和送的不是一份文本。
- */
+/** 提示词字幕行：压缩空白以减少 token，并与分段计数使用相同格式。 */
 export const cueLine = (c: Cue): string => `[${hms(c.from)}]${squeeze(c.text)}`
 
 const squeeze = (text: string): string => text.trim().replace(/\s+/g, ' ')
 
-/**
- * 字幕 → 带时间戳的纯文本。这份文本既进提示词，也原样存进 summaries.transcript。
- *
- * 相邻的重复行只留一条：ASR 在静音段会把同一句吐好几遍，那是纯粹的 token 浪费。
- */
+/** 将字幕转为带时间戳文本，用于提示词和 transcript 存储；去除相邻重复行。 */
 export function transcriptText(cues: readonly Cue[]): string {
   const lines: string[] = []
   let previous = ''
@@ -201,10 +182,7 @@ export function reducePrompt(
   }
 }
 
-/**
- * 简介兜底那一级。语音内容一个字都没拿到，所以提示词里要反复讲清「只有标题和简介」，
- * 否则模型会拿常识把细节补齐，那正是低置信度总结最坑人的地方。
- */
+/** 简介兜底提示词明确仅有标题和简介，避免模型补充未提供的细节。 */
 export function metaPrompt(
   meta: VideoMeta,
   brief: string,
@@ -242,11 +220,7 @@ function stripFence(reply: string): string {
   return trimmed.slice(firstBreak + 1, end)
 }
 
-/**
- * 推送用的一句话导语。正文首个非标题段落，截到 80 字。
- *
- * 模型不再单独产出它 —— 让它为了一行摘要再写一遍不划算，从正文截更稳。
- */
+/** 推送导语取正文首个非标题段落，最长 80 字。 */
 export function leadLine(article: string): string {
   for (const raw of article.split('\n')) {
     const line = raw.trim()
@@ -281,11 +255,7 @@ export interface RenderParts
   reasons?: readonly string[]
 }
 
-/**
- * 落盘的那份 Markdown：模型回的正文，前面补上标题、链接与来源。
- *
- * 降级必须写在正文里，不能只体现在字段上 —— 文件被单独分享出去时字段就不在了。
- */
+/** 渲染落盘 Markdown，补充标题、链接、来源和降级信息。 */
 export function renderMarkdown(meta: VideoMeta, s: RenderParts): string {
   const out: string[] = [`# ${meta.title}`, '', `<${meta.url}>`, '']
   if (meta.upName !== null) out.push(`UP 主：${meta.upName}`, '')

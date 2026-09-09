@@ -7,7 +7,6 @@ import { videoRef } from '../../domain/summary-format.ts'
 import type { Ports } from '../../ports/index.ts'
 import { errorBody } from '../errors.ts'
 
-/** 队列页要的两件事：现在都有哪些任务，以及「再跑一次」。 */
 export function jobRoutes(ports: Ports, queue: SummaryQueue): Hono {
   return new Hono()
     .get('/', (c) => {

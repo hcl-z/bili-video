@@ -19,10 +19,7 @@ export function zodIssues(err: ZodError): ErrorResponse['error']['issues'] {
 }
 
 /**
- * 未捕获异常的兜底。对外只给 code 和一句话，堆栈进日志 ——
- * 服务只听 127.0.0.1，但把内部路径回给页面依然没有好处。
- *
- * 拿 logger 是必须的：500 只回给页面不落日志，等于线上事故没有现场。
+ * 未捕获异常兜底：对外仅返回 code 和消息，堆栈写入日志；即使只监听 127.0.0.1，也不向页面暴露内部路径。
  */
 export function makeErrorHandler(root: Logger): (err: Error, c: Context) => Response {
   const logger = root.child({ mod: 'http' })

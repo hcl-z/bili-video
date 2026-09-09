@@ -14,10 +14,8 @@ import { FakeFetch } from '../test/fakes/bili-fetch.ts'
 import { DEMO_UP, demoAsrCues, demoBili, demoVideos } from './demo-data.ts'
 
 /**
- * 假 B 站的试跑环境：真库、真队列、真页面，只有出网是编排好的。
- *
- * 用来在没有小号、没有 LLM key 的情况下看完整条链路（抓动态 → 入队 → 取字幕 → 总结 →
- * 落库落盘 → 页面实时变），也用来复现「字幕没有」「模型回垃圾」这类分支。
+ * 假 B 站试跑：真实库、队列和页面，出网响应预编排。
+ * 无小号或 LLM key 也可走抓取、入队、字幕、总结、落盘和页面实时更新，并复现无字幕与模型异常分支。
  */
 const args = new Set(process.argv.slice(2))
 const dataDir = resolve(process.env['DEMO_DATA_DIR'] ?? './.demo-data')
@@ -46,7 +44,7 @@ const slow = async (url: string): Promise<void> => {
   }
 }
 
-/** 真 LLM 模式只放这一个域出网，其余照旧假的 —— 不会有请求打到 B 站。 */
+/** 真 LLM 模式仅放行该域名；其余请求仍为假响应，不访问 B 站。 */
 const fetchImpl = async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
   const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
   await slow(url)
@@ -80,13 +78,13 @@ const asr: Asr = {
   },
 }
 
-// 装成「上次登录过」：demo 不该逼人先扫码。
+// 预置登录态，demo 无需先扫码。
 if (core.cookies.isEmpty()) {
   core.cookies.setFromResponse(['SESSDATA=demo; Path=/; Domain=.bilibili.com'], clock.now())
 }
 
 core.repos.subscriptions.upsert({ ...DEMO_UP, enableDynamic: true, enableVideo: true, enableAi: true })
-// 换个端口：真服务多半正占着 8788，demo 不该和它抢。
+// 使用 8789，避免与通常占用 8788 的正式服务冲突。
 core.config.setSection('server', {
   ...core.config.getSection('server'),
   port: Number(process.env['DEMO_PORT'] ?? 8789),

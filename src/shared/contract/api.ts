@@ -268,7 +268,6 @@ export const UpdatesQuerySchema = z.object({
 })
 export type UpdatesQuery = z.infer<typeof UpdatesQuerySchema>
 
-/** uid → 昵称头像，页面要显示是谁发的。 */
 export const UpsMapSchema = z.record(
   z.string(),
   z.object({ name: z.string(), face: z.string().nullable() }),
@@ -295,7 +294,6 @@ export type PollResult = z.infer<typeof PollResultSchema>
 
 export const JobsResponseSchema = z.object({
   jobs: z.array(SummaryJobSchema),
-  /** bvid → 标题链接，页面要显示是哪个视频而不是一串 BV 号。 */
   videos: z.record(z.string(), z.object({ title: z.string(), url: z.string() })),
 })
 export type JobsResponse = z.infer<typeof JobsResponseSchema>

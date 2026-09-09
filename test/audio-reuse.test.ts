@@ -9,8 +9,6 @@ import type { CommandResult, CommandRunner } from '../src/server/ports/command.t
 import { FakeClock } from './fakes/clock.ts'
 import { CollectingLogger } from './fakes/logger.ts'
 
-/** 重跑不该再下一遍：上次留下的音频还在就直接用。 */
-
 class SpyCommands implements CommandRunner {
   runs = 0
   private readonly onRun: (dir: string) => Promise<void>
