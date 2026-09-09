@@ -9,6 +9,7 @@ import type {
   PatchAiSettingsRequest,
   PatchSubscriptionRequest,
   PollResult,
+  ReaderItemResponse,
   RulesResponse,
   RunAllSummariesResponse,
   SubscriptionResult,
@@ -19,8 +20,9 @@ import type {
   SystemResponse,
   TestRulesResponse,
   UpdatesResponse,
+  UpFeedResponse,
 } from '#shared/contract/api.ts'
-import type { SummaryJob } from '#shared/contract/job.ts'
+import type { PipelineStep, SummaryJob } from '#shared/contract/job.ts'
 import type { RuleKind } from '#shared/contract/subscription.ts'
 
 /**
@@ -109,6 +111,9 @@ export const api = {
 
   pollNow: () => request<PollResult>('/updates/poll', { method: 'POST' }),
 
+  /** 单条动态。阅读页深链接进来、左栏还没翻到那一页时用。 */
+  readerItem: (dynId: string) => request<ReaderItemResponse>(`/updates/${dynId}`),
+
   rules: () => request<RulesResponse>('/rules'),
 
   addRule: (rule: { scope: string; kind: RuleKind; pattern: string }) =>
@@ -122,8 +127,19 @@ export const api = {
   testRules: (input: { sample: string; uid: string | null }) =>
     request<TestRulesResponse>('/rules/test', { method: 'POST', body: JSON.stringify(input) }),
 
-  // 索引一次拉齐（含被拦下的），阅读栏点一条拉一条。
-  summaries: () => request<SummariesResponse>('/summaries'),
+  // 索引按 pubTs 游标翻页（before = 上一页最后一条），阅读栏点一条拉一条。
+  summaries: (before?: number) =>
+    request<SummariesResponse>(`/summaries${before === undefined ? '' : `?before=${before}`}`),
+
+  /** 某个 UP 的空间流。**每页都是一次出网请求**，别拿它做预取。 */
+  upFeed: (uid: string, offset?: string) =>
+    request<UpFeedResponse>(
+      `/ups/${uid}/feed${offset === undefined ? '' : `?offset=${encodeURIComponent(offset)}`}`,
+    ),
+
+  /** 手动排一条解析。轮询只抓启动后新发的，历史投稿靠这个。 */
+  parseUpItem: (uid: string, dynId: string) =>
+    request<SummaryJob>(`/ups/${uid}/items/${dynId}/parse`, { method: 'POST' }),
 
   summary: (bvid: string) => request<SummaryDetailResponse>(`/summaries/${bvid}`),
 
@@ -138,7 +154,11 @@ export const api = {
 
   jobs: () => request<JobsResponse>('/jobs'),
 
-  retryJob: (id: number) => request<SummaryJob>(`/jobs/${id}/retry`, { method: 'POST' }),
+  // from = 从哪一步起跑，它之前的产物照用；不传是从头。
+  retryJob: (id: number, from?: PipelineStep) =>
+    request<SummaryJob>(`/jobs/${id}/retry${from === undefined ? '' : `?from=${from}`}`, {
+      method: 'POST',
+    }),
 
   aiSettings: () => request<AiSettingsResponse>('/ai'),
 

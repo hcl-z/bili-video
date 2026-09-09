@@ -9,6 +9,7 @@ import type { Poller } from '../app/poller.ts'
 import type { SummaryQueue } from '../app/queue-runner.ts'
 import type { RuleService } from '../app/rules.ts'
 import type { SubscriptionService } from '../app/subscriptions.ts'
+import type { UpFeedService } from '../app/up-feed.ts'
 import type { Ports } from '../ports/index.ts'
 import { errorBody, makeErrorHandler } from './errors.ts'
 import { aiRoutes } from './routes/ai.ts'
@@ -20,6 +21,7 @@ import { subscriptionRoutes } from './routes/subscriptions.ts'
 import { summaryRoutes } from './routes/summaries.ts'
 import { systemRoutes } from './routes/system.ts'
 import { updateRoutes } from './routes/updates.ts'
+import { upRoutes } from './routes/ups.ts'
 import { eventRoutes } from './sse.ts'
 
 export interface HttpOptions {
@@ -34,6 +36,7 @@ export interface HttpOptions {
   rules: RuleService
   ai: AiService
   queue: SummaryQueue
+  ups: UpFeedService
 }
 
 /**
@@ -54,6 +57,7 @@ export function createHttpApp(ports: Ports, opts: HttpOptions): Hono {
   api.route('/rules', ruleRoutes(opts.rules))
   api.route('/jobs', jobRoutes(ports, opts.queue))
   api.route('/summaries', summaryRoutes(ports, opts.queue))
+  api.route('/ups', upRoutes(ports, opts.ups))
   api.route('/ai', aiRoutes(opts.ai))
   api.route('/events', eventRoutes(ports))
   // /api 下没命中的一律结构化 404，绝不落到静态资源的 index.html 上去。

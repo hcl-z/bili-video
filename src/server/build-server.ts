@@ -10,6 +10,7 @@ import { SummaryQueue } from './app/queue-runner.ts'
 import { RuleService } from './app/rules.ts'
 import { SubscriptionService } from './app/subscriptions.ts'
 import { SummarizeVideo } from './app/summarize-video.ts'
+import { UpFeedService } from './app/up-feed.ts'
 import { createHttpApp } from './http/app.ts'
 import { renderQr } from './infra/bili/qr-terminal.ts'
 import { TimedRegex } from './infra/regex/timed-regex.ts'
@@ -45,6 +46,7 @@ export interface Services {
   poll: Poller
   ai: AiService
   queue: SummaryQueue
+  ups: UpFeedService
 }
 
 /** 超过一天的音频文件当孤儿清掉。 */
@@ -80,6 +82,7 @@ export function buildServer(ports: Ports, opts: BuildOptions = {}): Server {
   })
   const queue = new SummaryQueue({
     jobs: ports.repos.jobs,
+    artifacts: ports.repos.artifacts,
     summarize: new SummarizeVideo({
       subtitles: ports.external.subtitles,
       audio: ports.external.audio,
@@ -91,6 +94,7 @@ export function buildServer(ports: Ports, opts: BuildOptions = {}): Server {
       updates: ports.repos.updates,
       subs: ports.repos.subscriptions,
       summaries: ports.repos.summaries,
+      artifacts: ports.repos.artifacts,
       llmCalls: ports.repos.llmCalls,
       markdown: ports.markdown,
       clock: ports.clock,
@@ -131,6 +135,16 @@ export function buildServer(ports: Ports, opts: BuildOptions = {}): Server {
     }),
     ai,
     queue,
+    ups: new UpFeedService({
+      reader: ports.external.biliReader,
+      subs: ports.repos.subscriptions,
+      updates: ports.repos.updates,
+      summaries: ports.repos.summaries,
+      jobs: ports.repos.jobs,
+      queue,
+      clock: ports.clock,
+      logger: ports.logger,
+    }),
   }
   const app = createHttpApp(ports, {
     startedAt,
@@ -141,6 +155,7 @@ export function buildServer(ports: Ports, opts: BuildOptions = {}): Server {
     rules: services.rules,
     ai: services.ai,
     queue: services.queue,
+    ups: services.ups,
   })
 
   let listening: ServerType | null = null

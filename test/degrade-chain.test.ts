@@ -31,12 +31,10 @@ describe('降级链', () => {
     assert.equal(s?.degradePath, 'asr')
     assert.equal(s?.transcriptSource, 'asr')
     assert.equal(s?.confidence, 'high')
-    // 全文总结、关键信息、每章小结都得落库并进 Markdown。
-    assert.match(s?.overview ?? '', /第一段说清背景/)
-    assert.equal(s?.keyInfo.terms[0]?.name, 'WBI')
-    assert.equal(s?.chapters[1]?.summary, '正题给出了做法和结论。')
-    assert.match(s?.fullMd ?? '', /## 全文总结/)
-    assert.match(s?.fullMd ?? '', /## 关键信息/)
+    // 模型回的正文要原样落库，也要进落盘的那份 Markdown。
+    assert.match(s?.article ?? '', /Overview/)
+    assert.match(s?.article ?? '', /第一步：先量再改/)
+    assert.match(s?.fullMd ?? '', /## Overview/)
     assert.deepEqual(audio.downloaded, ['BV1x'])
     assert.deepEqual(audio.cleaned, ['/tmp/fake/BV1x.m4a'])
     // 正文要说清它是怎么走到这一级的。
@@ -58,7 +56,7 @@ describe('降级链', () => {
     assert.equal(s?.transcriptSource, 'none')
     assert.equal(s?.confidence, 'low')
     // 没有时间轴就不给章节。
-    assert.equal(s?.chapters.length, 0)
+    assert.match(s?.article ?? '', /讲清了一件事/)
     assert.match(s?.fullMd ?? '', /未获取到语音内容/)
     assert.match(s?.fullMd ?? '', /语音转写：/)
     assert.deepEqual(audio.cleaned, [])
@@ -155,7 +153,7 @@ describe('降级链', () => {
     await h.close()
   })
 
-  it('总结里的章节时间戳还落在原视频上', async () => {
+  it('正文里的时间戳被链到原视频的那一秒', async () => {
     const fetch = bili([llmOk])
     fetch.on('player/wbi/v2', player([ZH_TRACK]))
     const { h } = await run(fetch)

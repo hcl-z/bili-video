@@ -1,6 +1,11 @@
 import { z } from 'zod'
 import { AiConfigSchema, AppConfigSchema, AsrConfigSchema } from './config.ts'
-import { DeliveryKindSchema, DeliveryStatusSchema, SummaryJobSchema } from './job.ts'
+import {
+  DeliveryKindSchema,
+  DeliveryStatusSchema,
+  JobStageSchema,
+  SummaryJobSchema,
+} from './job.ts'
 import { ProbeResultSchema } from './probe.ts'
 import { DegradePathSchema, SummarySchema, TranscriptSourceSchema } from './summary.ts'
 import {
@@ -9,7 +14,7 @@ import {
   RuleScopeSchema,
   SubscriptionSchema,
 } from './subscription.ts'
-import { UpdateSchema } from './update.ts'
+import { DynamicTypeSchema, UpdateSchema } from './update.ts'
 
 /**
  * 每个 /api 端点的 req/res schema。前端从 z.infer 拿类型，
@@ -79,6 +84,8 @@ export const PollSnapshotSchema = z.object({
   /** 退避到什么时候；null = 不在退避中。 */
   resumeAt: z.number().int().nullable(),
   consecutiveFailures: z.number().int().min(0),
+  /** 本次启动的抓取地板（秒）：只抓比它新的，更早的去阅读页手动解析。 */
+  floorTs: z.number().int(),
 })
 export type PollSnapshot = z.infer<typeof PollSnapshotSchema>
 
@@ -184,27 +191,86 @@ export const SUMMARY_STATE_LABEL: Record<SummaryState, string> = {
   none: '未总结',
 }
 
-export const SummaryFeedItemSchema = z.object({
-  bvid: z.string(),
+/**
+ * 解析状态。**没有「已拦下」** —— 过滤规则拦的是「自动解析」与「推送」这两个动作，
+ * 不是条目本身，所以它不该占掉一条动态的状态位。
+ */
+export const ParseStateSchema = SummaryStateSchema.exclude(['filtered'])
+export type ParseState = z.infer<typeof ParseStateSchema>
+
+export const PARSE_STATE_LABEL: Record<ParseState, string> = {
+  done: '已解析',
+  running: '解析中',
+  pending: '排队中',
+  failed: '解析失败',
+  none: '未解析',
+}
+
+/**
+ * 阅读页左栏的一行：一条动态 + 它在本地库里的状态。
+ *
+ * 本地索引和 UP 空间流回的是同一个形状，所以左栏、右栏、状态标记都只写一遍。
+ * 空间流那条路径上 `inDb=false` 是常态 —— 抓取地板之前的历史从没入过库。
+ */
+export const ReaderItemSchema = z.object({
   dynId: z.string(),
   uid: z.string(),
-  title: z.string(),
-  cover: z.string().nullable(),
+  type: DynamicTypeSchema,
   pubTs: z.number().int(),
-  state: SummaryStateSchema,
-  /** 有总结才有。索引里标「走了哪级降级」。 */
+  title: z.string().nullable(),
+  text: z.string().nullable(),
+  /** 视频简介 / 专栏摘要。只有空间流那条路径给得出，库里没存。 */
+  desc: z.string().nullable(),
+  cover: z.string().nullable(),
+  /** 图文的多图。只走接口不落库。 */
+  pics: z.array(z.string()),
+  bvid: z.string().nullable(),
+  url: z.string(),
+  inDb: z.boolean(),
+  state: ParseStateSchema,
+  /** 有总结才有。左栏据此标「走了哪级降级」。 */
   degradePath: DegradePathSchema.nullable(),
+  /** 命中过哪条规则。**只说明自动解析与推送被跳过**，手动解析照样能点。 */
   filterReason: z.string().nullable(),
+  jobStage: JobStageSchema.nullable(),
 })
-export type SummaryFeedItem = z.infer<typeof SummaryFeedItemSchema>
+export type ReaderItem = z.infer<typeof ReaderItemSchema>
+
+/** 索引的翻页游标：before 是上一页最后扫到那条的 pubTs。 */
+export const SummariesQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(200).default(40),
+  before: z.coerce.number().int().optional(),
+})
+export type SummariesQuery = z.infer<typeof SummariesQuerySchema>
 
 export const SummariesResponseSchema = z.object({
-  items: z.array(SummaryFeedItemSchema),
+  items: z.array(ReaderItemSchema),
   ups: UpsMapSchema,
-  /** 索引头上「N 条，其中 M 条被拦下」那句话。窗口内的计数，不是全库总数。 */
+  /** 这一页里被拦下的条数，不是全库总数。 */
   filteredCount: z.number().int().min(0),
+  /** 下一页的游标；null = 到底了。 */
+  nextBefore: z.number().int().nullable(),
 })
 export type SummariesResponse = z.infer<typeof SummariesResponseSchema>
+
+export const UpFeedQuerySchema = z.object({
+  /** B 站给的游标，原样带回来。首页不传。 */
+  offset: z.string().optional(),
+})
+export type UpFeedQuery = z.infer<typeof UpFeedQuerySchema>
+
+export const UpFeedResponseSchema = z.object({
+  up: z.object({ uid: z.string(), name: z.string(), face: z.string().nullable() }),
+  items: z.array(ReaderItemSchema),
+  /** B 站给的下一页游标。hasMore=false 时是 null。 */
+  hasMore: z.boolean(),
+  offset: z.string().nullable(),
+})
+export type UpFeedResponse = z.infer<typeof UpFeedResponseSchema>
+
+/** 单条。深链接进来时右栏不必等左栏翻到那一页。 */
+export const ReaderItemResponseSchema = z.object({ item: ReaderItemSchema })
+export type ReaderItemResponse = z.infer<typeof ReaderItemResponseSchema>
 
 /** 完整字幕/转写全文。单独一个端点：它可能有几万字，不该跟着详情一起拉。 */
 export const TranscriptResponseSchema = z.object({

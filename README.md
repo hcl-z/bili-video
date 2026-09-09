@@ -68,9 +68,12 @@ SESSDATA、cookies、AI apiKey 都用它派生的密钥加密落库（AES-256-GC
 src/shared/contract/   前后端共享的 zod schema 与类型
 src/server/
   ports/               端口（接口）：Clock / Logger / EventBus / 9 个仓储 / B站 / ASR / LLM / Notifier …
-  domain/              纯逻辑，零 IO：B站错误码分类、登录态决策、uid 识别、锚点推进、过滤判定
-  app/                 编排：登录生命周期（扫码 → 续期 → 失效）、订阅与自动关注、轮询、过滤规则
-  infra/               适配器：SQLite、secret-box、事件总线、真时钟、带超时的正则、B站（签名/登录/续期/关注/聚合流）
+  domain/              纯逻辑，零 IO：B站错误码分类、登录态决策、uid 识别、锚点推进、过滤判定、
+                       流水线步序与产物作废规则
+  app/                 编排：登录生命周期（扫码 → 续期 → 失效）、订阅与自动关注、轮询、过滤规则、
+                       总结队列、UP 空间流（阅读页翻历史 + 手动排解析）
+  infra/               适配器：SQLite、secret-box、事件总线、真时钟、带超时的正则、
+                       B站（签名/登录/续期/关注/聚合流/空间流）
   config/              YAML seed → DB，DB 为真相 + 热重载
   http/                Hono 装配与路由，含 SSE（/api/events）
   build-server.ts      ★ 组装根：buildServer(ports)，唯一 new 具体实现的地方
@@ -87,22 +90,34 @@ test/
 三份 tsconfig 把类型隔开：`server` 拿不到 DOM 类型，`web` 拿不到 node 类型，`shared` 两者都拿不到。
 写错了 `pnpm typecheck` 会直接报 `Cannot find name 'HTMLElement'` / `Cannot find name 'process'`。
 
-## B 站的三个常量要自己填
+## B 站的三个常量
 
-扫码登录、读接口不需要额外配置，但下面两件事需要 —— 它们依赖 B 站 web 端 JS 里的几个公开常量，
-本仓库不内置：
+这三件事依赖 B 站 web 端 JS 里的公开常量：
 
-| 要做的事 | 需要的配置 |
-| --- | --- |
-| WBI 签名（大部分读接口） | `bili.wbiMixinTable`（64 项的重排下标） |
-| 风控后重取 `bili_ticket` | `bili.ticket.keyId` / `bili.ticket.hmacKey` |
-| cookie 自动续期 | `bili.correspondPublicKeyPem`（`correspond/1` 的 RSA 公钥） |
+| 要做的事 | 需要的配置 | 种子文件里 |
+| --- | --- | --- |
+| WBI 签名（大部分读接口，含字幕） | `bili.wbiMixinTable`（64 项的重排下标） | 已填 |
+| 风控后重取 `bili_ticket` | `bili.ticket.keyId` / `bili.ticket.hmacKey` | 已填 |
+| cookie 自动续期 | `bili.correspondPublicKeyPem`（`correspond/1` 的 RSA 公钥） | 空，自己填 |
 
-算法都实现好并有单测，缺的只是常量。留空不会静默出错：需要它们的调用会带着「缺哪一项」直接失败，
-而不是发一个签错的请求换回 `-352`（那会被当成风控白等一轮退避）。续期留空就是「到期得重新扫码」。
+前两项在 `config.example.yaml` 里给了值（来源与核对日期写在那儿的注释里），所以从空库起的新装
+开箱能取字幕。续期那把公钥仍是空的 —— 空着就是「cookie 到期得重新扫码」，不影响别的。
 
-这些常量按版本会变，抄的时候记一下来源。原先的社区文档仓库（`bilibili-API-collect`）
-已于 2026-01-28 被 B 站要求下架，现在只能从浏览器里自己抠。
+留空不会静默出错：需要常量的调用会带着「缺哪一项」直接失败，而不是发一个签错的请求换回
+`-352`（那会被当成风控白等一轮退避）。
+
+常量按前端版本会变。签名请求开始持续吃 `-352` 就回来核对混淆表，别当成风控干等。
+原先的社区文档仓库（`bilibili-API-collect`）已于 2026-01-28 被 B 站要求下架，
+要重新抠只能从浏览器 DevTools 里搜 `getMixinKey`。
+
+**已经跑过的库改 YAML 不生效**（种子只在首次启动导入），得 PATCH 一次：
+
+```bash
+curl -sX PATCH http://127.0.0.1:8788/api/config/bili -H 'content-type: application/json' \
+  -d "$(node -e "const y=require('node:fs').readFileSync('config.example.yaml','utf8');
+      const {parse}=require('yaml');const b=parse(y).bili;
+      console.log(JSON.stringify({wbiMixinTable:b.wbiMixinTable,ticket:b.ticket}))")"
+```
 
 ## 轮询、锚点、过滤
 
@@ -114,6 +129,11 @@ test/
 抓回来是一条没内容的空动态。payload 还有两个坑 —— 用不上的 `major` 分支是**显式 null**
 （不是缺字段），`pub_ts` 是**字符串**。这两条都会让 zod 把整条判为解析失败。
 所以有条目没解析出来时**不推进 baseline**：心跳一旦越过它们，它们就再也不会被拉回来。
+
+**只抓服务启动之后新发的。** 每次进程启动记一个「抓取地板」（`Poller` 构造时的时刻），
+比它旧的一条都不入库 —— 于是第一次跑起来不会把几百条历史灌进来，停机期间发的也不补。
+地板在 `/api/system` 的 poll 快照里（`floorTs`），动态流页会把它写成一句人话。
+历史投稿不是丢了：阅读页点某个 UP 的头像就是**现拉的空间流**，翻到哪条都能手动排解析。
 
 **去重靠 per-UP 时间戳锚点**，不靠「见过的 id 列表」。锚点只单调推进，
 而且只推进到「早于本 UP 最早失败项」的最大成功时间戳 —— 于是中间某条处理失败时，
@@ -153,6 +173,49 @@ per-UP 规则**整套覆盖**全局规则，不是叠加。匹配范围只有动
 
 服务只绑 `127.0.0.1`，手机永远碰不到它（手机只收推送）。安全边界是文件系统权限，
 不是自写的登录。把 host 改成 `0.0.0.0` 等于放弃这个前提 —— 那之前得先加鉴权。
+
+## 阅读页（`/reader/:uid/:dynId`）
+
+顶上是订阅的 UP 头像，下面左右两栏。左栏两条泳道：
+
+- **「全部」** —— 本地库里抓到过的，跨 UP，按 `pubTs` 游标翻页，还带「补 N 条」批量入队。
+- **某个 UP** —— **现拉 `web-dynamic/v1/feed/space`**（不签 WBI，条目形状和聚合流一样，
+  所以解析器是同一份），视频与四类碎动态都在，按 B 站给的 `offset` 往前翻。
+
+两条泳道都是触底自动续页（`useInfiniteQuery` + `react-intersection-observer` 的哨兵，
+提前一屏开始取）。空间流那条**故意不挂 SSE**：对无限查询做失效等于把翻过的每一页
+都重新打一次 B 站，所以解析状态变化走 `setQueryData` 就地改（`lib/reader-cache.ts`）。
+
+右栏默认是原动态；解析完了才多一个「解析信息」标签页 —— 没解析完不给第二个标签，
+一个点不动的标签比没有标签更让人以为坏了。视频那条有「加入解析队列」：
+库里已经有就走 `/summaries/:bvid/run`，只在空间流里翻到的走 `/ups/:uid/items/:dynId/parse`，
+后者**先把动态落库再入队**（标题、封面、简介兜底都从 `updates` 读，不落库的总结是个空壳）。
+
+手动排队不判过滤规则 —— 点了就是意图。**过滤拦的是「自动解析」与「推送」这两个动作，
+不是条目本身**，所以命中规则的视频在阅读页照样是「未解析」而不是一个叫「已拦下」的状态，
+右栏只多一句「自动解析与推送跳过了这条」。代价是：手动解析会把这条动态落进库，
+以后轮询再抓到它会因 `dyn_id` 冲突算 skipped，也就不会再推一次（你已经看过它了）。
+
+## 队列是六步流水线，能从任意一步重跑
+
+`取字幕 → 下载音频 → 语音转写 → 分段总结 → 合并成文 → 落库落盘`。每一步的状态落
+`job_steps`，队列页画成一排圆点：完成 / 复用 / 跳过 / 失败 / 进行中各有各的标记。
+**复用和跳过是两件事** —— 前者是「上次的产物还能用」，后者是「这条路不用走」（有字幕就不下音频）。
+
+点某一步 = `POST /api/jobs/:id/retry?from=<step>`，从那儿重跑，前面几步的产物直接用。
+能这么做全靠 `job_artifacts` 里存的三样中间产物：
+
+| 产物 | 谁产出 | 谁消费 |
+| --- | --- | --- |
+| `transcript` | 取字幕 / 语音转写 | 分段、合并 |
+| `notes` | 分段总结 | 合并成文 |
+| `draft` | 合并成文 | 落库落盘 |
+
+「从第 N 步重跑」= 作废第 N 步及其之后的产物（`domain/pipeline.ts` 的纯函数说清哪些作废），
+然后照常跑一遍 —— 管线每一步都先看产物在不在，在就标成「复用」跳过去。少作废一个产物，
+重跑出来的东西就是半新半旧的，所以那张表是纯函数并且有单测。
+
+产物形状对不上（清过库、老任务、手改过）不会报错，只是那一步照常重跑。
 
 ## 前端组件
 

@@ -1,15 +1,14 @@
-import type { SummaryState } from '#shared/contract/api.ts'
+import type { ParseState, ReaderItem, SummaryState } from '#shared/contract/api.ts'
 import type { Result } from '#shared/contract/failure.ts'
 import { fail, ok } from '#shared/contract/failure.ts'
 import type { SummaryJob } from '#shared/contract/job.ts'
-import type { Chapter, Cue, MetaDraft, Summary, SummaryDraft } from '#shared/contract/summary.ts'
-import { MetaDraftSchema, SummaryDraftSchema } from '#shared/contract/summary.ts'
+import type { Cue, Summary } from '#shared/contract/summary.ts'
 import type { Update } from '#shared/contract/update.ts'
 import { chapterLink, hms, videoUrl } from '#shared/format.ts'
 
 import { fatalFailure } from './bili-error.ts'
 
-/** 结构化总结的纯逻辑：提示词、解析模型回来的 JSON、渲染 Markdown 全文。 */
+/** 总结的纯逻辑：提示词、收模型回的正文、渲染落盘的 Markdown。 */
 
 export interface VideoMeta {
   bvid: string
@@ -21,63 +20,122 @@ export interface VideoMeta {
 }
 
 /**
- * 一条视频在工作台上的状态。被拦下的优先 —— 它连队列都没进过。
- *
- * 任务比总结优先：重跑时库里既有旧总结又有 pending 任务，这时候该说「排队中」。
+ * 解析到哪一步了。任务比总结优先：重跑时库里既有旧总结又有 pending 任务，
+ * 这时候该说「排队中」。
  */
-export function feedState(u: Update | null, job: SummaryJob | null, hasSummary: boolean): SummaryState {
-  if (u?.filtered === true) return 'filtered'
+export function parseState(job: SummaryJob | null, hasSummary: boolean): ParseState {
   if (job !== null && job.status !== 'done') return job.status
   if (hasSummary) return 'done'
   return 'none'
 }
 
-/** 提示词里的一条字幕。分段的 token 计数也按这个形状算，免得算的和送的不是一份文本。 */
-export const cueLine = (c: Cue): string => `[${hms(c.from)}] ${c.text.trim()}`
-
-/** 字幕 → 带时间戳的纯文本。这份文本既进提示词，也原样存进 summaries.transcript。 */
-export function transcriptText(cues: readonly Cue[]): string {
-  return cues
-    .filter((c) => c.text.trim() !== '')
-    .map(cueLine)
-    .join('\n')
+/**
+ * 总结索引与阅读栏的口径：多一个「已拦下」。
+ *
+ * 它只表示「因为规则，这条压根没进过队列」—— 手动排过队或已经有总结之后，
+ * 就按解析状态说话，否则手动解析被拦下的那条会看到一个「没调用 AI」的空状态。
+ */
+export function feedState(
+  u: Update | null,
+  job: SummaryJob | null,
+  hasSummary: boolean,
+): SummaryState {
+  if (u?.filtered === true && job === null && !hasSummary) return 'filtered'
+  return parseState(job, hasSummary)
 }
 
-const JSON_ONLY =
-  '你是中文视频内容总结助手。只输出一个 JSON 对象，不要代码围栏，不要任何解释文字。'
-const DRAFT_SHAPE =
-  '{"tldr":"一句话讲清这个视频在干什么，60 字以内",' +
-  '"points":["3-5 条核心要点，每条一句话"],' +
-  '"overview":"全文总结：3-6 段，每段一个话题，讲清作者的论证与结论，' +
-  '不是要点的复述。段间用 \\\\n\\\\n 分隔，600-1200 字",' +
-  '"keyInfo":{' +
-  '"terms":[{"name":"术语或概念","desc":"视频里怎么解释的，一句话"}],' +
-  '"facts":["视频给出的数字、结论、明确判断，各一条，带上下文"],' +
-  '"resources":[{"name":"提到的工具/项目/书/链接","note":"用来干什么"}]},' +
-  '"chapters":[{"startSec":0,"title":"章节标题",' +
-  '"desc":"一句话说明，可省略","summary":"这一章讲了什么，2-4 句"}]}'
+/** 阅读页一行的可显示部分。本地库的行和空间流的条目各自能凑出这些字段。 */
+export type ReaderItemBase = Pick<
+  ReaderItem,
+  'dynId' | 'uid' | 'type' | 'pubTs' | 'title' | 'text' | 'desc' | 'cover' | 'pics' | 'bvid' | 'url'
+>
 
-/** 三块新内容对模型是新要求，光给形状不够，得说清「写什么」和「不写什么」。 */
-const DRAFT_RULES = [
-  'overview 要能独立读懂：不给出「本视频介绍了…」这种套话，直接写内容。',
-  'keyInfo 只收视频里真出现过的东西，没有就给空数组，别拿常识凑数。',
-  'chapters 覆盖全片，4-8 段，startSec 用整数秒；每段都要有 summary。',
-]
+/**
+ * 显示字段 + 本地库那点状态 → 阅读页一行。
+ *
+ * 这里**刻意不看 `filtered`**：规则拦的是自动解析与推送这两个动作，不是这条视频。
+ * 被拦下的条目在阅读页照样是「未解析」，手动点一下就能解析。
+ */
+export function readerItem(
+  base: ReaderItemBase,
+  local: { update: Update | null; summary: Summary | null; job: SummaryJob | null },
+): ReaderItem {
+  return {
+    ...base,
+    inDb: local.update !== null,
+    // 没有 bvid 就永远不会有总结，别让它显示「未解析」那种像是在等什么的状态。
+    state: base.bvid === null ? 'none' : parseState(local.job, local.summary !== null),
+    degradePath: local.summary?.degradePath ?? null,
+    filterReason: local.update?.filterReason ?? null,
+    jobStage: local.job === null ? null : local.job.stage,
+  }
+}
+
+/**
+ * 提示词里的一条字幕。时间戳和正文之间不留空格、内部连续空白压成一个 ——
+ * 一万行字幕省下的就是上万个 token，而阅读栏那边的解析对空格是可选的。
+ *
+ * 分段的 token 计数也按这个形状算，免得算的和送的不是一份文本。
+ */
+export const cueLine = (c: Cue): string => `[${hms(c.from)}]${squeeze(c.text)}`
+
+const squeeze = (text: string): string => text.trim().replace(/\s+/g, ' ')
+
+/**
+ * 字幕 → 带时间戳的纯文本。这份文本既进提示词，也原样存进 summaries.transcript。
+ *
+ * 相邻的重复行只留一条：ASR 在静音段会把同一句吐好几遍，那是纯粹的 token 浪费。
+ */
+export function transcriptText(cues: readonly Cue[]): string {
+  const lines: string[] = []
+  let previous = ''
+  for (const c of cues) {
+    const text = squeeze(c.text)
+    if (text === '' || text === previous) continue
+    previous = text
+    lines.push(`[${hms(c.from)}]${text}`)
+  }
+  return lines.join('\n')
+}
+
+/** 写作要求。原样进 system，各处只能有一份。 */
+const WRITING_TASK = [
+  '你将把一段视频重写成"阅读版本"，按内容主题分成若干小节；目标是让读者通过阅读就能完整理解视频讲了什么，就好像是在读一篇 Blog 版的文章一样。',
+  '',
+  '输出要求：',
+  '',
+  '1. Overview',
+  '用一段话点明视频的核心论题与结论。',
+  '',
+  '2. 按照主题来梳理',
+  '- 每个小节都需要根据视频中的内容详细展开，让我不需要再二次查看视频了解详情，每个小节不少于 500 字。',
+  '- 若出现方法/框架/流程，将其重写为条理清晰的步骤或段落。',
+  '- 若有关键数字、定义、原话，请如实保留核心词，并在括号内补充注释。',
+  '- 如果提供给你的有时间戳信息，那给每个小节加个起始的时间戳，便于我定位内容，否则直接忽略这一点。',
+  '',
+  '3. 框架 & 心智模型（Framework & mental models）',
+  '可以从视频中抽象出什么 framework & mental models，将其重写为条理清晰的步骤或段落，每个 framework & mental models 不少于 500 字。',
+  '',
+  '风格与限制：',
+  '- 永远不要高度浓缩！',
+  '- 不新增事实；若出现含混表述，请保持原意并注明不确定性。',
+  '- 专有名词保留原文，并在括号给出中文释义（若转录中出现或能直译）。',
+  '- 要求类的问题不用体现出来（例如 > 500 字）。',
+  '- 避免一个段落的内容过多，可以拆解成多个逻辑段落（使用 bullet points）。',
+].join('\n')
+
+/** 时间戳行的格式说明。模型要照抄时间点，得先知道每行长什么样。 */
+const CUE_FORMAT = '转录（每行形如 `[时间]内容`，时间是 `mm:ss`，超过一小时是 `h:mm:ss`）：'
 
 export function summaryPrompt(meta: VideoMeta, transcript: string): { system: string; user: string } {
   return {
-    system: `${JSON_ONLY}结论只能来自给定字幕，字幕里没有的事实一律不写。`,
+    system: WRITING_TASK,
     user: lines([
       `视频标题：${meta.title}`,
       meta.upName === null ? '' : `UP 主：${meta.upName}`,
       '',
-      '字幕（每行形如 `[时间] 内容`，时间是 `mm:ss`，超过一小时是 `h:mm:ss`）：',
+      CUE_FORMAT,
       transcript,
-      '',
-      '按这个形状回一个 JSON：',
-      DRAFT_SHAPE,
-      ...DRAFT_RULES,
-      'startSec 必须落在字幕出现过的时间点上。',
     ]),
   }
 }
@@ -93,6 +151,8 @@ export interface ChunkNote {
 /**
  * 分段阶段。这一步刻意不要 JSON：它的产出只喂给汇总那一步，
  * 多一道形状校验只会让一段解析失败就废掉整篇。
+ *
+ * 要求写得详细：汇总那一步看不到原文，这里省下的字数就是最终小节缺的内容。
  */
 export function chunkPrompt(
   meta: VideoMeta,
@@ -100,20 +160,19 @@ export function chunkPrompt(
 ): { system: string; user: string } {
   return {
     system:
-      '你是中文视频内容总结助手。只输出要点行，不要 JSON、不要小标题、不要客套话。' +
-      '结论只能来自给定字幕。',
+      '你把视频的这一段转录重写成可读的中文段落，供后续合成一篇文章使用。' +
+      '不要 JSON、不要客套话。结论只能来自给定字幕，不新增事实。',
     user: lines([
       `视频标题：${meta.title}`,
       `这是第 ${part.index + 1}/${part.total} 段，覆盖 ${hms(part.startSec)}–${hms(part.endSec)}。`,
       '',
-      '字幕（每行形如 `[时间] 内容`，时间是 `mm:ss`，超过一小时是 `h:mm:ss`）：',
+      CUE_FORMAT,
       part.transcript,
       '',
-      '用 4-8 行写这一段讲了什么，一行一件事，每行以 `[时间]` 开头，' +
-        '时间点照抄上面出现过的那些，格式也照抄。这一段之外的内容不要写。',
-      // 汇总阶段拿不到原文，术语和数字得在这一步捞出来，否则关键信息只能靠猜。
-      '如果这一段出现了术语、数字、结论或提到的工具/项目，再补几行，' +
-        '以 `关键：` 开头，写清是什么、视频里怎么说的。',
+      '按主题把这一段展开写清楚，不要高度浓缩：说清作者的论证、步骤、给出的数字和定义，' +
+        '专有名词保留原文。段落可以用 `-` 列表拆开。',
+      '每个话题以 `[时间]` 开头标出它开始的位置，时间点照抄上面出现过的那些，格式也照抄。',
+      '这一段之外的内容不要写。',
     ]),
   }
 }
@@ -127,20 +186,17 @@ export function reducePrompt(
     (n) => `第 ${n.index + 1} 段（${hms(n.startSec)}–${hms(n.endSec)}）：\n${n.text}`,
   )
   return {
-    system: `${JSON_ONLY}结论只能来自给定的分段要点，要点里没有的事实一律不写。`,
+    system: WRITING_TASK,
     user: lines([
       `视频标题：${meta.title}`,
       meta.upName === null ? '' : `UP 主：${meta.upName}`,
       '',
-      '这个视频被分段总结过，以下是各段的要点：',
+      '这个视频按时间切成了几段，以下是逐段的详细内容：',
       '',
       ...body,
       '',
-      '把它们合成一份总览，按这个形状回一个 JSON：',
-      DRAFT_SHAPE,
-      ...DRAFT_RULES,
-      'startSec 必须是上面要点里出现过的时间点 —— 它们是原视频的绝对时间，不要重新编号；' +
-        '`h:mm:ss` 是时:分:秒，换算成秒再填。',
+      '小节按主题划分，不必和上面的分段一一对应；同一主题跨了几段就合起来写。',
+      '时间戳沿用上面出现过的那些，它们是原视频的绝对时间，不要重新编号。',
     ]),
   }
 }
@@ -156,65 +212,53 @@ export function metaPrompt(
 ): { system: string; user: string } {
   return {
     system:
-      `${JSON_ONLY}你只有标题和简介，没有正片内容。` +
-      '不要编造视频里的细节、数字、结论；写不出来就说「简介没提」。',
+      '你只有标题和简介，没有正片内容。用一两段话写清这个视频大概在讲什么，' +
+      '不要编造视频里的细节、数字、结论；写不出来就说「简介没提」。不要小标题。',
     user: lines([
       `视频标题：${meta.title}`,
       meta.upName === null ? '' : `UP 主：${meta.upName}`,
       brief === '' ? '简介：（空）' : `简介：${brief}`,
       parts.length <= 1 ? '' : `分 P 标题：${parts.join('、')}`,
-      '',
-      '按这个形状回一个 JSON：',
-      '{"tldr":"根据标题与简介，这个视频大概在讲什么，60 字以内",' +
-        '"points":["2-4 条能从标题与简介确定的信息，每条一句话"]}',
-      '不要 chapters —— 你没有时间轴。',
     ]),
   }
 }
 
 const lines = (parts: readonly string[]): string => parts.filter((l) => l !== '').join('\n')
 
-/** 模型回的 JSON。解析不了是可预期的失败，重试同一个模型也不会变好，所以是 fatal。 */
-export const parseSummaryDraft = (reply: string): Result<SummaryDraft> =>
-  parseJsonReply(reply, SummaryDraftSchema)
-
-export const parseMetaDraft = (reply: string): Result<MetaDraft> =>
-  parseJsonReply(reply, MetaDraftSchema)
-
-/** 只要能 safeParse 就够，写成结构类型是为了不让 domain 直接依赖 zod。 */
-interface Parsable<T> {
-  safeParse: (
-    raw: unknown,
-  ) =>
-    | { success: true; data: T }
-    | { success: false; error: { issues: readonly { path: readonly PropertyKey[]; message: string }[] } }
+/** 模型回的正文。空的算这次没成，重试同一个模型也不会变好，所以是 fatal。 */
+export function parseArticle(reply: string): Result<string> {
+  const article = stripFence(reply).trim()
+  if (article === '') return fail(fatalFailure('模型回了空正文'))
+  return ok(article)
 }
 
-function parseJsonReply<T>(reply: string, schema: Parsable<T>): Result<T> {
-  const json = extractJson(reply)
-  if (json === null) return fail(fatalFailure(`模型回的不是 JSON：${reply.slice(0, 120)}`))
-
-  let raw: unknown
-  try {
-    raw = JSON.parse(json)
-  } catch (err) {
-    return fail(fatalFailure(`模型回的 JSON 解不开：${err instanceof Error ? err.message : String(err)}`))
-  }
-
-  const parsed = schema.safeParse(raw)
-  if (!parsed.success) {
-    const issues = parsed.error.issues.map((i) => `${i.path.join('.')} ${i.message}`).join('；')
-    return fail(fatalFailure(`模型回的 JSON 形状不对：${issues}`))
-  }
-  return ok(parsed.data)
+/** 有的模型会把整篇裹在 ```markdown 围栏里。 */
+function stripFence(reply: string): string {
+  const trimmed = reply.trim()
+  if (!trimmed.startsWith('```')) return trimmed
+  const firstBreak = trimmed.indexOf('\n')
+  const end = trimmed.lastIndexOf('```')
+  if (firstBreak === -1 || end <= firstBreak) return trimmed
+  return trimmed.slice(firstBreak + 1, end)
 }
 
-/** 围栏、前后的客套话都可能有；取第一个 `{` 到最后一个 `}` 之间那段。 */
-function extractJson(reply: string): string | null {
-  const start = reply.indexOf('{')
-  const end = reply.lastIndexOf('}')
-  if (start < 0 || end <= start) return null
-  return reply.slice(start, end + 1)
+/**
+ * 推送用的一句话导语。正文首个非标题段落，截到 80 字。
+ *
+ * 模型不再单独产出它 —— 让它为了一行摘要再写一遍不划算，从正文截更稳。
+ */
+export function leadLine(article: string): string {
+  for (const raw of article.split('\n')) {
+    const line = raw.trim()
+    if (line === '' || line.startsWith('#') || /^[-*_]{3,}$/.test(line)) continue
+    const clean = line
+      .replace(/^>\s*/, '')
+      .replace(/^(?:[-*+]|\d+[.)])\s+/, '')
+      .replace(/[*`_]/g, '')
+      .trim()
+    if (clean !== '') return clean.length > 80 ? `${clean.slice(0, 80)}…` : clean
+  }
+  return ''
 }
 
 /** 动态那条记录可能已经不在了（清过库、换过 bvid），退回 bvid 本身而不是让调用方各写一遍。 */
@@ -232,26 +276,20 @@ const SOURCE_LABEL: Record<Summary['transcriptSource'], string> = {
 }
 
 export interface RenderParts
-  extends Pick<
-    Summary,
-    | 'tldr'
-    | 'points'
-    | 'overview'
-    | 'keyInfo'
-    | 'chapters'
-    | 'transcriptSource'
-    | 'confidence'
-    | 'degradePath'
-  > {
+  extends Pick<Summary, 'article' | 'transcriptSource' | 'confidence' | 'degradePath'> {
   /** 降级原因，每退一级一条。没降级就是空的。 */
   reasons?: readonly string[]
 }
 
-/** Markdown 全文。降级必须在正文里写明，不能只体现在字段上。 */
+/**
+ * 落盘的那份 Markdown：模型回的正文，前面补上标题、链接与来源。
+ *
+ * 降级必须写在正文里，不能只体现在字段上 —— 文件被单独分享出去时字段就不在了。
+ */
 export function renderMarkdown(meta: VideoMeta, s: RenderParts): string {
   const out: string[] = [`# ${meta.title}`, '', `<${meta.url}>`, '']
   if (meta.upName !== null) out.push(`UP 主：${meta.upName}`, '')
-  // 全链路失败时封面是仅剩的内容之一，所以只在那一级贴图，别让正常总结顶个大图。
+  // 全链路失败时封面是仅剩的内容之一，所以只在那一级贴图。
   if (s.degradePath === 'link-only' && typeof meta.cover === 'string' && meta.cover !== '') {
     out.push(`![封面](${meta.cover})`, '')
   }
@@ -265,47 +303,18 @@ export function renderMarkdown(meta: VideoMeta, s: RenderParts): string {
   for (const r of s.reasons ?? []) out.push(`> - ${r}`)
   if ((s.reasons ?? []).length > 0) out.push('')
 
-  out.push('## TL;DR', '', s.tldr, '')
-  if (s.points.length > 0) {
-    out.push('## 核心要点', '')
-    for (const p of s.points) out.push(`- ${p}`)
-  }
-
-  if (s.overview !== '') out.push('', '## 全文总结', '', s.overview, '')
-
-  const { terms, facts, resources } = s.keyInfo
-  if (terms.length + facts.length + resources.length > 0) {
-    out.push('', '## 关键信息', '')
-    if (terms.length > 0) {
-      out.push('**术语与概念**', '')
-      for (const t of terms) out.push(`- **${t.name}**：${t.desc}`)
-      out.push('')
-    }
-    if (facts.length > 0) {
-      out.push('**数字与结论**', '')
-      for (const f of facts) out.push(`- ${f}`)
-      out.push('')
-    }
-    if (resources.length > 0) {
-      out.push('**提到的东西**', '')
-      for (const r of resources) out.push(`- **${r.name}**：${r.note}`)
-      out.push('')
-    }
-  }
-
-  if (s.chapters.length > 0) {
-    out.push('', '## 章节', '')
-    for (const c of s.chapters) out.push(...chapterLines(meta.bvid, c))
-  }
+  out.push('---', '', s.article)
   return `${out.join('\n')}\n`
 }
 
-function chapterLines(bvid: string, c: Chapter): string[] {
-  const head = `### [${hms(c.startSec)}](${chapterLink(bvid, c.startSec)}) ${c.title}`
-  const out = [head, '']
-  if (c.desc !== null) out.push(`*${c.desc}*`, '')
-  if (c.summary !== '') out.push(c.summary, '')
-  return out
+/** 行首和标题里的 `[mm:ss]` 变成能点的链接，跳到 B 站的那一秒。 */
+export function linkTimestamps(article: string, bvid: string): string {
+  return article.replace(/\[(\d{1,2}(?::\d{2}){1,2})\](?!\()/g, (whole, stamp: string) => {
+    const parts = stamp.split(':').map(Number)
+    if (parts.some((n) => !Number.isFinite(n))) return whole
+    const sec = parts.reduce((acc, n) => acc * 60 + n, 0)
+    return `[${stamp}](${chapterLink(bvid, sec)})`
+  })
 }
 
 /** 落盘文件名。用 bvid 而不是标题：标题会改，改完重跑会留下一份孤儿文件。 */

@@ -56,6 +56,7 @@ export function UpdatesPage() {
   return (
     <Page title="动态流" hint="每条动态为什么推了、为什么没推，都能在这儿看到原因。">
       {system.data !== undefined && <PollBanner poll={system.data.poll} />}
+      {system.data !== undefined && <FloorHint floorTs={system.data.poll.floorTs} />}
 
       <div className="mb-4 flex items-center gap-4">
         <Button size="sm" onClick={() => poll.mutate()} disabled={poll.isPending}>
@@ -99,6 +100,17 @@ export function UpdatesPage() {
     </Page>
   )
 }
+
+/** 抓取地板每次启动重算，不写出来的话「为什么没抓到那条」会查很久。 */
+const FloorHint = (props: { floorTs: number }) => (
+  <p className="text-muted-foreground mb-4 text-sm">
+    只抓 {formatTime(props.floorTs * 1000)}（本次启动）之后新发的。更早的投稿去
+    <Link to="/reader/all" className="text-brand-ink hover:underline">
+      阅读
+    </Link>
+    页按 UP 翻，翻到的能手动排解析。
+  </p>
+)
 
 /** auth-lost 是终态：cron 已经被摘掉，不提示的话页面会安静地永远不更新。 */
 function PollBanner(props: { poll: PollSnapshot }) {

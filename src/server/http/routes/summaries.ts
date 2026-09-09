@@ -1,20 +1,27 @@
 import { Hono } from 'hono'
 
 import type {
+  ReaderItem,
   RunAllSummariesResponse,
   SummariesResponse,
   SummaryDetailResponse,
-  SummaryFeedItem,
   TranscriptResponse,
   UpsMap,
 } from '#shared/contract/api.ts'
+import { SummariesQuerySchema } from '#shared/contract/api.ts'
 import type { SummaryQueue } from '../../app/queue-runner.ts'
 import { feedState } from '../../domain/summary-format.ts'
 import type { Ports } from '../../ports/index.ts'
 import { errorBody } from '../errors.ts'
+import { fromUpdate } from '../reader-item.ts'
 
-/** 索引只取最近这一窗，页头那句「N 条」说的也是这一窗，不是全库。 */
+/** 批量补队一次最多看这么多条。索引本身是翻页的，这个只管 run-all。 */
 const INDEX_LIMIT = 100
+/**
+ * 一页要多取几条动态：只有带 bvid 的才进这个索引，碎动态会被筛掉，
+ * 按 limit 原样取会让「还有没有下一页」判错。
+ */
+const OVERFETCH = 3
 
 /** 宽松校验：BV 号长度历史上变过，只挡明显不是 id 的东西（路径穿越、超长串）。 */
 const BVID = /^[A-Za-z0-9]{3,24}$/
@@ -31,28 +38,33 @@ export function summaryRoutes(ports: Ports, queue: SummaryQueue): Hono {
 
   return new Hono()
     .get('/', (c) => {
-      const items: SummaryFeedItem[] = []
+      const q = SummariesQuerySchema.safeParse(c.req.query())
+      if (!q.success) return c.json(errorBody('invalid-request', '查询参数不对'), 400)
+
+      const rows = updates.list({
+        limit: q.data.limit * OVERFETCH,
+        includeFiltered: true,
+        ...(q.data.before === undefined ? {} : { before: q.data.before }),
+      })
+      const items: ReaderItem[] = []
       let filteredCount = 0
-      // 只列视频：其余四类动态永远不会有总结，它们在动态流那一页。
-      for (const u of updates.list({ limit: INDEX_LIMIT, includeFiltered: true })) {
+      let scanned = 0
+      // 只列视频：其余四类动态永远不会有总结，它们在动态流和阅读页的 UP 泳道里。
+      for (const u of rows) {
+        if (items.length >= q.data.limit) break
+        scanned += 1
         if (u.bvid === null) continue
-        const summary = summaries.get(u.bvid)
-        const state = feedState(u, jobs.getByBvid(u.bvid), summary !== null)
-        if (state === 'filtered') filteredCount += 1
-        items.push({
-          bvid: u.bvid,
-          dynId: u.dynId,
-          uid: u.uid,
-          title: u.title ?? u.bvid,
-          cover: u.cover,
-          pubTs: u.pubTs,
-          state,
-          degradePath: summary?.degradePath ?? null,
-          filterReason: u.filterReason,
-        })
+        // 按库里的标记数，不按条目状态数：「被拦下」不是一条动态的状态（见 readerItem）。
+        if (u.filtered) filteredCount += 1
+        items.push(fromUpdate(ports, u))
       }
 
-      const body: SummariesResponse = { items, ups: upsMap(), filteredCount }
+      // 游标按**扫到哪一行**给，不按最后一条视频给 —— 尾巴上全是碎动态时也能往前走。
+      const lastScanned = rows[scanned - 1]
+      const more = scanned < rows.length || rows.length === q.data.limit * OVERFETCH
+      const nextBefore = more && lastScanned !== undefined ? lastScanned.pubTs : null
+
+      const body: SummariesResponse = { items, ups: upsMap(), filteredCount, nextBefore }
       return c.json(body)
     })
 

@@ -92,6 +92,11 @@ export const AiConfigSchema = z.object({
   temperature: z.number().min(0).max(2).default(0.3),
   chunk: ChunkConfigSchema.default({}),
   llmConcurrency: z.number().int().min(1).max(8).default(2),
+  /**
+   * 单次调用的总超时。阅读版总结一次要吐上万 token，按 30–40 token/s 算就是好几分钟，
+   * 给小了会在快写完的时候被自己掐死。流式下还有一道 90s 的空闲超时管「假死」。
+   */
+  timeoutMs: z.number().int().min(10_000).max(1_800_000).default(600_000),
 })
 
 export const AsrConfigSchema = z.object({

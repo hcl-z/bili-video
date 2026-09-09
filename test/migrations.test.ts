@@ -15,6 +15,8 @@ const EXPECTED_TABLES = [
   'cookies',
   'deliveries',
   'filter_rules',
+  'job_artifacts',
+  'job_steps',
   'llm_calls',
   'migrations',
   'runtime_state',

@@ -2,7 +2,7 @@ import { join } from 'node:path'
 import type { DatabaseSync } from 'node:sqlite'
 
 import { ASR_API_KEY, LLM_API_KEY } from './app/ai.ts'
-import { seedConfigIfEmpty } from './config/load.ts'
+import { seedConfig } from './config/load.ts'
 import { SqliteConfigStore } from './config/store.ts'
 import {
   createBrowserIdentity,
@@ -27,7 +27,11 @@ import { migrate } from './infra/db/migrations.ts'
 import { SqliteStateRepo } from './infra/db/repo-state.ts'
 import { SqliteDeliveryRepo, SqliteLlmCallRepo } from './infra/db/repo-delivery.ts'
 import { SqliteAnchorRepo, SqliteUpdateRepo } from './infra/db/repo-feed.ts'
-import { SqliteJobRepo, SqliteSummaryRepo } from './infra/db/repo-summary.ts'
+import {
+  SqliteJobArtifactRepo,
+  SqliteJobRepo,
+  SqliteSummaryRepo,
+} from './infra/db/repo-summary.ts'
 import { SqliteFilterRuleRepo, SqliteSubscriptionRepo } from './infra/db/repo-subscriptions.ts'
 import { SqliteWriteAuditRepo } from './infra/db/repo-write-audit.ts'
 import { openDatabase } from './infra/db/sqlite.ts'
@@ -143,8 +147,8 @@ export function openCore(opts: CoreOptions): Core {
     )
   }
 
-  const seededFrom = seedConfigIfEmpty(db, opts.seedFile ?? null, clock.now(), logger)
-  const config = new SqliteConfigStore(db, now, seededFrom)
+  const seeded = seedConfig(db, opts.seedFile ?? null, clock.now(), logger)
+  const config = new SqliteConfigStore(db, now, seeded.from)
 
   // cookie 和 SESSDATA 一样敏感（SESSDATA 本身就是其中一条），走同一套 secret-box。
   const cipher: Cipher = {
@@ -187,6 +191,7 @@ export function openCore(opts: CoreOptions): Core {
     anchors: new SqliteAnchorRepo(db),
     updates: new SqliteUpdateRepo(db),
     jobs: new SqliteJobRepo(db),
+    artifacts: new SqliteJobArtifactRepo(db),
     summaries: new SqliteSummaryRepo(db),
     deliveries: new SqliteDeliveryRepo(db),
     llmCalls: new SqliteLlmCallRepo(db),

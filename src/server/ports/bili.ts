@@ -12,6 +12,11 @@ export interface BiliReader {
   fetchFeed(opts?: { offset?: string | null }): Promise<Result<FeedPage>>
   /** feed/all/update 心跳：比 baseline 新的有几条，比拉全量便宜。 */
   countSince(baseline: string): Promise<Result<number>>
+  /**
+   * 单个 UP 的空间流。轮询不用它 —— 它是阅读页翻历史用的，
+   * 因为抓取地板之前的投稿在本地库里根本不存在。
+   */
+  fetchSpace(opts: { uid: string; offset?: string | null }): Promise<Result<FeedPage>>
 }
 
 export interface FeedPage {
@@ -40,6 +45,8 @@ export interface ParsedDynamic {
   /** 视频简介 / 专栏摘要。只参与过滤匹配，不入库。 */
   desc: string | null
   cover: string | null
+  /** 图文的多图（含封面那张）。只有阅读页用，不落库。 */
+  pics: string[]
   bvid: string | null
   url: string
   raw: unknown

@@ -34,7 +34,7 @@ export interface Harness {
   qrs: string[]
   dataDir: string
   /** 用同一个 dataDir 重新装配一遍，用来测「重启后……」这类行为。 */
-  restart(): Promise<Harness>
+  restart(over?: Partial<HarnessOptions>): Promise<Harness>
   close(): Promise<void>
 }
 
@@ -136,11 +136,12 @@ export async function createHarness(opts: HarnessOptions = {}): Promise<Harness>
     fetch,
     qrs,
     dataDir,
-    async restart() {
+    async restart(over: Partial<HarnessOptions> = {}) {
       await server.stop()
       core.close()
       // 带上同一个 FakeFetch：重启后打过的桩还在，否则「重启后登录态还在」没法测。
-      return createHarness({ ...opts, dataDir, fetch, ownsDataDir: owned })
+      // over 用来改这次启动的参数，典型是 startAt（抓取地板按启动时刻算）。
+      return createHarness({ ...opts, dataDir, fetch, ownsDataDir: owned, ...over })
     },
     async close() {
       await server.stop()

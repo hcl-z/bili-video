@@ -8,6 +8,7 @@ import type {
 } from '#shared/contract/api.ts'
 import { FakeFetch, type FakeResponse } from './fakes/bili-fetch.ts'
 import { createHarness } from './support/harness.ts'
+import { pubAt } from './support/time.ts'
 
 /** 分栏阅读的数据面：索引每行的状态，以及阅读栏一次要齐的那一坨。 */
 
@@ -18,7 +19,12 @@ const av = (id: string, bvid: string, title: string) => ({
   id_str: id,
   type: 'DYNAMIC_TYPE_AV',
   modules: {
-    module_author: { mid: 111, name: 'UP-111', face: 'https://f/111.jpg', pub_ts: `17000001${id}` },
+    module_author: {
+      mid: 111,
+      name: 'UP-111',
+      face: 'https://f/111.jpg',
+      pub_ts: String(pubAt(Number(id))),
+    },
     module_dynamic: {
       desc: null,
       major: {
@@ -33,11 +39,7 @@ const av = (id: string, bvid: string, title: string) => ({
   },
 })
 
-const REPLY = JSON.stringify({
-  tldr: '一句话讲完',
-  points: ['要点一', '要点二'],
-  chapters: [{ startSec: 83, title: '正题', desc: null }],
-})
+const REPLY = '## Overview\n\n一句话讲完。\n\n## [01:23] 正题\n\n正题给出了做法。'
 
 const llmOk: FakeResponse = {
   raw: {
@@ -107,15 +109,16 @@ describe('总结分栏阅读', () => {
     const blocked = list.items.find((i) => i.bvid === 'BV1no')
     assert.equal(ok?.state, 'done')
     assert.equal(ok?.degradePath, 'subtitle')
-    assert.equal(blocked?.state, 'filtered')
+    // 被规则拦下的条目状态就是「没解析」：拦的是自动解析与推送，不是这条视频。
+    assert.equal(blocked?.state, 'none')
     assert.match(blocked?.filterReason ?? '', /广告/)
 
     const detail = (await (
       await h.server.app.request('/api/summaries/BV1ok')
     ).json()) as SummaryDetailResponse
     assert.equal(detail.state, 'done')
-    assert.equal(detail.summary?.tldr, '一句话讲完')
-    assert.equal(detail.summary?.chapters[0]?.startSec, 83)
+    assert.equal(detail.summary?.tldr, '一句话讲完。')
+    assert.match(detail.summary?.article ?? '', /正题给出了做法/)
     assert.equal(detail.up?.name, 'UP-111')
     assert.equal(detail.update?.title, '正常视频')
     assert.equal(detail.job?.status, 'done')
@@ -196,7 +199,7 @@ describe('总结分栏阅读', () => {
     assert.equal(run.status, 200)
     await h.server.services.queue.drain()
     assert.equal(h.core.repos.jobs.getByBvid('BV1ok')?.status, 'done')
-    assert.equal(h.core.repos.summaries.get('BV1ok')?.tldr, '一句话讲完')
+    assert.equal(h.core.repos.summaries.get('BV1ok')?.tldr, '一句话讲完。')
 
     const missing = await h.server.app.request('/api/summaries/BV1none/run', { method: 'POST' })
     assert.equal(missing.status, 404)
@@ -210,7 +213,7 @@ describe('总结分栏阅读', () => {
       await h.server.app.request('/api/summaries/BV1ok/transcript')
     ).json()) as TranscriptResponse
     assert.equal(tr.source, 'subtitle')
-    assert.match(tr.text, /^\[01:23\] 进入正题$/)
+    assert.match(tr.text, /^\[01:23\]进入正题$/)
     assert.equal((await h.server.app.request('/api/summaries/BV1none/transcript')).status, 404)
 
     await h.close()

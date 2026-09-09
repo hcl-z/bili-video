@@ -55,6 +55,27 @@ describe('配置', () => {
     }
   })
 
+  it('老库缺整段配置时按种子补上，已有的那几段不动', async () => {
+    const file = yamlFile('ai:\n  model: seeded\nbili:\n  refreshThresholdDays: 7\n')
+    const first = await createHarness({ seedFile: file })
+    // 模拟老库：这一段是 schema 后加的，当年 seed 时还不存在。
+    first.core.db.exec("DELETE FROM app_config WHERE key = 'bili'")
+
+    const second = await first.restart()
+    try {
+      assert.equal(
+        second.core.config.getSection('bili').refreshThresholdDays,
+        7,
+        '缺的段要拿种子补上，否则它会静默停在 schema 默认值',
+      )
+      assert.equal(second.core.config.getSection('ai').model, 'seeded')
+      assert.equal(second.core.config.seededFrom(), null, '补一段不是首次 seed')
+    } finally {
+      await second.close()
+      rmSync(dirname(file), { recursive: true, force: true })
+    }
+  })
+
   it('改数据库里的配置无需重启即生效', async () => {
     const h = await createHarness()
     try {

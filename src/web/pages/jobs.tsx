@@ -5,6 +5,7 @@ import type { JobsResponse } from '#shared/contract/api.ts'
 import type { SummaryJob } from '#shared/contract/job.ts'
 import { JOB_STAGE_LABEL } from '#shared/contract/job.ts'
 import { videoUrl } from '#shared/format.ts'
+import { JobPipeline } from '@/components/job-pipeline'
 import { Page } from '@/components/page'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -26,7 +27,10 @@ export function JobsPage() {
   const jobs = useQuery({ queryKey: keys.jobs, queryFn: api.jobs })
 
   return (
-    <Page title="队列" hint="每个任务卡在哪一步、为什么失败，失败和完成的都能重跑。">
+    <Page
+      title="队列"
+      hint="六步流水线：每一步的状态一眼看到，点某一步就从那儿重跑，前面的结果不重复跑。"
+    >
       {jobs.isPending ? (
         <Skeleton className="h-24 w-full" />
       ) : jobs.isError ? (
@@ -75,39 +79,47 @@ function JobRow(props: { job: SummaryJob; video: { title: string; url: string } 
 
   return (
     <Card>
-      <CardContent className="flex items-start gap-3 py-3">
-        <div className="min-w-0 flex-1">
-          <a
-            href={props.video?.url ?? videoUrl(job.bvid)}
-            target="_blank"
-            rel="noreferrer"
-            className="line-clamp-1 text-sm font-medium hover:underline"
-          >
-            {props.video?.title ?? job.bvid}
-          </a>
-          <div className="text-muted-foreground mt-1.5 flex items-center gap-2 text-xs">
-            <StageBadge job={job} />
-            <span className="font-mono">{job.bvid}</span>
-            <span>·</span>
-            <span>{formatTime(job.updatedAt)}</span>
-            {job.attempts > 1 && <span>· 第 {job.attempts} 次</span>}
+      <CardContent className="py-3">
+        <div className="flex items-start gap-3">
+          <div className="min-w-0 flex-1">
+            <a
+              href={props.video?.url ?? videoUrl(job.bvid)}
+              target="_blank"
+              rel="noreferrer"
+              className="line-clamp-1 text-sm font-medium hover:underline"
+            >
+              {props.video?.title ?? job.bvid}
+            </a>
+            <div className="text-muted-foreground mt-1.5 flex items-center gap-2 text-xs">
+              <StageBadge job={job} />
+              <span className="font-mono">{job.bvid}</span>
+              <span>·</span>
+              <span>{formatTime(job.updatedAt)}</span>
+              {job.attempts > 1 && <span>· 第 {job.attempts} 次</span>}
+            </div>
           </div>
-          {job.error !== null && (
-            <p className="bg-muted/60 mt-2 rounded px-2 py-1.5 text-xs">{job.error}</p>
+
+          {/* 跑着的不给重跑按钮：点了也只会被后端挡回来。 */}
+          {job.status !== 'running' && job.status !== 'pending' && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => retry.mutate({})}
+              disabled={retry.isPending}
+            >
+              <RotateCcw className="size-3.5" />
+              整条重跑
+            </Button>
           )}
         </div>
 
-        {/* 跑着的不给重跑按钮：点了也只会被后端挡回来。 */}
-        {job.status !== 'running' && job.status !== 'pending' && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => retry.mutate()}
-            disabled={retry.isPending}
-          >
-            <RotateCcw className="size-3.5" />
-            重跑
-          </Button>
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+          <JobPipeline job={job} />
+          <p className="text-muted-foreground text-xs">点某一步从那儿重跑，前面的结果直接复用</p>
+        </div>
+
+        {job.error !== null && (
+          <p className="bg-muted/60 mt-2.5 rounded px-2 py-1.5 text-xs">{job.error}</p>
         )}
       </CardContent>
     </Card>

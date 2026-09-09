@@ -15,6 +15,8 @@ interface DemoVideo {
   /** 'human' 人工字幕 / 'ai' 只有 AI 字幕 / 'none' 没字幕，退到语音转写。 */
   subtitle: 'human' | 'ai' | 'none'
   cues: Array<[number, string]>
+  /** 只出现在空间流里，不在聚合流里 —— 用来演「地板之前的历史，手动点解析」。 */
+  historyOnly?: boolean
 }
 
 const VIDEOS: DemoVideo[] = [
@@ -65,6 +67,19 @@ const VIDEOS: DemoVideo[] = [
       [108, '再往下全挂了，也还会留一条只有标题、封面和链接的最小记录。'],
     ],
   },
+  {
+    bvid: 'BV1Demo004',
+    cid: 1004,
+    title: '这是启动之前的老投稿（只在空间流里，要自己点解析）',
+    desc: '定时抓取只要启动之后新发的，所以它没入库；在阅读页选这个 UP 就能翻到它。',
+    subtitle: 'human',
+    historyOnly: true,
+    cues: [
+      [0, '这条是老投稿，轮询不会抓它，因为它发布在服务启动之前。'],
+      [30, '在阅读页点这个 UP 的头像，左栏就是现拉的空间流，翻到它点「加入解析队列」。'],
+      [75, '解析完右栏会多出一个「解析信息」的标签页，和自动抓到的那几条一模一样。'],
+    ],
+  },
 ]
 
 /** 没字幕那条走转写：demo 里由假转写吐这些句子，省掉 yt-dlp 与本地模型。 */
@@ -74,9 +89,15 @@ export function demoAsrCues(bvid: string): Array<{ from: number; to: number; tex
   return v.cues.map(([from, text], i) => ({ from, to: v.cues[i + 1]?.[0] ?? from + 5, text }))
 }
 
-export const demoVideos = (): DemoVideo[] => VIDEOS
+export const demoVideos = (): DemoVideo[] => VIDEOS.filter((v) => v.historyOnly !== true)
 
 const byBvid = new Map(VIDEOS.map((v) => [v.bvid, v]))
+
+/** 轮询有抓取地板：要被抓到就得发布在启动之后，老投稿则相反。 */
+const pubTs = (v: DemoVideo, i: number): number => {
+  const now = Math.trunc(Date.now() / 1000)
+  return v.historyOnly === true ? now - 86_400 : now + (i + 1) * 60
+}
 
 const feedItem = (v: DemoVideo, i: number) => ({
   id_str: `90${i}`,
@@ -86,7 +107,7 @@ const feedItem = (v: DemoVideo, i: number) => ({
       mid: Number(DEMO_UP.uid),
       name: DEMO_UP.name,
       face: 'https://i0.hdslb.com/demo.jpg',
-      pub_ts: String(Math.trunc(Date.now() / 1000) - (VIDEOS.length - i) * 600),
+      pub_ts: String(pubTs(v, i)),
     },
     module_dynamic: {
       desc: null,
@@ -118,34 +139,35 @@ const tracksFor = (v: DemoVideo): unknown[] => {
 /** 取第一个小句，别在词中间切断。 */
 const clause = (text: string): string => text.split(/[。，、：]/)[0]!.slice(0, 18)
 
-/** 编排好的假回答：标题、要点、章节都从字幕里挑，看着像真的总结。 */
+/** 编排好的假回答：Markdown 正文，小节标题带时间戳，看着像真的阅读版本。 */
 function fakeCompletion(body: string | null): FakeResponse {
   const prompt = body ?? ''
   const video = VIDEOS.find((v) => prompt.includes(v.title)) ?? VIDEOS[0]!
-  const picks = video.cues.slice(1, 4)
-  const reply = JSON.stringify({
-    tldr: `${video.title.split('：')[0]}：${video.desc}`,
-    points: picks.map(([, text]) => text.replace(/[。，].*$/, '')),
-    overview: video.cues
-      .filter((_, i) => i % 2 === 0)
-      .map(([, text]) => text)
-      .join('')
-      .replace(/(.{80,120}?。)/g, '$1\n\n'),
-    keyInfo: {
-      terms: picks.map(([, text]) => ({ name: clause(text), desc: text })),
-      facts: video.cues.slice(-2).map(([, text]) => text),
-      resources: [{ name: video.bvid, note: '这条演示数据本身' }],
-    },
-    chapters: video.cues
-      .filter((_, i) => i % 3 === 0)
-      .map(([sec, text]) => ({ startSec: sec, title: clause(text), desc: null, summary: text })),
-  })
+  const sections = video.cues.filter((_, i) => i % 3 === 0)
+  const lines = ['## Overview', '', `${video.desc}${video.cues[0]?.[1] ?? ''}`, '']
+
+  for (const [sec, text] of sections) {
+    lines.push(`## [${hms(sec)}] ${clause(text)}`, '', text, '')
+    const details = video.cues.filter(([at]) => at > sec).slice(0, 2)
+    for (const [, d] of details) lines.push(`- ${d}`)
+    if (details.length > 0) lines.push('')
+  }
+
+  lines.push('## 框架 & 心智模型', '', `${clause(video.cues.at(-1)?.[1] ?? '')}：`, '')
+  for (const [, text] of video.cues.slice(-2)) lines.push(`- ${text}`)
+
   return {
     raw: {
-      choices: [{ message: { content: reply } }],
-      usage: { prompt_tokens: 800 + video.cues.length * 20, completion_tokens: 220 },
+      choices: [{ message: { content: lines.join('\n') } }],
+      usage: { prompt_tokens: 800 + video.cues.length * 20, completion_tokens: 1200 },
     },
   }
+}
+
+/** 秒 → mm:ss。demo 自己拼假回答里的时间戳，不想为一个格式化去 import 服务端。 */
+function hms(sec: number): string {
+  const mm = String(Math.trunc(sec / 60)).padStart(2, '0')
+  return `${mm}:${String(sec % 60).padStart(2, '0')}`
 }
 
 /** 把 demo 需要的每一跳都打上桩。顺序有意义：先具体后通用。 */
@@ -153,6 +175,15 @@ export function demoBili(fake: FakeFetch): FakeFetch {
   return fake
     .on('feed/all/update', { data: { update_num: VIDEOS.length } })
     .on('feed/all', {
+      data: {
+        items: VIDEOS.filter((v) => v.historyOnly !== true).map(feedItem),
+        has_more: false,
+        offset: '',
+        update_baseline: `demo-${Date.now()}`,
+      },
+    })
+    // 空间流多一条老投稿：阅读页里它是「没入库、可以手动解析」的那种。
+    .on('feed/space', {
       data: {
         items: VIDEOS.map(feedItem),
         has_more: false,

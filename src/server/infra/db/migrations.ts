@@ -176,11 +176,46 @@ ALTER TABLE summaries ADD COLUMN overview TEXT NOT NULL DEFAULT '';
 ALTER TABLE summaries ADD COLUMN key_info_json TEXT NOT NULL DEFAULT '{}';
 `
 
+/**
+ * 流水线：每一步的状态 + 每一步的产物。
+ *
+ * 产物是「从任意一步重跑」的全部前提 —— 没有它，从 reduce 重跑还得重新取一遍字幕。
+ * 按 bvid 存而不是 job_id：一个 bvid 一条任务，重跑复位的是同一行。
+ */
+const JOB_PIPELINE = `
+CREATE TABLE job_steps (
+  job_id INTEGER NOT NULL,
+  step   TEXT NOT NULL,
+  status TEXT NOT NULL,
+  note   TEXT,
+  at     INTEGER NOT NULL,
+  PRIMARY KEY (job_id, step)
+);
+
+CREATE TABLE job_artifacts (
+  bvid      TEXT NOT NULL,
+  kind      TEXT NOT NULL,
+  payload   TEXT NOT NULL,
+  meta_json TEXT,
+  at        INTEGER NOT NULL,
+  PRIMARY KEY (bvid, kind)
+);
+
+ALTER TABLE summary_jobs ADD COLUMN resume_from TEXT;
+`
+
+// 模型回的正文本身。老行是空的，读的时候退回 full_md。
+const SUMMARY_ARTICLE = `
+ALTER TABLE summaries ADD COLUMN article TEXT NOT NULL DEFAULT '';
+`
+
 export const MIGRATIONS: Migration[] = [
   { version: 1, name: 'init', sql: INIT },
   { version: 2, name: 'runtime_state', sql: RUNTIME_STATE },
   { version: 3, name: 'bili_write_calls', sql: BILI_WRITE_CALLS },
   { version: 4, name: 'summary_detail', sql: SUMMARY_DETAIL },
+  { version: 5, name: 'job_pipeline', sql: JOB_PIPELINE },
+  { version: 6, name: 'summary_article', sql: SUMMARY_ARTICLE },
 ]
 
 /**

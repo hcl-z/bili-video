@@ -9,6 +9,10 @@ import type { BiliHttp } from './http-client.ts'
 
 const FEED_URL = 'https://api.bilibili.com/x/polymer/web-dynamic/v1/feed/all'
 const UPDATE_URL = 'https://api.bilibili.com/x/polymer/web-dynamic/v1/feed/all/update'
+const SPACE_URL = 'https://api.bilibili.com/x/polymer/web-dynamic/v1/feed/space'
+/** 聚合流和空间流的条目形状一样，所以两处的 features 也必须一样。 */
+const FEATURES =
+  'itemOpusStyle,listOnlyfans,opusBigCover,onlyfansVote,decorationCard,onlyfansAssetsV2,ugcDelete'
 
 /** 只认这五类，别的（直播、番剧推送等）直接跳过。 */
 const TYPES: Record<string, DynamicType> = {
@@ -112,6 +116,11 @@ function contentOf(dyn: z.infer<typeof DynModuleSchema> | null | undefined) {
       nz(major.article?.covers[0]) ??
       nz(major.draw?.items[0]?.src) ??
       nz(major.opus?.pics[0]?.url),
+    pics: [
+      ...(major.draw?.items ?? []).map((i) => i.src),
+      ...(major.opus?.pics ?? []).map((p) => p.url),
+      ...(major.article?.covers ?? []),
+    ].filter((u) => u !== ''),
     bvid: nz(major.archive?.bvid),
   }
 }
@@ -131,17 +140,38 @@ export class BiliReaderClient implements BiliReader {
       platform: 'web',
       timezone_offset: -480,
       // 不带 itemOpusStyle 的话，图文的正文既不在 desc 也不在 major 里，等于抓回来一条没内容的动态。
-      features: 'itemOpusStyle,listOnlyfans,opusBigCover,onlyfansVote,decorationCard,onlyfansAssetsV2,ugcDelete',
+      features: FEATURES,
     }
     if (opts.offset != null && opts.offset !== '') params['offset'] = opts.offset
 
     const res = await this.http.get<unknown>(FEED_URL, params, {
       referer: 'https://t.bilibili.com/',
     })
+    return this.page('feed/all', res)
+  }
+
+  /** 空间流。不签 WBI —— 这个接口只要登录态，混淆表没配也能用。 */
+  async fetchSpace(opts: { uid: string; offset?: string | null }): Promise<Result<FeedPage>> {
+    const params: Record<string, string | number> = {
+      host_mid: opts.uid,
+      platform: 'web',
+      timezone_offset: -480,
+      features: FEATURES,
+    }
+    if (opts.offset != null && opts.offset !== '') params['offset'] = opts.offset
+
+    const res = await this.http.get<unknown>(SPACE_URL, params, {
+      referer: `https://space.bilibili.com/${opts.uid}/dynamic`,
+    })
+    return this.page('feed/space', res)
+  }
+
+  /** 两条流的 payload 形状一样，解析也就只写一遍。 */
+  private page(api: string, res: Result<unknown>): Result<FeedPage> {
     if (!res.ok) return res
 
     const parsed = FeedSchema.safeParse(res.value)
-    if (!parsed.success) return fail(shapeFailure('feed/all', res.value))
+    if (!parsed.success) return fail(shapeFailure(api, res.value))
 
     const items: ParsedDynamic[] = []
     let unparsed = 0
@@ -215,6 +245,7 @@ export class BiliReaderClient implements BiliReader {
       // 视频简介 / 专栏摘要。过滤规则的匹配范围里有它，所以要一路带下去。
       desc: self.desc ?? from?.desc ?? from?.text ?? null,
       cover: self.cover ?? from?.cover ?? null,
+      pics: self.pics.length > 0 ? self.pics : (from?.pics ?? []),
       bvid,
       url: bvid != null ? `https://www.bilibili.com/video/${bvid}` : `https://t.bilibili.com/${item.id_str}`,
       raw,

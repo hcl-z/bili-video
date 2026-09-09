@@ -36,6 +36,11 @@ export interface PollDeps {
 export class Poller {
   private readonly deps: PollDeps
   private readonly logger: Logger
+  /**
+   * 抓取地板（秒）：只抓比它新的。每次进程启动重算 —— 停机期间发的不补，
+   * 历史投稿在阅读页按 UP 翻空间流、手动排解析。
+   */
+  private readonly floorTs: number
   private running = false
   private cancelCron: Cancel | null = null
   private cancelConfig: Cancel | null = null
@@ -51,9 +56,11 @@ export class Poller {
   constructor(deps: PollDeps) {
     this.deps = deps
     this.logger = deps.logger.child({ mod: 'poll' })
+    this.floorTs = Math.trunc(deps.clock.now() / 1000)
   }
 
   start(): void {
+    this.logger.info({ floorTs: this.floorTs }, '只抓这一刻之后发布的内容')
     this.schedule()
     this.cancelConfig = this.deps.config.onChange((section) => {
       if (section === 'poll') this.schedule()
@@ -81,6 +88,7 @@ export class Poller {
       lastError: this.lastError,
       resumeAt: this.resumeAt === 0 ? null : this.resumeAt,
       consecutiveFailures: this.consecutiveFailures,
+      floorTs: this.floorTs,
     }
   }
 
@@ -160,7 +168,7 @@ export class Poller {
       this.resumeAt = 0
 
       const usable = res.value.items.filter(
-        (i) => known.has(i.uid) && i.pubTs > (anchors.get(i.uid) ?? 0),
+        (i) => known.has(i.uid) && i.pubTs > Math.max(anchors.get(i.uid) ?? 0, this.floorTs),
       )
       fresh.push(...usable)
       offset = res.value.offset

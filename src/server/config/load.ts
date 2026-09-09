@@ -6,27 +6,43 @@ import { AppConfigSchema, CONFIG_SECTION_NAMES } from '#shared/contract/config.t
 import type { Logger } from '../ports/logger.ts'
 
 /**
- * `config.example.yaml` 只是**首次启动的种子**。一旦 app_config 有内容，YAML 就再也不看了 ——
+ * `config.example.yaml` 只是**首次启动的种子**。一旦某个 section 落了库，YAML 对它就再也不看了 ——
  * 页面上要写明这件事，否则三个月后改了 YAML 会以为「没生效」是 bug。
  *
- * @returns seed 来源文件路径；null 表示这次启动没有 seed（库里已有配置，或没给种子文件）。
+ * 判断按 section 逐个来，不是「表里有东西就整段跳过」：schema 后加的 section 在老库里
+ * 没有对应行，整段跳过的话它永远等不到种子，而 store 会用默认值把它补齐 ——
+ * 于是「混淆表明明填了却报未配置」这种事只能靠读代码才查得出来。
  */
-export function seedConfigIfEmpty(
+export interface SeedOutcome {
+  /** 全新库的种子来源；null = 这次启动不是首次 seed。页面上那句「YAML 不再生效」看它。 */
+  from: string | null
+  /** 这次补上的 section。老库升级时才非空。 */
+  filled: string[]
+}
+
+export function seedConfig(
   db: DatabaseSync,
   seedFile: string | null,
   now: number,
   logger: Logger,
-): string | null {
-  const existing = db.prepare('SELECT COUNT(*) AS n FROM app_config').get()
-  if (Number((existing as Record<string, unknown>)['n']) > 0) return null
+): SeedOutcome {
+  const present = new Set(
+    db
+      .prepare('SELECT key FROM app_config')
+      .all()
+      .map((r) => String((r as Record<string, unknown>)['key'])),
+  )
+  const missing = CONFIG_SECTION_NAMES.filter((s) => !present.has(s))
+  if (missing.length === 0) return { from: null, filled: [] }
 
-  const raw = seedFile !== null && existsSync(seedFile) ? readSeed(seedFile, logger) : {}
+  const usable = seedFile !== null && existsSync(seedFile) ? seedFile : null
+  const raw = usable === null ? {} : readSeed(usable, logger)
   const config = AppConfigSchema.parse(raw)
 
   const stmt = db.prepare('INSERT INTO app_config (key, value_json, updated_at) VALUES (?, ?, ?)')
   db.exec('BEGIN')
   try {
-    for (const section of CONFIG_SECTION_NAMES) {
+    for (const section of missing) {
       stmt.run(section, JSON.stringify(config[section]), now)
     }
     db.exec('COMMIT')
@@ -35,9 +51,13 @@ export function seedConfigIfEmpty(
     throw err
   }
 
-  const from = seedFile !== null && existsSync(seedFile) ? seedFile : null
-  logger.info({ from, sections: CONFIG_SECTION_NAMES.length }, '首次启动：配置已 seed 进数据库')
-  return from
+  const first = present.size === 0
+  if (first) {
+    logger.info({ from: usable, sections: missing.length }, '首次启动：配置已 seed 进数据库')
+  } else {
+    logger.info({ from: usable, filled: missing }, '库里缺这几段配置，按种子补上')
+  }
+  return { from: first ? usable : null, filled: missing }
 }
 
 function readSeed(file: string, logger: Logger): unknown {

@@ -19,6 +19,7 @@ import type {
   AnchorRepo,
   DeliveryRepo,
   FilterRuleRepo,
+  JobArtifactRepo,
   JobRepo,
   LlmCallRepo,
   SubscriptionRepo,
@@ -53,6 +54,8 @@ export interface Repos {
   anchors: AnchorRepo
   updates: UpdateRepo
   jobs: JobRepo
+  /** 流水线每一步的产物。「从任意一步重跑」全靠它。 */
+  artifacts: JobArtifactRepo
   summaries: SummaryRepo
   deliveries: DeliveryRepo
   llmCalls: LlmCallRepo

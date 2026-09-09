@@ -207,10 +207,7 @@ describe('summaries', () => {
     const summary = {
       bvid: 'BVa',
       tldr: '一句话',
-      points: ['甲', '乙'],
-      overview: '第一段。\n\n第二段。',
-      keyInfo: { terms: [{ name: 'WAL', desc: '预写日志' }], facts: ['写放大 2 倍'], resources: [] },
-      chapters: [{ startSec: 0, title: '开场', desc: '打招呼', summary: '开场讲了背景。' }],
+      article: '## Overview\n\n开场讲了背景。',
       fullMd: '# 全文',
       transcriptSource: 'asr' as const,
       degradePath: 'asr' as const,

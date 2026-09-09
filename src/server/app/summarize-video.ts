@@ -1,16 +1,21 @@
+import { z } from 'zod'
+
 import type { AsrConfig, ChunkConfig } from '#shared/contract/config.ts'
 import { fail, ok, type Failure, type Result } from '#shared/contract/failure.ts'
-import type { JobStage, SummaryJob } from '#shared/contract/job.ts'
-import type { Cue, Summary, SummaryDraft } from '#shared/contract/summary.ts'
+import type { PipelineStep, StepStatus, SummaryJob } from '#shared/contract/job.ts'
+import type { Cue, Summary } from '#shared/contract/summary.ts'
+import { CueSchema } from '#shared/contract/summary.ts'
 import type { Update } from '#shared/contract/update.ts'
 import { fatalFailure } from '../domain/bili-error.ts'
 import { chunkCues, type TranscriptChunk } from '../domain/chunker.ts'
 import { degrade, levelFor, sourceFor, startDegrade, type DegradeStep } from '../domain/degrade.ts'
+import { needsTranscript, stepIndex, type ArtifactKind } from '../domain/pipeline.ts'
 import {
   chunkPrompt,
+  leadLine,
+  linkTimestamps,
   metaPrompt,
-  parseMetaDraft,
-  parseSummaryDraft,
+  parseArticle,
   reducePrompt,
   renderMarkdown,
   summaryFileName,
@@ -28,7 +33,13 @@ import type { EventBus } from '../ports/event-bus.ts'
 import type { Llm, LlmCompletion } from '../ports/llm.ts'
 import type { Logger } from '../ports/logger.ts'
 import type { MarkdownWriter } from '../ports/markdown.ts'
-import type { LlmCallRepo, SubscriptionRepo, SummaryRepo, UpdateRepo } from '../ports/repo.ts'
+import type {
+  JobArtifactRepo,
+  LlmCallRepo,
+  SubscriptionRepo,
+  SummaryRepo,
+  UpdateRepo,
+} from '../ports/repo.ts'
 import { Lane } from './lane.ts'
 
 /** 转写结果。走到哪一级由 step 说，为什么走到这一级由 reasons 说。 */
@@ -38,7 +49,24 @@ export interface Transcript {
   reasons: string[]
 }
 
-export type StageHook = (stage: JobStage) => void
+/** 落盘的转写产物。cues 存原始形状：分段要的是时间戳，纯文本回不来。 */
+const TranscriptArtifactSchema = z.object({
+  cues: CueSchema.array(),
+  step: z.enum(['subtitle', 'asr', 'meta', 'link']),
+  reasons: z.array(z.string()),
+})
+
+const NotesArtifactSchema = z
+  .object({
+    index: z.number().int(),
+    startSec: z.number().int(),
+    endSec: z.number().int(),
+    text: z.string(),
+  })
+  .array()
+
+/** 每一步汇报自己的状态。队列那边把它写进 job_steps 并推 SSE。 */
+export type StepHook = (step: PipelineStep, status: StepStatus, note?: string | null) => void
 
 export interface SummarizeDeps {
   subtitles: SubtitleFetcher | null
@@ -51,6 +79,8 @@ export interface SummarizeDeps {
   updates: UpdateRepo
   subs: SubscriptionRepo
   summaries: SummaryRepo
+  /** 每一步的产物。有它「从第 N 步重跑」才不用重做前面 N-1 步。 */
+  artifacts: JobArtifactRepo
   llmCalls: LlmCallRepo
   markdown: MarkdownWriter
   clock: Clock
@@ -80,41 +110,87 @@ export class SummarizeVideo {
    *
    * 不返回 Result —— 内容取不到从来不是「这条任务失败」，而是「这条总结降一级」。
    * 真正的失败只发生在总结那一段。
+   *
+   * from 在转写之后（chunk/reduce/persist）时直接复用上次的产物：那正是
+   * 「从第 N 步重跑」要省掉的活。产物不在了（清过库、或这条是老任务）就照常重跑。
    */
-  async transcribe(bvid: string, stage: StageHook): Promise<Transcript> {
+  async transcribe(bvid: string, from: PipelineStep, hook: StepHook): Promise<Transcript> {
+    if (!needsTranscript(from)) {
+      const cached = this.cachedTranscript(bvid)
+      if (cached !== null) {
+        const at: PipelineStep = cached.step === 'asr' ? 'asr' : 'subtitle'
+        hook(at, 'reused', `复用上次的转写文本（${cached.cues.length} 行）`)
+        return cached
+      }
+    }
+
     let state = startDegrade()
+    const skipSubtitle = stepIndex(from) > stepIndex('subtitle')
 
-    stage('subtitle')
-    const subtitle = await this.fetchSubtitle(bvid)
-    if (subtitle.ok) return { cues: subtitle.value, step: state.step, reasons: state.reasons }
-    state = degrade(state, subtitle.failure.message)
+    if (skipSubtitle) {
+      hook('subtitle', 'skipped', '按你选的起点跳过，直接走语音转写')
+      state = degrade(state, '按你选的起点跳过字幕')
+    } else {
+      hook('subtitle', 'running')
+      const subtitle = await this.fetchSubtitle(bvid)
+      if (subtitle.ok) {
+        hook('subtitle', 'done', `${subtitle.value.length} 行字幕`)
+        hook('download', 'skipped', '有字幕，不用下音频')
+        hook('asr', 'skipped', '有字幕，不用转写')
+        return this.remember(bvid, { cues: subtitle.value, step: state.step, reasons: state.reasons })
+      }
+      hook('subtitle', 'failed', subtitle.failure.message)
+      state = degrade(state, subtitle.failure.message)
+    }
 
-    const cues = await this.asrLane.run(() => this.runAsr(bvid, stage))
-    if (cues.ok) return { cues: cues.value, step: state.step, reasons: state.reasons }
+    const cues = await this.asrLane.run(() => this.runAsr(bvid, hook))
+    if (cues.ok) {
+      return this.remember(bvid, { cues: cues.value, step: state.step, reasons: state.reasons })
+    }
     state = degrade(state, cues.failure.message)
 
     this.logger.warn({ bvid, reasons: state.reasons }, '没拿到语音内容，退到简介兜底')
-    return { cues: [], step: state.step, reasons: state.reasons }
+    return this.remember(bvid, { cues: [], step: state.step, reasons: state.reasons })
   }
 
-  /** 第二段：调 LLM、解析、落库落盘。 */
-  async summarize(job: SummaryJob, t: Transcript, stage: StageHook): Promise<Result<Summary>> {
-    const llm = this.deps.llm()
-    if (llm === null) return await this.linkOnly(job, t, fatalFailure('AI 总结已关闭（ai.enabled=false）'))
-
+  /** 第二段：调 LLM、落库落盘。from 在 reduce 之后就直接复用上次的正文。 */
+  async summarize(
+    job: SummaryJob,
+    t: Transcript,
+    from: PipelineStep,
+    hook: StepHook,
+  ): Promise<Result<Summary>> {
     const meta = this.meta(job)
-    const draft =
-      t.step === 'meta'
-        ? await this.summarizeMeta(llm, job, meta, stage)
-        : await this.summarizeTranscript(llm, job, meta, t.cues, stage)
-    if (!draft.ok) return await this.linkOnly(job, t, draft.failure)
+    let article = stepIndex(from) > stepIndex('reduce') ? this.cachedArticle(job.bvid) : null
 
-    return await this.persist(job, meta, {
-      ...draft.value,
+    if (article !== null) {
+      hook('reduce', 'reused', '复用上次生成的正文，只重跑落库')
+    } else {
+      const llm = this.deps.llm()
+      if (llm === null) {
+        return await this.linkOnly(job, t, fatalFailure('AI 总结已关闭（ai.enabled=false）'), hook)
+      }
+      const made =
+        t.step === 'meta'
+          ? await this.summarizeMeta(llm, job, meta, hook)
+          : await this.summarizeTranscript(llm, job, meta, t.cues, from, hook)
+      if (!made.ok) return await this.linkOnly(job, t, made.failure, hook)
+      article = made.value
+      this.deps.artifacts.put(job.bvid, 'draft', {
+        payload: article,
+        at: this.deps.clock.now(),
+      })
+    }
+
+    hook('persist', 'running')
+    const done = await this.persist(job, meta, {
+      article,
       transcript: transcriptText(t.cues),
       step: t.step,
       reasons: t.reasons,
     })
+    hook('persist', done.ok ? 'done' : 'failed', done.ok ? null : done.failure.message)
+    return done
   }
 
   /** 有转写文本：按 token 数决定整篇一次还是分段后汇总。 */
@@ -123,48 +199,77 @@ export class SummarizeVideo {
     job: SummaryJob,
     meta: VideoMeta,
     cues: readonly Cue[],
-    stage: StageHook,
-  ): Promise<Result<SummaryDraft>> {
+    from: PipelineStep,
+    hook: StepHook,
+  ): Promise<Result<string>> {
     const chunks = chunkCues(cues, this.deps.chunkConfig())
     if (chunks.length <= 1) {
-      stage('reduce')
+      hook('chunk', 'skipped', '全文不长，一次总结完')
+      hook('reduce', 'running')
       const prompt = summaryPrompt(meta, transcriptText(cues))
       const reply = await this.call(llm, job.bvid, 'reduce', prompt)
-      if (!reply.ok) return fail(reply.failure)
-      return parseSummaryDraft(reply.value)
+      if (!reply.ok) return this.reduceFailed(hook, reply.failure)
+      const article = parseArticle(reply.value)
+      if (!article.ok) return this.reduceFailed(hook, article.failure)
+      hook('reduce', 'done', `${article.value.length} 字`)
+      return article
     }
 
-    stage('chunk')
-    const notes: ChunkNote[] = []
-    for (const c of chunks) {
-      // 顺序跑：并发发出去的话，LLM 那条通道的并发上限就形同虚设了。
-      const prompt = chunkPrompt(meta, {
-        index: c.index,
-        total: chunks.length,
-        startSec: c.startSec,
-        endSec: c.endSec,
-        transcript: transcriptText(c.cues),
+    let notes = stepIndex(from) > stepIndex('chunk') ? this.cachedNotes(job.bvid) : null
+    if (notes !== null) {
+      hook('chunk', 'reused', `复用上次的 ${notes.length} 段内容`)
+    } else {
+      const made: ChunkNote[] = []
+      for (const c of chunks) {
+        // 每段报一次：一次 LLM 调用要几十秒，不报的话这一步看着像卡住了。
+        hook('chunk', 'running', `第 ${c.index + 1}/${chunks.length} 段`)
+        // 顺序跑：并发发出去的话，LLM 那条通道的并发上限就形同虚设了。
+        const prompt = chunkPrompt(meta, {
+          index: c.index,
+          total: chunks.length,
+          startSec: c.startSec,
+          endSec: c.endSec,
+          transcript: transcriptText(c.cues),
+        })
+        const reply = await this.call(llm, job.bvid, 'chunk', prompt)
+        if (!reply.ok) {
+          hook('chunk', 'failed', `第 ${c.index + 1}/${chunks.length} 段：${reply.failure.message}`)
+          return fail(reply.failure)
+        }
+        made.push(note(c, reply.value))
+      }
+      hook('chunk', 'done', `${chunks.length} 段`)
+      notes = made
+      this.deps.artifacts.put(job.bvid, 'notes', {
+        payload: JSON.stringify(made),
+        at: this.deps.clock.now(),
       })
-      const reply = await this.call(llm, job.bvid, 'chunk', prompt)
-      if (!reply.ok) return fail(reply.failure)
-      notes.push(note(c, reply.value))
     }
 
-    stage('reduce')
+    hook('reduce', 'running')
     const reply = await this.call(llm, job.bvid, 'reduce', reducePrompt(meta, notes))
-    if (!reply.ok) return fail(reply.failure)
-    this.logger.info({ bvid: job.bvid, chunks: chunks.length }, '分段总结已汇总')
-    return parseSummaryDraft(reply.value)
+    if (!reply.ok) return this.reduceFailed(hook, reply.failure)
+    const article = parseArticle(reply.value)
+    if (!article.ok) return this.reduceFailed(hook, article.failure)
+    this.logger.info({ bvid: job.bvid, chunks: notes.length }, '分段总结已汇总')
+    hook('reduce', 'done', `${article.value.length} 字`)
+    return article
   }
 
-  /** 只有简介：不给章节，编出来的时间戳比没有更糟。 */
+  private reduceFailed(hook: StepHook, failure: Failure): Result<string> {
+    hook('reduce', 'failed', failure.message)
+    return fail(failure)
+  }
+
+  /** 只有简介：写不出阅读版本，只能给一段「大概在讲什么」。 */
   private async summarizeMeta(
     llm: Llm,
     job: SummaryJob,
     meta: VideoMeta,
-    stage: StageHook,
-  ): Promise<Result<SummaryDraft>> {
-    stage('reduce')
+    hook: StepHook,
+  ): Promise<Result<string>> {
+    hook('chunk', 'skipped', '没有语音内容，没什么可分段的')
+    hook('reduce', 'running')
     const brief = this.deps.updates.get(job.updateId)?.text ?? ''
     // 分 P 标题是这一级唯一还能拿到的「内容」，取不到就算了，别让兜底也失败。
     const parts = await this.deps.subtitles?.parts(job.bvid)
@@ -174,10 +279,11 @@ export class SummarizeVideo {
       'reduce',
       metaPrompt(meta, brief, parts?.ok === true ? parts.value : []),
     )
-    if (!reply.ok) return fail(reply.failure)
-    const draft = parseMetaDraft(reply.value)
-    if (!draft.ok) return fail(draft.failure)
-    return ok({ ...draft.value, chapters: [] })
+    if (!reply.ok) return this.reduceFailed(hook, reply.failure)
+    const article = parseArticle(reply.value)
+    if (!article.ok) return this.reduceFailed(hook, article.failure)
+    hook('reduce', 'done', '只有标题与简介，低置信度')
+    return article
   }
 
   /**
@@ -185,16 +291,19 @@ export class SummarizeVideo {
    *
    * 两者都要：推送那边得有东西可推，队列页也得留着重跑的入口，不能把失败藏起来。
    */
-  private async linkOnly(job: SummaryJob, t: Transcript, failure: Failure): Promise<Result<Summary>> {
+  private async linkOnly(
+    job: SummaryJob,
+    t: Transcript,
+    failure: Failure,
+    hook: StepHook,
+  ): Promise<Result<Summary>> {
     // 已有总结就不动它 —— 一次 LLM 抖动不该把好总结覆盖成一行链接。
     if (this.deps.summaries.get(job.bvid) === null) {
       const reasons = [...t.reasons, `生成总结：${failure.message}`]
+      // 不算 persist 跑过了：这条任务卡在生成那一步，落的只是一条能推出去的最小记录。
+      hook('persist', 'skipped', '只落了一条最小记录：标题、封面、链接')
       await this.persist(job, this.meta(job), {
-        tldr: '这条没能生成总结，只剩标题与链接。',
-        points: reasons,
-        overview: '',
-        keyInfo: { terms: [], facts: [], resources: [] },
-        chapters: [],
+        article: reasons.map((r) => `- ${r}`).join('\n'),
         transcript: transcriptText(t.cues),
         step: 'link',
         reasons,
@@ -204,13 +313,12 @@ export class SummarizeVideo {
   }
 
   private async persist(job: SummaryJob, meta: VideoMeta, parts: SummaryParts): Promise<Result<Summary>> {
+    // 时间戳在落库前就链好：阅读栏和落盘的 Markdown 因此都能点。
+    const article = linkTimestamps(parts.article, job.bvid)
     const summary: Summary = {
       bvid: job.bvid,
-      tldr: parts.tldr,
-      points: parts.points,
-      overview: parts.overview,
-      keyInfo: parts.keyInfo,
-      chapters: parts.chapters,
+      tldr: leadLine(article),
+      article,
       transcriptSource: sourceFor(parts.step),
       ...levelFor(parts.step),
       createdAt: this.deps.clock.now(),
@@ -267,28 +375,78 @@ export class SummarizeVideo {
   }
 
   /** 下音频 + 转写。两步任一步炸了都只是「这一级不成」，所以错误收成 Result。 */
-  private async runAsr(bvid: string, stage: StageHook): Promise<Result<Cue[]>> {
+  private async runAsr(bvid: string, hook: StepHook): Promise<Result<Cue[]>> {
     const { audio, asr } = this.deps
-    if (audio === null || asr === null) return fail(fatalFailure('音频转写没接入这个进程'))
+    if (audio === null || asr === null) {
+      const why = '音频转写没接入这个进程'
+      hook('download', 'skipped', why)
+      hook('asr', 'skipped', why)
+      return fail(fatalFailure(why))
+    }
 
-    stage('download')
+    hook('download', 'running')
     let path: string
     try {
       path = (await audio.download(bvid)).path
+      hook('download', 'done')
     } catch (err) {
+      hook('download', 'failed', message(err))
+      hook('asr', 'skipped', '没有音频可转写')
       return fail(fatalFailure(`下载音频失败：${message(err)}`))
     }
 
-    stage('asr')
+    hook('asr', 'running')
     try {
       const cues = await asr.transcribe(path, { language: this.deps.asrConfig().language })
-      if (cues.length === 0) return fail(fatalFailure('转写结果是空的'))
+      if (cues.length === 0) {
+        hook('asr', 'failed', '转写结果是空的')
+        return fail(fatalFailure('转写结果是空的'))
+      }
       // 成功即删。失败留着，重跑时下载那一步会直接用它；超过 24h 的由启动清理兜掉。
       await audio.cleanup(path)
+      hook('asr', 'done', `${cues.length} 行`)
       return ok(cues)
     } catch (err) {
+      hook('asr', 'failed', message(err))
       return fail(fatalFailure(`语音转写失败：${message(err)}`))
     }
+  }
+
+  /** 转写产物落盘，下一次从 chunk / reduce 起跑就不用再取一遍。 */
+  private remember(bvid: string, t: Transcript): Transcript {
+    this.deps.artifacts.put(bvid, 'transcript', {
+      payload: JSON.stringify(t),
+      at: this.deps.clock.now(),
+    })
+    return t
+  }
+
+  private cachedTranscript(bvid: string): Transcript | null {
+    return this.cached(bvid, 'transcript', TranscriptArtifactSchema)
+  }
+
+  private cachedNotes(bvid: string): ChunkNote[] | null {
+    return this.cached(bvid, 'notes', NotesArtifactSchema)
+  }
+
+  /** 正文是纯文本，没有形状要校验，空的就当没有。 */
+  private cachedArticle(bvid: string): string | null {
+    const row = this.deps.artifacts.get(bvid, 'draft')
+    return row === null || row.payload.trim() === '' ? null : row.payload
+  }
+
+  /** 形状对不上就当没有：宁可多跑一步，也不能拿半个旧产物拼出一份总结。 */
+  private cached<T>(bvid: string, kind: ArtifactKind, schema: { safeParse: SafeParse<T> }): T | null {
+    const row = this.deps.artifacts.get(bvid, kind)
+    if (row === null) return null
+    try {
+      const parsed = schema.safeParse(JSON.parse(row.payload))
+      if (parsed.success) return parsed.data
+      this.logger.warn({ bvid, kind }, '存下来的产物形状不对，这一步重跑')
+    } catch (err) {
+      this.logger.warn({ bvid, kind, err: message(err) }, '产物解不开，这一步重跑')
+    }
+    return null
   }
 
   /** 标题这些东西来自动态那条记录；记录不见了就退回 bvid，不让整条任务失败。 */
@@ -304,11 +462,15 @@ export class SummarizeVideo {
   }
 }
 
-interface SummaryParts extends SummaryDraft {
+interface SummaryParts {
+  article: string
   transcript: string
   step: DegradeStep
   reasons: readonly string[]
 }
+
+/** 只要能 safeParse 就够，写成结构类型是为了不让这里依赖 zod 的具体类型。 */
+type SafeParse<T> = (raw: unknown) => { success: true; data: T } | { success: false }
 
 const note = (c: TranscriptChunk, text: string): ChunkNote => ({
   index: c.index,

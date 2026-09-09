@@ -27,12 +27,12 @@ describe('总结队列', () => {
     assert.equal(job?.error, null)
 
     const summary = h.core.repos.summaries.get('BV1x')
-    assert.equal(summary?.tldr, '一句话讲完这个视频')
-    assert.equal(summary?.points.length, 3)
+    assert.equal(summary?.tldr, '这个视频讲清了一件事，并给出了结论。')
+    assert.match(summary?.article ?? '', /第一步：先量再改/)
     assert.equal(summary?.transcriptSource, 'subtitle')
     // 章节链接要能点回 B 站的那一秒。
-    assert.match(summary?.fullMd ?? '', /\?t=83/)
-    assert.match(summary?.fullMd ?? '', /## 核心要点/)
+    assert.match(summary?.fullMd ?? '', /01:23/)
+    assert.match(summary?.fullMd ?? '', /## Overview/)
 
     const md = readFileSync(join(h.dataDir, 'summaries', 'BV1x.md'), 'utf8')
     assert.equal(md, summary?.fullMd)

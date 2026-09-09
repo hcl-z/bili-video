@@ -4,6 +4,7 @@ import { describe, it } from 'node:test'
 import type { PollResult, UpdatesResponse } from '#shared/contract/api.ts'
 import { FakeFetch, type FakeResponse } from './fakes/bili-fetch.ts'
 import { createHarness, type Harness } from './support/harness.ts'
+import { pubAt } from './support/time.ts'
 
 /**
  * 轮询、五类解析、锚点。走主测试缝，只有 fetch 是假的 —— 于是解析、过滤、
@@ -49,7 +50,7 @@ function orig(kind: 'av' | 'tombstone'): unknown {
     id_str: '800',
     type: 'DYNAMIC_TYPE_AV',
     modules: {
-      module_author: { mid: 999, name: 'UP-999', pub_ts: '1700000000' },
+      module_author: { mid: 999, name: 'UP-999', pub_ts: String(pubAt(0)) },
       module_dynamic: { desc: null, major: major('DYNAMIC_TYPE_AV', '') },
     },
   }
@@ -108,15 +109,15 @@ async function rig(fetch: FakeFetch, subs: string[]): Promise<Harness> {
 describe('轮询与解析', () => {
   it('五类都解析入库、非订阅 uid 挡掉、锚点推到最新、第二轮不产新条目', async () => {
     const items = [
-      dyn('901', '111', 'DYNAMIC_TYPE_AV', 1_700_000_100),
-      dyn('902', '111', 'DYNAMIC_TYPE_DRAW', 1_700_000_200),
-      dyn('903', '111', 'DYNAMIC_TYPE_WORD', 1_700_000_300),
-      dyn('904', '222', 'DYNAMIC_TYPE_FORWARD', 1_700_000_400),
-      dyn('905', '222', 'DYNAMIC_TYPE_ARTICLE', 1_700_000_500),
+      dyn('901', '111', 'DYNAMIC_TYPE_AV', pubAt(100)),
+      dyn('902', '111', 'DYNAMIC_TYPE_DRAW', pubAt(200)),
+      dyn('903', '111', 'DYNAMIC_TYPE_WORD', pubAt(300)),
+      dyn('904', '222', 'DYNAMIC_TYPE_FORWARD', pubAt(400)),
+      dyn('905', '222', 'DYNAMIC_TYPE_ARTICLE', pubAt(500)),
       // 没订阅的人，一条都不该入库。
-      dyn('906', '999', 'DYNAMIC_TYPE_AV', 1_700_000_600),
+      dyn('906', '999', 'DYNAMIC_TYPE_AV', pubAt(600)),
       // 认不出的类型（直播推送之类）跳过，不该让整页作废。
-      dyn('907', '111', 'DYNAMIC_TYPE_LIVE_RCMD', 1_700_000_700),
+      dyn('907', '111', 'DYNAMIC_TYPE_LIVE_RCMD', pubAt(700)),
     ]
     const fetch = bili(feed(items))
     const h = await rig(fetch, ['111', '222'])
@@ -143,8 +144,8 @@ describe('轮询与解析', () => {
     assert.equal(draw?.cover, 'https://c/draw.jpg')
 
     // 锚点推到各自的最新一条，且只推到自己的。
-    assert.equal(h.core.repos.anchors.get('111'), 1_700_000_300)
-    assert.equal(h.core.repos.anchors.get('222'), 1_700_000_500)
+    assert.equal(h.core.repos.anchors.get('111'), pubAt(300))
+    assert.equal(h.core.repos.anchors.get('222'), pubAt(500))
     assert.equal(h.core.repos.anchors.get('999'), null)
 
     // 第二轮：同一份响应，一条新的都不该有。
@@ -159,7 +160,7 @@ describe('轮询与解析', () => {
 
   it('转发的标题封面取自 orig，原动态被删也不报错', async () => {
     const forward = (id: string, kind: 'av' | 'tombstone'): unknown => ({
-      ...(dyn(id, '111', 'DYNAMIC_TYPE_FORWARD', 1_700_000_100) as object),
+      ...(dyn(id, '111', 'DYNAMIC_TYPE_FORWARD', pubAt(100)) as object),
       orig: orig(kind),
     })
     const fetch = bili(feed([forward('901', 'av'), forward('902', 'tombstone')]))
@@ -181,7 +182,7 @@ describe('轮询与解析', () => {
   })
 
   it('重启后不重复处理已处理过的条目', async () => {
-    const fetch = bili(feed([dyn('901', '111', 'DYNAMIC_TYPE_WORD', 1_700_000_100)]))
+    const fetch = bili(feed([dyn('901', '111', 'DYNAMIC_TYPE_WORD', pubAt(100))]))
     const h = await rig(fetch, ['111'])
     assert.equal((await h.server.services.poll.pollOnce()).found, 1)
 
@@ -194,9 +195,40 @@ describe('轮询与解析', () => {
     await h2.close()
   })
 
+  it('启动之前发布的一条都不抓，之后发的照抓', async () => {
+    const fetch = bili(
+      feed([
+        dyn('901', '111', 'DYNAMIC_TYPE_AV', pubAt(60)),
+        // 启动之前：历史投稿只能在阅读页按 UP 翻空间流，轮询不管它。
+        dyn('902', '111', 'DYNAMIC_TYPE_AV', pubAt(-86_400)),
+      ]),
+    )
+    const h = await rig(fetch, ['111'])
+
+    assert.equal((await h.server.services.poll.pollOnce()).found, 1)
+    const stored = h.core.repos.updates.list({ limit: 10, includeFiltered: true })
+    assert.deepEqual(stored.map((u) => u.dynId), ['901'])
+    // 地板也在快照里，页面据此说明「更早的去阅读页」。
+    assert.equal(h.server.services.poll.snapshot().floorTs, pubAt(0))
+
+    await h.close()
+  })
+
+  it('重启后地板抬到新的启动时刻，停机期间发的不补', async () => {
+    // 这条发在停机期间：第一次启动之后、重启之前。
+    const fetch = bili(feed([dyn('901', '111', 'DYNAMIC_TYPE_WORD', pubAt(3600))]))
+    const h = await rig(fetch, ['111'])
+
+    const h2 = await h.restart({ startAt: h.clock.now() + 2 * 3_600_000 })
+    assert.equal((await h2.server.services.poll.pollOnce()).found, 0)
+    assert.equal(h2.core.repos.updates.list({ limit: 10, includeFiltered: true }).length, 0)
+
+    await h2.close()
+  })
+
   it('有条目解析不出来时不推进心跳游标', async () => {
     const broken = { id_str: '910', type: 'DYNAMIC_TYPE_WORD', modules: { module_author: {}, module_dynamic: {} } }
-    const fetch = bili(feed([dyn('901', '111', 'DYNAMIC_TYPE_WORD', 1_700_000_100), broken]))
+    const fetch = bili(feed([dyn('901', '111', 'DYNAMIC_TYPE_WORD', pubAt(100)), broken]))
     const h = await rig(fetch, ['111'])
 
     assert.equal((await h.server.services.poll.pollOnce()).found, 1)
@@ -207,7 +239,7 @@ describe('轮询与解析', () => {
   })
 
   it('上一轮没跑完时这次直接跳过', async () => {
-    const fetch = bili(feed([dyn('901', '111', 'DYNAMIC_TYPE_WORD', 1_700_000_100)]))
+    const fetch = bili(feed([dyn('901', '111', 'DYNAMIC_TYPE_WORD', pubAt(100))]))
     const h = await rig(fetch, ['111'])
     const poll = h.server.services.poll
 
@@ -254,8 +286,8 @@ describe('过滤规则', () => {
   it('黑名单命中的条目照样入库，但标成被过滤并带上原因', async () => {
     const fetch = bili(
       feed([
-        dyn('901', '111', 'DYNAMIC_TYPE_WORD', 1_700_000_100, '今天这条是恰饭'),
-        dyn('902', '111', 'DYNAMIC_TYPE_WORD', 1_700_000_200, '正常内容'),
+        dyn('901', '111', 'DYNAMIC_TYPE_WORD', pubAt(100), '今天这条是恰饭'),
+        dyn('902', '111', 'DYNAMIC_TYPE_WORD', pubAt(200), '正常内容'),
       ]),
     )
     const h = await rig(fetch, ['111'])
@@ -313,7 +345,7 @@ describe('过滤规则', () => {
   })
 
   it('手动催一轮：页面上不用等两分钟', async () => {
-    const fetch = bili(feed([dyn('901', '111', 'DYNAMIC_TYPE_WORD', 1_700_000_100)]))
+    const fetch = bili(feed([dyn('901', '111', 'DYNAMIC_TYPE_WORD', pubAt(100))]))
     const h = await rig(fetch, ['111'])
     const res = await h.server.app.request('/api/updates/poll', { method: 'POST' })
     assert.equal(res.status, 200)

@@ -17,9 +17,9 @@ import { Link } from 'react-router-dom'
 import type { SummaryDetailResponse } from '#shared/contract/api.ts'
 import type { SummaryJob } from '#shared/contract/job.ts'
 import { JOB_STAGE_LABEL } from '#shared/contract/job.ts'
-import type { Summary } from '#shared/contract/summary.ts'
 import { DEGRADE_LABEL, TRANSCRIPT_SOURCE_LABEL } from '#shared/contract/summary.ts'
 import { chapterLink, hms, videoUrl } from '#shared/format.ts'
+import { Markdown } from '@/components/markdown'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -147,77 +147,7 @@ function Article(props: { detail: SummaryDetailResponse; rerunning?: boolean; no
         </p>
       )}
 
-      <p className="border-brand/25 bg-brand/[0.07] mb-7 rounded-lg border px-5 py-4 text-lg leading-relaxed font-medium">
-        {summary.tldr}
-      </p>
-
-      {summary.overview !== '' && (
-        <>
-          <SectionLabel>全文总结</SectionLabel>
-          <div className="mb-8 space-y-3.5">
-            {summary.overview
-              .split(/\n{2,}/)
-              .map((para) => para.trim())
-              .filter((para) => para !== '')
-              .map((para) => (
-                <p key={para} className="text-foreground/90 text-[15.5px] leading-[1.85]">
-                  {para}
-                </p>
-              ))}
-          </div>
-        </>
-      )}
-
-      <SectionLabel>核心要点</SectionLabel>
-      <ol className="mb-8">
-        {summary.points.map((p, i) => (
-          <li
-            key={p}
-            className="text-foreground/90 grid grid-cols-[26px_1fr] gap-3.5 border-t py-3 text-[15px] leading-relaxed last:border-b"
-          >
-            <span className="text-brand-ink font-mono text-[13px] font-bold tabular-nums">
-              {String(i + 1).padStart(2, '0')}
-            </span>
-            <span>{p}</span>
-          </li>
-        ))}
-      </ol>
-
-      <KeyInfo info={summary.keyInfo} />
-
-      {summary.chapters.length > 0 && (
-        <>
-          <SectionLabel>分段总结，点时间戳跳到 B 站对应时刻</SectionLabel>
-          <div className="mb-8 grid gap-2">
-            {summary.chapters.map((ch) => (
-              <article
-                key={`${ch.startSec}-${ch.title}`}
-                className="grid grid-cols-[56px_1fr] gap-3 border-t py-3 last:border-b"
-              >
-                <a
-                  href={chapterLink(bvid, ch.startSec)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-brand-ink hover:underline font-mono text-[13px] font-semibold tabular-nums"
-                >
-                  {hms(ch.startSec)}
-                </a>
-                <div className="min-w-0">
-                  <h3 className="text-[15px] leading-snug font-semibold">{ch.title}</h3>
-                  {ch.desc !== null && (
-                    <p className="text-muted-foreground mt-0.5 text-[13px]">{ch.desc}</p>
-                  )}
-                  {ch.summary !== '' && (
-                    <p className="text-foreground/90 mt-1.5 text-[14.5px] leading-relaxed">
-                      {ch.summary}
-                    </p>
-                  )}
-                </div>
-              </article>
-            ))}
-          </div>
-        </>
-      )}
+      <Markdown text={summary.article} />
 
       {summary.degradePath !== 'meta-only' && summary.degradePath !== 'link-only' && (
         <Transcript bvid={bvid} />
@@ -236,64 +166,6 @@ function Article(props: { detail: SummaryDetailResponse; rerunning?: boolean; no
     </Inner>
   )
 }
-
-/** 关键信息：术语、数字结论、提到的东西。三组都可能为空。 */
-function KeyInfo(props: { info: Summary['keyInfo'] }) {
-  const { terms, facts, resources } = props.info
-  if (terms.length + facts.length + resources.length === 0) return null
-
-  return (
-    <>
-      <SectionLabel>关键信息</SectionLabel>
-      <div className="mb-8 grid gap-3 md:grid-cols-2">
-        {terms.length > 0 && (
-          <InfoCard title="术语与概念">
-            <dl className="grid gap-2">
-              {terms.map((t) => (
-                <div key={t.name}>
-                  <dt className="text-[14px] font-semibold">{t.name}</dt>
-                  <dd className="text-muted-foreground text-[13.5px] leading-relaxed">{t.desc}</dd>
-                </div>
-              ))}
-            </dl>
-          </InfoCard>
-        )}
-        {facts.length > 0 && (
-          <InfoCard title="数字与结论">
-            <ul className="grid gap-1.5">
-              {facts.map((f) => (
-                <li key={f} className="text-[13.5px] leading-relaxed">
-                  {f}
-                </li>
-              ))}
-            </ul>
-          </InfoCard>
-        )}
-        {resources.length > 0 && (
-          <InfoCard title="提到的东西">
-            <dl className="grid gap-2">
-              {resources.map((r) => (
-                <div key={r.name}>
-                  <dt className="text-[14px] font-semibold">{r.name}</dt>
-                  <dd className="text-muted-foreground text-[13.5px] leading-relaxed">{r.note}</dd>
-                </div>
-              ))}
-            </dl>
-          </InfoCard>
-        )}
-      </div>
-    </>
-  )
-}
-
-const InfoCard = (props: { title: string; children: ReactNode }) => (
-  <section className="bg-card rounded-lg border px-4 py-3.5">
-    <h3 className="text-muted-foreground mb-2.5 text-[11.5px] font-bold tracking-wide">
-      {props.title}
-    </h3>
-    {props.children}
-  </section>
-)
 
 /** 完整字幕/转写全文。点开才拉：它可能有几万字。 */
 function Transcript(props: { bvid: string }) {
@@ -389,7 +261,7 @@ function FailNotice(props: { job: SummaryJob }) {
         重跑没成，停在「{JOB_STAGE_LABEL[props.job.stage]}」：{props.job.error ?? '原因不明'}
         。下面是上一次的结果。
       </p>
-      <Button size="sm" variant="outline" onClick={() => retry.mutate()} disabled={retry.isPending}>
+      <Button size="sm" variant="outline" onClick={() => retry.mutate({})} disabled={retry.isPending}>
         {retry.isPending ? (
           <Loader2 className="size-3.5 motion-safe:animate-spin" />
         ) : (
@@ -406,8 +278,8 @@ function Failed(props: { detail: SummaryDetailResponse; job: SummaryJob }) {
   const { job } = props
   const { summary, update, bvid } = props.detail
   const retry = useRetryJob(job.id)
-  // link-only 的那条最小记录里，每退一级留了一条原因。
-  const trail = summary?.degradePath === 'link-only' ? summary.points : []
+  // link-only 的那条最小记录里，正文就是每退一级的原因。
+  const trail = summary?.degradePath === 'link-only' ? summary.article : ''
 
   return (
     <Inner>
@@ -444,29 +316,19 @@ function Failed(props: { detail: SummaryDetailResponse; job: SummaryJob }) {
         </span>
       </p>
 
-      {trail.length > 0 && (
+      {trail !== '' && (
         <>
           <SectionLabel>一路退到哪儿了</SectionLabel>
-          <ol className="mb-6">
-            {trail.map((r, i) => (
-              <li
-                key={r}
-                className="text-foreground/90 grid grid-cols-[26px_1fr] gap-3.5 border-t py-2.5 text-[15px] leading-relaxed last:border-b"
-              >
-                <span className="text-muted-foreground font-mono text-[13px] font-bold tabular-nums">
-                  {String(i + 1).padStart(2, '0')}
-                </span>
-                <span>{r}</span>
-              </li>
-            ))}
-          </ol>
+          <div className="mb-6">
+            <Markdown text={trail} />
+          </div>
         </>
       )}
 
       <p className="text-muted-foreground text-sm">
         重跑是幂等的，同一条任务、同一份总结，不会产生第二条数据。
       </p>
-      <Button className="mt-4" size="sm" onClick={() => retry.mutate()} disabled={retry.isPending}>
+      <Button className="mt-4" size="sm" onClick={() => retry.mutate({})} disabled={retry.isPending}>
         {retry.isPending ? (
           <Loader2 className="size-3.5 motion-safe:animate-spin" />
         ) : (

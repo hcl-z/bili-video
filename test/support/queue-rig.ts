@@ -1,6 +1,7 @@
 import type { AppEvent } from '#shared/contract/events.ts'
 import { FakeFetch, type FakeResponse } from '../fakes/bili-fetch.ts'
 import { createHarness, type Harness, type HarnessOptions } from './harness.ts'
+import { pubAt } from './time.ts'
 
 /** 总结队列相关测试的公共舞台：一个订阅、一条视频动态、一份字幕、一个 LLM。 */
 
@@ -11,7 +12,7 @@ export const avItem = (bvid: string, idStr: string, title = '视频标题'): unk
   id_str: idStr,
   type: 'DYNAMIC_TYPE_AV',
   modules: {
-    module_author: { mid: 111, name: 'UP-111', face: 'https://f/111.jpg', pub_ts: '1700000100' },
+    module_author: { mid: 111, name: 'UP-111', face: 'https://f/111.jpg', pub_ts: String(pubAt(100)) },
     module_dynamic: {
       desc: null,
       // 用不上的 major 分支是显式 null，真 payload 就是这样（见 poll.test 的注释）。
@@ -29,20 +30,19 @@ export const avItem = (bvid: string, idStr: string, title = '视频标题'): unk
 
 export const AV_ITEM = avItem('BV1x', '901')
 
-export const REPLY = JSON.stringify({
-  tldr: '一句话讲完这个视频',
-  points: ['要点一', '要点二', '要点三'],
-  overview: '第一段说清背景。\n\n第二段说清结论。',
-  keyInfo: {
-    terms: [{ name: 'WBI', desc: '一种查询签名' }],
-    facts: ['吞吐提升 3 倍'],
-    resources: [{ name: 'yt-dlp', note: '下音频' }],
-  },
-  chapters: [
-    { startSec: 0, title: '开场', desc: null, summary: '开场交代了背景。' },
-    { startSec: 83, title: '正题', desc: '细说', summary: '正题给出了做法和结论。' },
-  ],
-})
+/** 模型回的是 Markdown 正文，不是 JSON。 */
+export const REPLY = [
+  '## Overview',
+  '',
+  '这个视频讲清了一件事，并给出了结论。',
+  '',
+  '## [01:23] 正题',
+  '',
+  '这一节把做法拆成了几步：',
+  '',
+  '- 第一步：先量再改',
+  '- 第二步：改完再量',
+].join('\n')
 
 export const llmOk: FakeResponse = {
   raw: { choices: [{ message: { content: REPLY } }], usage: { prompt_tokens: 120, completion_tokens: 40 } },

@@ -1,17 +1,19 @@
 import type { Failure } from '#shared/contract/failure.ts'
-import type { JobStage, SummaryJob } from '#shared/contract/job.ts'
+import type { JobStage, PipelineStep, SummaryJob } from '#shared/contract/job.ts'
 import { fatalFailure } from '../domain/bili-error.ts'
+import { staleArtifacts } from '../domain/pipeline.ts'
 import type { Clock } from '../ports/clock.ts'
 import type { ConfigStore } from '../ports/config-store.ts'
 import type { EventBus } from '../ports/event-bus.ts'
 import type { Llm } from '../ports/llm.ts'
 import type { Logger } from '../ports/logger.ts'
-import type { JobRepo } from '../ports/repo.ts'
+import type { JobArtifactRepo, JobRepo } from '../ports/repo.ts'
 import { Lane } from './lane.ts'
-import type { SummarizeVideo, Transcript } from './summarize-video.ts'
+import type { StepHook, SummarizeVideo, Transcript } from './summarize-video.ts'
 
 export interface QueueDeps {
   jobs: JobRepo
+  artifacts: JobArtifactRepo
   summarize: SummarizeVideo
   /** ★ 总开关：null 表示 AI 关着，这时候只入队不消费。 */
   llm: () => Llm | null
@@ -71,18 +73,34 @@ export class SummaryQueue {
     }
 
     const job = this.deps.jobs.enqueue({ ...v, at: this.deps.clock.now() })
-    this.emit(job.id, 'pending', 'queued')
+    this.emit(job, 'pending', 'queued')
     this.pump()
     return job
   }
 
-  /** 重跑一条：把 failed/done 放回 pending。已完成的重跑会覆盖原来的总结。 */
-  retry(id: number): 'ok' | 'missing' | 'busy' {
+  /**
+   * 重跑一条：把 failed/done 放回 pending。已完成的重跑会覆盖原来的总结。
+   *
+   * from 指定从哪一步起跑（缺省从头）：这一步及其之后的产物全部作废重算，
+   * 前面几步的产物照用 —— 那正是「不用再跑一遍前面的重活」的实现。
+   */
+  retry(id: number, from?: PipelineStep): 'ok' | 'missing' | 'busy' {
     const job = this.deps.jobs.get(id)
     if (job === null) return 'missing'
     if (job.status === 'running' || job.status === 'pending') return 'busy'
-    this.deps.jobs.enqueue({ bvid: job.bvid, updateId: job.updateId, at: this.deps.clock.now() })
-    this.emit(id, 'pending', 'queued')
+
+    const at = this.deps.clock.now()
+    if (from !== undefined) {
+      this.deps.artifacts.drop(job.bvid, staleArtifacts(from))
+      this.deps.jobs.resetStepsFrom(job.id, from, at)
+    }
+    this.deps.jobs.enqueue({
+      bvid: job.bvid,
+      updateId: job.updateId,
+      at,
+      from: from ?? null,
+    })
+    this.emit(job, 'pending', 'queued')
     this.pump()
     return 'ok'
   }
@@ -112,7 +130,7 @@ export class SummaryQueue {
     while (this.running.size < capacity) {
       const job = this.deps.jobs.claimNext(this.deps.clock.now())
       if (job === null) return
-      this.emit(job.id, 'running', job.stage)
+      this.emit(job, 'running', job.stage)
       const p = this.execute(job).finally(() => {
         this.running.delete(job.id)
         this.pump()
@@ -123,23 +141,29 @@ export class SummaryQueue {
 
   /** 绝不抛：一条任务炸掉不能把队列带走。 */
   private async execute(job: SummaryJob): Promise<void> {
+    const from: PipelineStep = job.resumeFrom ?? 'subtitle'
     // 失败事件要报「停在哪一步」，所以跟着闭包记最后一步，别用 claimNext 那份快照。
     let at: JobStage = job.stage
-    const stage = (s: JobStage): void => {
-      at = s
-      this.deps.jobs.setStage(job.id, s, this.deps.clock.now())
-      this.emit(job.id, 'running', s)
+    const hook: StepHook = (step, status, note) => {
+      const now = this.deps.clock.now()
+      this.deps.jobs.setStep(job.id, step, status, note ?? null, now)
+      // 只有真在跑的那一步才算「卡在哪儿」；跳过和复用不改任务的当前位置。
+      if (status === 'running') {
+        at = step
+        this.deps.jobs.setStage(job.id, step, now)
+      }
+      this.emit(job, 'running', at)
     }
     try {
       // 转写不会「失败」，只会降级 —— 拿不到语音内容照样往下走，退到简介兜底。
       // 转写内部自己排队（并发 1），队列这层不拦，否则一条长视频会把有字幕的也堵住。
-      const t: Transcript = await this.deps.summarize.transcribe(job.bvid, stage)
+      const t: Transcript = await this.deps.summarize.transcribe(job.bvid, from, hook)
 
-      const res = await this.llmLane.run(() => this.deps.summarize.summarize(job, t, stage))
+      const res = await this.llmLane.run(() => this.deps.summarize.summarize(job, t, from, hook))
       if (!res.ok) return this.fail(job, at, res.failure)
 
       this.deps.jobs.finish(job.id, { ok: true }, this.deps.clock.now())
-      this.emit(job.id, 'done', 'persist')
+      this.emit(job, 'done', 'persist')
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       this.fail(job, at, fatalFailure(message))
@@ -150,7 +174,7 @@ export class SummaryQueue {
   private fail(job: SummaryJob, at: JobStage, failure: Failure): void {
     try {
       this.deps.jobs.finish(job.id, { ok: false, error: failure.message }, this.deps.clock.now())
-      this.emit(job.id, 'failed', at)
+      this.emit(job, 'failed', at)
     } catch (err) {
       // 库都写不进去（多半是关停时连接已关），只剩日志这条路。
       this.logger.error({ id: job.id, err: String(err) }, '任务失败状态没写进库')
@@ -161,7 +185,7 @@ export class SummaryQueue {
     )
   }
 
-  private emit(id: number, status: SummaryJob['status'], stage: JobStage): void {
-    this.deps.events.emit({ type: 'job.changed', id, status, stage })
+  private emit(job: Pick<SummaryJob, 'id' | 'bvid'>, status: SummaryJob['status'], stage: JobStage): void {
+    this.deps.events.emit({ type: 'job.changed', id: job.id, bvid: job.bvid, status, stage })
   }
 }

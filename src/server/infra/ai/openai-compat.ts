@@ -16,8 +16,6 @@ export interface OpenAiCompatDeps {
   apiKey: () => string | null
 }
 
-/** 连不上或超时不该把总结任务吊死在这里。 */
-const TIMEOUT_MS = 120_000
 const PROBE_TIMEOUT_MS = 15_000
 
 export class OpenAiCompatLlm implements Llm {
@@ -43,7 +41,7 @@ export class OpenAiCompatLlm implements Llm {
           temperature: opts.temperature ?? cfg.temperature,
           ...(opts.maxTokens === undefined ? {} : { max_tokens: opts.maxTokens }),
         },
-        TIMEOUT_MS,
+        cfg.timeoutMs,
         opts.signal,
       )
       const body = await res.text()

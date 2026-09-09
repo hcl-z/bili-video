@@ -11,6 +11,8 @@ export const AppEventSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('job.changed'),
     id: z.number().int(),
+    /** 页面按 bvid 认这一行，没有它就只能整页重取。 */
+    bvid: z.string(),
     status: JobStatusSchema,
     stage: JobStageSchema,
   }),

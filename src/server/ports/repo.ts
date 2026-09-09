@@ -1,8 +1,16 @@
 import type { VideoUsage } from '#shared/contract/api.ts'
 import type { FilterRule, RuleKind, Subscription } from '#shared/contract/subscription.ts'
 import type { Update, UpdateWithRaw } from '#shared/contract/update.ts'
-import type { DeliveryKind, DeliveryStatus, JobStage, SummaryJob } from '#shared/contract/job.ts'
+import type {
+  DeliveryKind,
+  DeliveryStatus,
+  JobStage,
+  PipelineStep,
+  StepStatus,
+  SummaryJob,
+} from '#shared/contract/job.ts'
 import type { Summary } from '#shared/contract/summary.ts'
+import type { ArtifactKind } from '../domain/pipeline.ts'
 import type { NotifyChannel } from './notifier.ts'
 
 /**
@@ -52,7 +60,8 @@ export interface UpdateRepo {
 }
 
 export interface JobRepo {
-  enqueue(job: { bvid: string; updateId: string; at: number }): SummaryJob
+  /** from = 这一轮从哪一步开始；缺省从头。 */
+  enqueue(job: { bvid: string; updateId: string; at: number; from?: PipelineStep | null }): SummaryJob
   get(id: number): SummaryJob | null
   getByBvid(bvid: string): SummaryJob | null
   /** 取一条 pending 置为 running（单进程内加锁即可，不需要 SKIP LOCKED）。 */
@@ -62,6 +71,28 @@ export interface JobRepo {
   /** 启动时把崩在中途的 running 重置为 pending 续跑。 */
   resetRunning(at: number): number
   list(q: { status?: SummaryJob['status']; limit: number }): SummaryJob[]
+
+  /** 一步的状态。重跑时只复位 from 及其之后的几步，前面的留着给人看「上次到哪了」。 */
+  setStep(jobId: number, step: PipelineStep, status: StepStatus, note: string | null, at: number): void
+  resetStepsFrom(jobId: number, from: PipelineStep, at: number): void
+}
+
+/**
+ * 每一步的产物：转写文本、分段要点、待落库的草稿。
+ *
+ * 它就是「从任意一步重跑」的前提 —— 没有它，从 reduce 重跑还要重新取一遍字幕、
+ * 重新调一遍分段。按 bvid 存，因为一个 bvid 只有一条任务。
+ */
+export interface JobArtifactRepo {
+  get(bvid: string, kind: ArtifactKind): JobArtifact | null
+  put(bvid: string, kind: ArtifactKind, a: { payload: string; meta?: unknown; at: number }): void
+  drop(bvid: string, kinds: readonly ArtifactKind[]): void
+}
+
+export interface JobArtifact {
+  payload: string
+  meta: unknown
+  at: number
 }
 
 export interface SummaryRepo {

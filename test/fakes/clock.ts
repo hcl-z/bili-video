@@ -4,12 +4,15 @@ import type { Cancel, Clock } from '../../src/server/ports/clock.ts'
  * 可控时钟。cron 不做真解析：`schedule` 只把任务挂起来，靠 `tick()` 手动触发一轮 ——
  * 我们要测的是「一轮做了什么」和「撞上了要跳过」，不是 croner 的解析正确性。
  */
+/** 默认起点。抓取地板按启动时刻算，所以假动态的发布时间都得相对它算（见 support/time.ts）。 */
+export const CLOCK_START = Date.UTC(2026, 8, 7, 12, 0, 0)
+
 export class FakeClock implements Clock {
   #now: number
   readonly scheduled: { cron: string; task: () => void | Promise<void> }[] = []
   readonly slept: number[] = []
 
-  constructor(startAt = Date.UTC(2026, 8, 7, 12, 0, 0)) {
+  constructor(startAt = CLOCK_START) {
     this.#now = startAt
   }
 
