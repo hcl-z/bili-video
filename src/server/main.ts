@@ -24,7 +24,6 @@ const webRoot = resolve(process.env['WEB_ROOT'] ?? './dist/web')
 const clock = new SystemClock()
 const events = new InMemoryEventBus()
 
-// 容器里 json=true，由 docker logs 收走；本地 pino-pretty 给人看。
 const logger = createLogger({
   level: (process.env['LOG_LEVEL'] as 'info') ?? 'info',
   dir: join(dataDir, 'logs'),
@@ -41,7 +40,6 @@ try {
     clock,
     logger,
     events,
-    seedFile: process.env['CONFIG_SEED'] ?? 'config.example.yaml',
     masterKeyPath: process.env['MASTER_KEY_PATH'],
     masterKeyPassphrase: process.env['MASTER_KEY'],
   })

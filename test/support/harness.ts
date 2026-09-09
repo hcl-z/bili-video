@@ -39,8 +39,6 @@ export interface Harness {
 }
 
 export interface HarnessOptions {
-  /** 首次启动 seed 用的 YAML；null 表示不 seed。默认用仓库里的 config.example.yaml。 */
-  seedFile?: string | null
   /** 复用已有目录（restart 场景）。 */
   dataDir?: string
   startAt?: number
@@ -79,7 +77,6 @@ export async function createHarness(opts: HarnessOptions = {}): Promise<Harness>
     clock,
     logger,
     events,
-    seedFile: opts.seedFile === undefined ? 'config.example.yaml' : opts.seedFile,
     fetch: fetch.fetch,
     ...(opts.commands === undefined ? {} : { commands: opts.commands }),
   })

@@ -24,7 +24,6 @@ function freshCore(): Core {
     clock: new FakeClock(),
     logger: new CollectingLogger(),
     events: new InMemoryEventBus(),
-    seedFile: null,
   })
 }
 

@@ -8,10 +8,7 @@ import { ZodError } from 'zod'
 
 const isSection = (s: string): s is ConfigSection => s in CONFIG_SECTIONS
 
-/**
- * 配置以数据库为真相，改完立刻生效、不重启。`seededFrom` 是页面上那句
- * 「配置已由 Web 管理，config.yaml 不再生效」的依据。
- */
+/** 配置以数据库为真相，修改立即生效；`seededFrom` 标示首次初始化来源。 */
 export function configRoutes(ports: Ports): Hono {
   const log = ports.logger.child({ mod: 'http' })
   const body = (): ConfigResponse => ({

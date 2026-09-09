@@ -279,7 +279,7 @@ function TruthCard(props: { config: ConfigResponse }) {
     <Card>
       <CardContent className="text-muted-foreground space-y-2.5 py-4 text-sm">
         <p>
-          配置已由本页面管理，<code className="font-mono">config.yaml</code> 不再生效。
+          配置已由本页面管理；修改默认配置需更新应用内的 <code className="font-mono">INITIAL_CONFIG</code>。
           {props.config.seededFrom === null
             ? '（当前配置来自数据库）'
             : `（首次启动时从 ${props.config.seededFrom} 导入过一次）`}

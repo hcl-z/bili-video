@@ -77,8 +77,6 @@ export interface CoreOptions {
   clock: Clock
   logger: Logger
   events: EventBus
-  /** 首次启动的种子 YAML；null 表示不 seed（全用 schema 默认值）。 */
-  seedFile?: string | null
   dbFile?: string
   masterKeyPath?: string
   /** 有 passphrase 就用它派生，不落 key 文件（容器里常这么干）。 */
@@ -147,7 +145,7 @@ export function openCore(opts: CoreOptions): Core {
     )
   }
 
-  const seeded = seedConfig(db, opts.seedFile ?? null, clock.now(), logger)
+  const seeded = seedConfig(db, clock.now(), logger)
   const config = new SqliteConfigStore(db, now, seeded.from)
 
   // cookie 和 SESSDATA 一样敏感（SESSDATA 本身就是其中一条），走同一套 secret-box。

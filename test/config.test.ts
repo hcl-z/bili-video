@@ -1,28 +1,18 @@
 import assert from 'node:assert/strict'
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
-import { dirname, join } from 'node:path'
 import { describe, it } from 'node:test'
 
 import { CONFIG_SECTION_NAMES } from '#shared/contract/config.ts'
 import { createHarness } from './support/harness.ts'
 
-function yamlFile(body: string): string {
-  const dir = mkdtempSync(join(tmpdir(), 'bili-video-yaml-'))
-  const file = join(dir, 'config.yaml')
-  writeFileSync(file, body)
-  return file
-}
-
 describe('配置', () => {
-  it('首次启动从 config.example.yaml 导入全部 section', async () => {
+  it('首次启动从内置默认值导入全部 section', async () => {
     const h = await createHarness()
     try {
       const res = await h.server.app.request('/api/config')
       assert.equal(res.status, 200)
       const body = (await res.json()) as { config: Record<string, unknown>; seededFrom: string }
 
-      assert.equal(body.seededFrom, 'config.example.yaml')
+      assert.equal(body.seededFrom, 'built-in')
       assert.deepEqual(Object.keys(body.config).sort(), [...CONFIG_SECTION_NAMES].sort())
       // 仓库里的示例值：这两条是 spec 定死的（只听回环、轮询错峰到 :30）。
       assert.equal((body.config['server'] as { host: string }).host, '127.0.0.1')
@@ -32,32 +22,22 @@ describe('配置', () => {
     }
   })
 
-  it('YAML 只在库为空时生效：之后改 YAML 不影响已有配置', async () => {
-    const file = yamlFile('ai:\n  model: from-first-yaml\n')
-    const first = await createHarness({ seedFile: file })
-    assert.equal(first.core.config.getSection('ai').model, 'from-first-yaml')
-    assert.equal(first.core.config.seededFrom(), file)
+  it('内置默认值只在库为空时导入，之后重启不覆盖已有配置', async () => {
+    const first = await createHarness()
+    first.core.config.setSection('ai', { ...first.core.config.getSection('ai'), model: 'saved-model' })
 
-    // 改 YAML，用同一个 dataDir 重启。
-    writeFileSync(file, 'ai:\n  model: from-second-yaml\n')
     const second = await first.restart()
     try {
-      assert.equal(
-        second.core.config.getSection('ai').model,
-        'from-first-yaml',
-        '库已有配置，YAML 不该再被读进来',
-      )
+      assert.equal(second.core.config.getSection('ai').model, 'saved-model')
       assert.equal(second.core.config.seededFrom(), null, '第二次启动没有 seed')
     } finally {
       await second.close()
-      // 连目录一起收掉，否则每跑一次测试就在 tmp 里留一个空壳。
-      rmSync(dirname(file), { recursive: true, force: true })
     }
   })
 
-  it('老库缺整段配置时按种子补上，已有的那几段不动', async () => {
-    const file = yamlFile('ai:\n  model: seeded\nbili:\n  refreshThresholdDays: 7\n')
-    const first = await createHarness({ seedFile: file })
+  it('老库缺整段配置时按内置默认值补上，已有的那几段不动', async () => {
+    const first = await createHarness()
+    first.core.config.setSection('ai', { ...first.core.config.getSection('ai'), model: 'saved' })
     // 模拟老库：这一段是 schema 后加的，当年 seed 时还不存在。
     first.core.db.exec("DELETE FROM app_config WHERE key = 'bili'")
 
@@ -65,14 +45,13 @@ describe('配置', () => {
     try {
       assert.equal(
         second.core.config.getSection('bili').refreshThresholdDays,
-        7,
-        '缺的段要拿种子补上，否则它会静默停在 schema 默认值',
+        15,
+        '缺的段要按内置默认值补齐',
       )
-      assert.equal(second.core.config.getSection('ai').model, 'seeded')
+      assert.equal(second.core.config.getSection('ai').model, 'saved')
       assert.equal(second.core.config.seededFrom(), null, '补一段不是首次 seed')
     } finally {
       await second.close()
-      rmSync(dirname(file), { recursive: true, force: true })
     }
   })
 
@@ -174,10 +153,10 @@ describe('配置', () => {
     }
   })
 
-  it('不 seed 时全部落到 schema 默认值', async () => {
-    const h = await createHarness({ seedFile: null })
+  it('首次启动总是写入内置默认值', async () => {
+    const h = await createHarness()
     try {
-      assert.equal(h.core.config.seededFrom(), null)
+      assert.equal(h.core.config.seededFrom(), 'built-in')
       assert.deepEqual(Object.keys(h.core.config.get()).sort(), [...CONFIG_SECTION_NAMES].sort())
       assert.equal(h.core.config.getSection('poll').cron, '30 */2 * * * *')
     } finally {

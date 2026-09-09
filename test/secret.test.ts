@@ -123,7 +123,6 @@ function core(dir: string, extra: { masterKeyPassphrase?: string } = {}) {
     clock: new FakeClock(),
     logger: new CollectingLogger(),
     events: new InMemoryEventBus(),
-    seedFile: null,
     ...extra,
   })
 }

@@ -18,9 +18,7 @@
     "build:server": "tsc -b tsconfig.server.json",
     "build:web": "vite build",
     "typecheck": "tsc -b tsconfig.shared.json tsconfig.server.json tsconfig.web.json",
-    "test": "node --test \"test/**/*.test.ts\"",
-    "demo": "node --env-file-if-exists=.env scripts/demo.ts",
-    "prototype": "node -e \"import('node:child_process').then(({execSync})=>execSync('open prototype/workbench-prototype.html?variant=B'))\""
+    "test": "node --test \"test/**/*.test.ts\""
   },
   "imports": {
     "#shared/*": "./src/shared/*"
@@ -38,7 +36,6 @@
     "hono": "4.9.10",
     "pino": "9.7.0",
     "pino-roll": "3.1.0",
-    "push-all-in-one": "4.5.4",
     "qrcode-terminal": "0.12.0",
     "yaml": "2.8.1",
     "zod": "3.25.76"

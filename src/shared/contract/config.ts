@@ -1,9 +1,6 @@
 import { z } from 'zod'
 
-/**
- * 配置真相为数据库 `app_config`；`config.example.yaml` 仅首次启动时 seed。
- * schema 是 YAML 与 DB 的共同入口；每个 section 对应一行，更新一段不会覆写其他段。
- */
+/** 配置以数据库为唯一真相；首次启动由内置默认值初始化。 */
 
 export const ServerConfigSchema = z.object({
   /** 只听回环地址。改成 0.0.0.0 等于放弃「无登录系统」这个前提，别改（spec Q31a）。 */
