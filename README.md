@@ -68,11 +68,8 @@ docker compose logs -f bili-video
 容器没有 Apple Metal 环境，因此不支持本地 `mlx-audio`。首次容器启动会切换到 `openai-compat`，请在「AI 与 ASR」页面配置远程转写服务；也可以改用 `chat-audio`。
 
 ### 使用 GHCR 镜像
-
-将 `<owner>/<repo>` 替换为 GitHub 仓库路径：
-
 ```bash
-docker pull ghcr.io/<owner>/<repo>:latest
+docker pull ghcr.io/hcl-z/bili-video:latest
 
 docker run -d \
   --name bili-video \
@@ -80,7 +77,7 @@ docker run -d \
   -p 127.0.0.1:8788:8788 \
   -e MASTER_KEY='replace-with-a-long-random-secret' \
   -v bili-video-data:/app/data \
-  ghcr.io/<owner>/<repo>:latest
+  ghcr.io/hcl-z/bili-video:latest
 ```
 
 ## 数据与安全
@@ -129,22 +126,6 @@ data/
 
 应用内主要配置包括：轮询周期、B 站签名常量、过滤规则、AI/ASR 服务、总结并发、输出目录、推送渠道和健康检查。
 
-## 镜像发布
-
-`.github/workflows/container.yml` 使用 GitHub Actions 构建 `linux/amd64` 与 `linux/arm64` 镜像并推送到 GHCR：
-
-- 推送到 `main`：发布 `latest` 与 `sha-<commit>`
-- 推送 `v*` 标签：发布标签、语义化版本与 commit SHA，例如 `v1.2.3`、`1.2.3`、`1.2`
-
-工作流使用仓库自带的 `GITHUB_TOKEN`，无需额外配置镜像仓库密码。仓库需允许 Actions 写入 Packages；首次发布后可在 GitHub Packages 页面调整镜像可见性。
-
-发布示例：
-
-```bash
-git tag v0.1.0
-git push origin v0.1.0
-```
-
 ## 开发
 
 ```bash
@@ -153,19 +134,3 @@ pnpm typecheck      # shared/server/web 三份 TypeScript 配置
 pnpm test           # node:test 测试套件
 pnpm build          # 后端声明检查 + Vite 生产构建
 ```
-
-项目结构：
-
-```text
-src/shared/contract/   前后端共享 schema 与类型
-src/server/
-  domain/              无 IO 的业务规则
-  app/                 登录、轮询、队列、推送等用例编排
-  infra/               SQLite、B 站、AI、ASR、通知等适配器
-  http/                Hono API、静态资源与 SSE
-  server.ts            依赖组合与服务生命周期
-src/web/               React + Vite + Tailwind CSS 工作台
-test/                  真 SQLite + 假外部 I/O 的测试
-```
-
-详细行为与设计取舍见 [`docs/spec/v1-bili-monitor-summary.md`](docs/spec/v1-bili-monitor-summary.md)。

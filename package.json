@@ -3,7 +3,17 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "B 站动态/视频监听 + 推送 + AI 总结（单用户，本地常驻）",
+  "description": "B 站动态/视频监听 + 推送 + AI 总结",
+  "keywords": [
+    "bilibili",
+    "bilibili-monitor",
+    "video-summary",
+    "ai-summary",
+    "self-hosted",
+    "rss",
+    "notification",
+    "asr"
+  ],
   "license": "MIT",
   "packageManager": "pnpm@10.33.2",
   "engines": {
