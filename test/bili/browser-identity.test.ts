@@ -8,10 +8,7 @@ import {
   serializeIdentity,
 } from '../../src/server/infra/bili/browser-identity.ts'
 
-/**
- * 逐请求随机 UA 反而是机器人特征（spec 用户故事 68）。这组测试盯的是两件事：
- * 版本互相咬合，以及一旦生成就不再变。
- */
+/** 逐请求随机 UA 反而是机器人特征（spec 用户故事 68）。这组测试盯的是两件事： 版本互相咬合，以及一旦生成就不再变 */
 describe('infra/bili 浏览器身份', () => {
   it('UA 的 Chrome 主版本落在 136–141', () => {
     for (let i = 0; i < 50; i++) {

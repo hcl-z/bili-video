@@ -43,7 +43,7 @@ export function ruleRoutes(rules: RuleService): Hono {
       return c.json(list())
     })
 
-    /** 样本测试框。只读，不落库。 */
+    /** 样本测试框。只读，不落库 */
     .post('/test', async (c) => {
       const parsed = await parseBody(c.req.raw, TestRulesRequestSchema)
       if (!parsed.ok) return c.json(parsed.body, 400)

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { resolve } from 'node:path'
 import { after, describe, it } from 'node:test'
 
+import { resolveListenConfig } from '../src/server/server.ts'
 import { HealthResponseSchema } from '#shared/contract/api.ts'
 import { createHarness } from './support/harness.ts'
 
@@ -20,6 +21,30 @@ describe('装配好的服务', () => {
     assert.equal(body.uptimeMs, 0)
   })
 
+  it('容器可用环境变量覆盖监听地址，且不修改数据库配置', async () => {
+    const h = await createHarness()
+    try {
+      const saved = h.core.config.getSection('server')
+      assert.deepEqual(resolveListenConfig(saved, { SERVER_HOST: '0.0.0.0', SERVER_PORT: '8080' }), {
+        host: '0.0.0.0',
+        port: 8080,
+      })
+      assert.deepEqual(h.core.config.getSection('server'), saved)
+    } finally {
+      await h.close()
+    }
+  })
+
+  it('无监听环境变量时沿用数据库配置', async () => {
+    const h = await createHarness()
+    try {
+      const saved = h.core.config.getSection('server')
+      assert.deepEqual(resolveListenConfig(saved, {}), saved)
+    } finally {
+      await h.close()
+    }
+  })
+
   it('未知的 /api 路径返回结构化 404 而不是 HTML', async () => {
     const h = await createHarness()
     after(() => h.close())
@@ -35,7 +60,7 @@ describe('装配好的服务', () => {
     const h = await createHarness()
     after(() => h.close())
 
-    // 只回 500 不落日志，等于事故没有现场 —— 这个系统的卖点就是可观测性。
+
     h.server.app.get('/boom', () => {
       throw new Error('故意炸的')
     })

@@ -1,21 +1,18 @@
 import { Hono } from 'hono'
 
-import type { ConfigResponse } from '#shared/contract/api.ts'
-import { CONFIG_SECTIONS, type ConfigSection } from '#shared/contract/config.ts'
+import type { AppConfig, ConfigSection } from '#shared/contract/config.ts'
+import { CONFIG_SECTIONS } from '#shared/contract/config.ts'
 import { assertAsrProviderAvailable, LocalAsrUnavailableError } from '../../domain/asr-provider.ts'
-import type { Ports } from '../../ports/index.ts'
+import type { ServerDeps } from '../../types/index.ts'
 import { errorBody, zodIssues } from '../errors.ts'
 import { ZodError } from 'zod'
 
 const isSection = (s: string): s is ConfigSection => s in CONFIG_SECTIONS
 
-/** 配置以数据库为真相，修改立即生效；`seededFrom` 标示首次初始化来源。 */
-export function configRoutes(ports: Ports): Hono {
-  const log = ports.logger.child({ mod: 'http' })
-  const body = (): ConfigResponse => ({
-    config: ports.config.get(),
-    seededFrom: ports.config.seededFrom(),
-  })
+/** 配置以数据库为真相，修改立即生效 */
+export function configRoutes(deps: ServerDeps): Hono {
+  const log = deps.logger.child({ mod: 'http' })
+  const body = (): AppConfig => deps.config.get()
 
   return new Hono()
     .get('/', (c) => c.json(body()))
@@ -31,10 +28,10 @@ export function configRoutes(ports: Ports): Hono {
       }
 
       // 合并语义：页面只发改动的字段，不必回传整段。
-      const merged = { ...ports.config.getSection(section), ...patch }
+      const merged = { ...deps.config.getSection(section), ...patch }
 
       // cron 当场校验。写进库要等到下一次排程才炸，而那时候没人在看。
-      const badCron = cronError(ports.clock.checkCron, merged)
+      const badCron = cronError(deps.clock.checkCron, merged)
       if (badCron !== null) {
         return c.json(errorBody('invalid-cron', `cron 表达式不合法：${badCron}`), 400)
       }
@@ -43,11 +40,11 @@ export function configRoutes(ports: Ports): Hono {
         const parsed = CONFIG_SECTIONS[section].parse(merged) as never
         if (section === 'asr') {
           assertAsrProviderAvailable(
-            ports.runtime.isDocker,
+            deps.runtime.isDocker,
             (parsed as { provider: 'mlx-audio' | 'openai-compat' | 'chat-audio' }).provider,
           )
         }
-        ports.config.setSection(section, parsed)
+        deps.config.setSection(section, parsed)
       } catch (err) {
         if (err instanceof LocalAsrUnavailableError) {
           return c.json(errorBody('asr-provider-unavailable', err.message), 400)
@@ -58,7 +55,7 @@ export function configRoutes(ports: Ports): Hono {
         throw err
       }
 
-      ports.events.emit({ type: 'config.changed', section })
+      deps.events.emit({ type: 'config.changed', section })
       log.info({ section, fields: Object.keys(patch) }, '配置已更新')
       return c.json(body())
     })

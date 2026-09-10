@@ -5,10 +5,7 @@ import { compileRegex } from '../src/server/domain/filter.ts'
 import { TimedRegex } from '../src/server/infra/regex/timed-regex.ts'
 import { CollectingLogger } from './fakes/logger.ts'
 
-/**
- * 用户手写的正则要能被打断，否则一个 `(a+)+` 就把轮询卡死。
- * 这里测的是「真的中断了」，所以用一条已知会灾难性回溯的表达式。
- */
+
 describe('TimedRegex', () => {
   it('正常正则照常匹配', () => {
     const re = new TimedRegex(() => 100, new CollectingLogger())

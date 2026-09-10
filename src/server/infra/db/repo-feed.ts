@@ -1,7 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite'
 
 import type { DynamicType, Update, UpdateWithRaw } from '#shared/contract/update.ts'
-import type { AnchorRepo, UpdateRepo } from '../../ports/repo.ts'
+import type { AnchorRepo, UpdateRepo } from '../../types/persistence.ts'
 import { num, str, strOrNull, toBool, toInt, type Row } from './sqlite.ts'
 
 export class SqliteAnchorRepo implements AnchorRepo {
@@ -21,10 +21,7 @@ export class SqliteAnchorRepo implements AnchorRepo {
     return new Map(rows.map((r) => [str((r as Row)['uid']), num((r as Row)['last_pub_ts'])]))
   }
 
-  /**
-   * 单调推进由 SQL 的 WHERE 保证：并发或乱序的调用都不可能把锚点往回拨，
-   * 也就不会因为一次回退把已推过的内容重推一遍。
-   */
+  /** 单调推进由 SQL 的 WHERE 保证：并发或乱序的调用都不可能把锚点往回拨， 也就不会因为一次回退把已推过的内容重推一次 */
   advance(uid: string, pubTs: number, at: number): void {
     this.db
       .prepare(
@@ -58,10 +55,7 @@ export class SqliteUpdateRepo implements UpdateRepo {
     this.db = db
   }
 
-  /**
-   * dyn_id 冲突就跳过。「重复轮询不重复推送」的第一道闸门在这里：
-   * 返回的 inserted 才是真正的新内容，调用方按它决定推不推。
-   */
+
   insertMany(updates: UpdateWithRaw[]): { inserted: string[]; skipped: string[] } {
     const stmt = this.db.prepare(
       `INSERT INTO updates
@@ -105,7 +99,7 @@ export class SqliteUpdateRepo implements UpdateRepo {
     return r ? toUpdate(r as Row) : null
   }
 
-  /** 同一个 bvid 理论上只有一条动态；真撞上就取最新那条。 */
+
   getByBvid(bvid: string): Update | null {
     const r = this.db
       .prepare('SELECT * FROM updates WHERE bvid = ? ORDER BY pub_ts DESC LIMIT 1')

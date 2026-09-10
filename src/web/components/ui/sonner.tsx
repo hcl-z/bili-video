@@ -9,7 +9,7 @@ import { Toaster as Sonner, type ToasterProps } from "sonner"
 
 import { useTheme } from "@/lib/theme"
 
-// 与 CLI 生成版的唯一差别：换掉 next-themes（那是给 Next 用的，我们的主题只有一个 .dark class）。
+// 与 CLI 生成版的唯一差避免：换掉 next-themes（那是给 Next 用的，我们的主题只有一个 .dark class）
 const Toaster = ({ ...props }: ToasterProps) => {
   const { theme } = useTheme()
 

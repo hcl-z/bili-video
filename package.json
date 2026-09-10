@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "description": "B 站动态/视频监听 + 推送 + AI 总结（单用户，本地常驻）",
-  "license": "ISC",
+  "license": "MIT",
   "packageManager": "pnpm@10.33.2",
   "engines": {
     "node": ">=24"
@@ -36,8 +36,8 @@
     "hono": "4.9.10",
     "pino": "9.7.0",
     "pino-roll": "3.1.0",
+    "push-all-in-one": "4.5.4",
     "qrcode-terminal": "0.12.0",
-    "yaml": "2.8.1",
     "zod": "3.25.76"
   },
   "devDependencies": {

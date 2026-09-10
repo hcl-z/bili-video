@@ -1,11 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite'
 
-/**
- * 迁移用 TS 常量而不是 .sql 文件：没有文件 IO、没有打包时要额外 COPY 的资源，
- * 同一份代码在 tsx / 剥类型 / tsc 三种跑法下都一样。
- *
- * 规则：已发布的迁移永不修改，只追加。version 单调递增。
- */
+/** 迁移用 TS 常量而不是 .sql 文件：没有文件 IO、没有打包时要额外 COPY 的资源， 同一份代码在 tsx / 剥类型 / tsc 三种跑法下都一样。 规则：已发布的迁移永不修改，只追加。version 单调递增 */
 export interface Migration {
   version: number
   name: string
@@ -138,11 +133,7 @@ CREATE TABLE deliveries (
 CREATE INDEX idx_deliveries_at ON deliveries(at DESC);
 `
 
-/**
- * 派生运行态。不是用户配置（那在 app_config，页面上能改），而是系统自己攒出来、
- * 重启要接着用的东西：浏览器身份就是第一个 —— 换一个 UA 等于在同一个 cookie 会话里
- * 换了台电脑，那正是风控在找的信号。
- */
+/** 派生运行态。不是用户配置（那在 app_config，页面上能改），而是系统自己攒出来、 重启要接着用的数据：浏览器身份就是第一个 —— 换一个 UA 等于在同一个 cookie 会话里 换了台电脑，那正是风控在找的信号 */
 const RUNTIME_STATE = `
 CREATE TABLE runtime_state (
   key        TEXT PRIMARY KEY,
@@ -151,11 +142,7 @@ CREATE TABLE runtime_state (
 );
 `
 
-/**
- * 写接口调用审计。全系统只有「自动关注」一个写操作，它的风控比读严得多，
- * 所以它每一次调用都留痕：既是事后核对「到底发了几个写请求」的依据，
- * 也是限流本身的状态 —— 频次从这张表数出来，于是重启不会把额度清零。
- */
+/** 写接口调用审计。全系统只有「自动关注」一个写操作，它的风控比读严得多， 所以它每一次调用都留痕：既是事后核对「到底发了几个写请求」的依据， 也是限流本身的状态 —— 频次从这张表数出来，于是重启不会把额度清零 */
 const BILI_WRITE_CALLS = `
 CREATE TABLE bili_write_calls (
   id      INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -170,18 +157,13 @@ CREATE TABLE bili_write_calls (
 CREATE INDEX idx_bili_write_calls_at ON bili_write_calls(at DESC);
 `
 
-// 全文总结与关键信息。老行给空值，读出来就是「这条没有这两块」。
+
 const SUMMARY_DETAIL = `
 ALTER TABLE summaries ADD COLUMN overview TEXT NOT NULL DEFAULT '';
 ALTER TABLE summaries ADD COLUMN key_info_json TEXT NOT NULL DEFAULT '{}';
 `
 
-/**
- * 流水线：每一步的状态 + 每一步的产物。
- *
- * 产物是「从任意一步重跑」的全部前提 —— 没有它，从 reduce 重跑还得重新取一遍字幕。
- * 按 bvid 存而不是 job_id：一个 bvid 一条任务，重跑复位的是同一行。
- */
+/** 流水线：每一步的状态 + 每一步的产物。 产物是「从任意一步重跑」的全部前提 —— 没有它，从 reduce 重跑还得重新取一次字幕。 按 bvid 存而不是 job_id：一个 bvid 单条任务，重跑复位的是同一行 */
 const JOB_PIPELINE = `
 CREATE TABLE job_steps (
   job_id INTEGER NOT NULL,
@@ -204,7 +186,7 @@ CREATE TABLE job_artifacts (
 ALTER TABLE summary_jobs ADD COLUMN resume_from TEXT;
 `
 
-// 模型回的正文本身。老行是空的，读的时候退回 full_md。
+// 模型回的正文本身。旧记录是空的，读的时候退回 full_md
 const SUMMARY_ARTICLE = `
 ALTER TABLE summaries ADD COLUMN article TEXT NOT NULL DEFAULT '';
 `
@@ -218,11 +200,7 @@ export const MIGRATIONS: Migration[] = [
   { version: 6, name: 'summary_article', sql: SUMMARY_ARTICLE },
 ]
 
-/**
- * 幂等：已应用的版本跳过。每个版本一个事务，中途失败不会留半张表。
- *
- * `list` 只为测试预留（往里塞一个会炸的迁移，验证回滚）；生产永远走默认的 MIGRATIONS。
- */
+/** 幂等：已应用的版本跳过。每个版本一个事务，中途失败不会留半张表。 `list` 只为测试预留（往里塞一个会失败的迁移，验证回滚）；生产永远走默认的 MIGRATIONS */
 export function migrate(db: DatabaseSync, now: number, list: Migration[] = MIGRATIONS): number[] {
   db.exec(`CREATE TABLE IF NOT EXISTS migrations (
     version    INTEGER PRIMARY KEY,

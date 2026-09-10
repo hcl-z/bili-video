@@ -1,6 +1,4 @@
-/**
- * 和 http-client 那份测试同一个理由：假的只有 fetch，三跳链路、WBI 签名、字幕挑选跑的都是真代码。
- */
+/** 和 http-client 那份测试同一个理由：假的只有 fetch，三跳链路、WBI 签名、字幕挑选跑的都是实际代码 */
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
@@ -53,7 +51,7 @@ describe('infra/bili 字幕', () => {
     const res = await r.client.fetch('BV1xx')
     assert.equal(res.ok, true)
     assert.deepEqual(res.ok && res.value, [{ from: 1.2, to: 3, text: '开场' }])
-    // cid 必须来自 view，不能瞎猜；签名参数得真签上。
+    // cid 必须来自 view，不能瞎猜；签名参数得真签上
     const player = r.fetch.requests.find((q) => q.url.includes('player/wbi/v2'))
     assert.equal(player?.query.get('cid'), '555')
     assert.ok(player?.query.get('w_rid'))

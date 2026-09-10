@@ -7,7 +7,7 @@ import { after, describe, it } from 'node:test'
 import { MIGRATIONS, migrate } from '../src/server/infra/db/migrations.ts'
 import { openDatabase } from '../src/server/infra/db/sqlite.ts'
 
-/** 表清单写死在测试里：漏建一张表要在这儿失败，而不是等到某个 ticket 的 SQL 报 no such table。 */
+/** 表清单写死在测试里：漏建单个表要在此处失败，而不是等到某个 ticket 的 SQL 报 no such table */
 const EXPECTED_TABLES = [
   'anchors',
   'app_config',
@@ -68,7 +68,7 @@ describe('migrations', () => {
     const second = openDatabase(file)
     assert.deepEqual(migrate(second, 2_000), [], '已应用过的迁移不该重跑')
     assert.deepEqual(tableNames(second), EXPECTED_TABLES)
-    // 同一个连接上再调一次也不该有副作用。
+
     assert.deepEqual(migrate(second, 3_000), [])
     second.close()
   })

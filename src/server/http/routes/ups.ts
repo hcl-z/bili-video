@@ -3,12 +3,12 @@ import { Hono } from 'hono'
 import type { UpFeedResponse } from '#shared/contract/api.ts'
 import { UpFeedQuerySchema } from '#shared/contract/api.ts'
 import type { UpFeedService } from '../../app/up-feed.ts'
-import type { Ports } from '../../ports/index.ts'
+import type { ServerDeps } from '../../types/index.ts'
 import { errorBody, zodIssues } from '../errors.ts'
 import { statusOf } from '../parse.ts'
 
-/** 阅读页按 UP 翻空间流 + 手动排解析。两个端点都会打 B 站，别在页面上预取。 */
-export function upRoutes(ports: Ports, ups: UpFeedService): Hono {
+
+export function upRoutes(deps: ServerDeps, ups: UpFeedService): Hono {
   return new Hono()
     .get('/:uid/feed', async (c) => {
       const q = UpFeedQuerySchema.safeParse(c.req.query())
@@ -24,7 +24,7 @@ export function upRoutes(ports: Ports, ups: UpFeedService): Hono {
     })
 
     .post('/:uid/items/:dynId/parse', async (c) => {
-      if (!ports.config.getSection('ai').enabled) {
+      if (!deps.config.getSection('ai').enabled) {
         return c.json(errorBody('conflict', 'AI 总开关关着，打开后才会跑'), 409)
       }
 

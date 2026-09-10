@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input'
 import { useLogStream } from '@/lib/use-log-stream'
 import { cn } from '@/lib/utils'
 
-/** 每一档只看那一档（Error 连 fatal 一起）。「全部」是唯一能看到 trace 的档。 */
+/** 每一档只看那一档（Error 连 fatal 一起）。「全部」是唯一能看到 trace 的档 */
 const FILTERS: readonly { value: LogFilter; label: string; dot: string }[] = [
   { value: 'all', label: '全部', dot: 'bg-muted-foreground/60' },
   { value: 'debug', label: 'Debug', dot: 'bg-muted-foreground' },
@@ -20,7 +20,7 @@ const FILTERS: readonly { value: LogFilter; label: string; dot: string }[] = [
   { value: 'error', label: 'Error', dot: 'bg-destructive' },
 ]
 
-/** 级别色块。warn 与 error 用实底 —— 它们要在几十行里被一眼扫到，描边不够。 */
+
 const LEVEL_BADGE: Record<LogLevelName, string> = {
   trace: 'bg-muted text-muted-foreground',
   debug: 'bg-muted text-muted-foreground',
@@ -30,7 +30,7 @@ const LEVEL_BADGE: Record<LogLevelName, string> = {
   fatal: 'bg-destructive text-white',
 }
 
-/** `[模块]` 的颜色。warn 及以上跟级别走，其余用强调色 —— 不为它引入第二个色相。 */
+
 const MOD_COLOR: Record<LogLevelName, string> = {
   trace: 'text-brand-ink/70',
   debug: 'text-brand-ink/70',
@@ -46,9 +46,9 @@ const TIME = new Intl.DateTimeFormat('zh-CN', {
   second: '2-digit',
 })
 
-/** 离底多少像素内算「还在底部」。滚轮的一格就有几十像素，卡太死会误判成「用户翻上去了」。 */
+
 const AT_BOTTOM_PX = 24
-/** 字段值超过这个长度就掐中间。URL 和路径的关键信息在两头，掐尾巴等于什么都没说。 */
+/** 字段值超过这个长度就掐中间。URL 和路径的关键信息在两头，掐尾巴等于什么都没说 */
 const MAX_VALUE_CHARS = 110
 
 export function LogsPage() {
@@ -60,7 +60,7 @@ export function LogsPage() {
   const { lines, connected, clear } = useLogStream(filter, paused)
   const scroller = useRef<HTMLDivElement>(null)
 
-  // 档位在服务端过滤，搜索和模块在本地 —— 它们改起来太频繁，每敲一个字重连一次流不值得。
+  // 档位在服务端过滤，搜索和模块在本地 —— 它们改起来太频繁，每敲一个字重连一次流不值得
   const shown = useMemo(
     () => lines.filter((l) => (mod === null || l.mod === mod) && matches(l, query)),
     [lines, mod, query],
@@ -75,11 +75,7 @@ export function LogsPage() {
   return (
     <Page title="日志" hint="服务端实时流，按级别筛选。文件按天轮转、留 7 天。" wide>
       <div className="mb-3 flex flex-wrap items-center gap-x-1.5 gap-y-2">
-        {/*
-          分段控件，视觉和 shadcn 的 TabsList 一套：底槽 bg-muted，选中的那一档浮起来
-          （bg-background + 阴影）。选中态不用强调色 —— 五个档已经各有一颗语义色点，
-          再压一块粉底进去就成了两个信号打架。
-        */}
+        {}
         <div
           className="bg-muted inline-flex h-8 shrink-0 items-center rounded-lg p-[3px]"
           role="group"
@@ -139,14 +135,12 @@ export function LogsPage() {
       </div>
 
       <Card className="overflow-hidden py-0">
-        {/*
-          定高而不是 max-height：行是一条条冒出来的，高度跟着行数长会让整页一直往下窜。
-        */}
+        {}
         <CardContent
           ref={scroller}
           onScroll={(e) => {
             const el = e.currentTarget
-            // 翻上去看东西时自动停掉跟随，回到底部再自动接上 —— 不然新行会把人拽回去。
+
             setFollow(el.scrollHeight - el.scrollTop - el.clientHeight < AT_BOTTOM_PX)
           }}
           className="h-[62vh] min-h-72 overflow-y-auto px-3 py-2.5"

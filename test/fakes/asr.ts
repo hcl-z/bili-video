@@ -1,8 +1,8 @@
 import type { Cue } from '#shared/contract/summary.ts'
-import type { Asr } from '../../src/server/ports/asr.ts'
-import type { AudioDownloader, DownloadedAudio } from '../../src/server/ports/audio.ts'
+import type { Asr } from '../../src/server/types/ai.ts'
+import type { AudioDownloader, DownloadedAudio } from '../../src/server/types/ai.ts'
 
-/** 音频下载假件。`fails` 为真就模拟下载失败那条路。 */
+/** 音频下载测试替身。`fails` 为真就模拟下载失败应项路 */
 export class FakeAudioDownloader implements AudioDownloader {
   fails = false
   downloaded: string[] = []

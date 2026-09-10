@@ -6,12 +6,7 @@ import { api } from '@/lib/api'
 import { keys } from '@/lib/query'
 import { patchUpFeedItem } from '@/lib/reader-cache'
 
-/**
- * 手动排一条解析（含重跑）。
- *
- * 一律走 `/ups/.../parse`：它会先把动态落库（不落库的总结拿不到标题和简介），
- * 而且不判过滤规则 —— 规则拦的是自动解析，手动点就是明确要它。
- */
+/** 手动排单条解析（含重跑）。 一律走 `/ups/.../parse`：它会先把动态落库（不落库的总结拿不到标题和简介）， 而且不判过滤规则 —— 规则拦的是自动解析，手动点就是明确要它 */
 export function useParseItem(item: ReaderItem) {
   const qc = useQueryClient()
   return useMutation({

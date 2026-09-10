@@ -10,13 +10,12 @@ describe('配置', () => {
     try {
       const res = await h.server.app.request('/api/config')
       assert.equal(res.status, 200)
-      const body = (await res.json()) as { config: Record<string, unknown>; seededFrom: string }
+      const body = (await res.json()) as Record<string, unknown>
 
-      assert.equal(body.seededFrom, 'built-in')
-      assert.deepEqual(Object.keys(body.config).sort(), [...CONFIG_SECTION_NAMES].sort())
-      // 仓库里的示例值：这两条是 spec 定死的（只听回环、轮询错峰到 :30）。
-      assert.equal((body.config['server'] as { host: string }).host, '127.0.0.1')
-      assert.equal((body.config['poll'] as { cron: string }).cron, '30 */2 * * * *')
+      assert.deepEqual(Object.keys(body).sort(), [...CONFIG_SECTION_NAMES].sort())
+
+      assert.equal((body['server'] as { host: string }).host, '127.0.0.1')
+      assert.equal((body['poll'] as { cron: string }).cron, '30 */2 * * * *')
     } finally {
       await h.close()
     }
@@ -29,7 +28,6 @@ describe('配置', () => {
     const second = await first.restart()
     try {
       assert.equal(second.core.config.getSection('ai').model, 'saved-model')
-      assert.equal(second.core.config.seededFrom(), null, '第二次启动没有 seed')
     } finally {
       await second.close()
     }
@@ -38,7 +36,7 @@ describe('配置', () => {
   it('老库缺整段配置时按内置默认值补上，已有的那几段不动', async () => {
     const first = await createHarness()
     first.core.config.setSection('ai', { ...first.core.config.getSection('ai'), model: 'saved' })
-    // 模拟老库：这一段是 schema 后加的，当年 seed 时还不存在。
+
     first.core.db.exec("DELETE FROM app_config WHERE key = 'bili'")
 
     const second = await first.restart()
@@ -49,7 +47,6 @@ describe('配置', () => {
         '缺的段要按内置默认值补齐',
       )
       assert.equal(second.core.config.getSection('ai').model, 'saved')
-      assert.equal(second.core.config.seededFrom(), null, '补一段不是首次 seed')
     } finally {
       await second.close()
     }
@@ -67,12 +64,12 @@ describe('配置', () => {
       })
       assert.equal(res.status, 200)
 
-      // 同一个进程、同一个实例，不重启就能读到新值。
+      // 同一个进程、同一个实例，不重启就能读到新值
       assert.notEqual(before, 'hot-swapped')
       assert.equal(h.core.config.getSection('ai').model, 'hot-swapped')
-      assert.equal(h.ports.config.get().ai.model, 'hot-swapped')
+      assert.equal(h.deps.config.get().ai.model, 'hot-swapped')
 
-      // 落库了：重启后还在。
+
       const again = await h.restart()
       assert.equal(again.core.config.getSection('ai').model, 'hot-swapped')
       await again.close()
@@ -97,7 +94,7 @@ describe('配置', () => {
       assert.equal(after.temperature, 0.9)
       assert.equal(after.model, before.model)
       assert.deepEqual(after.chunk, before.chunk)
-      // 别的 section 一个字节都不该动。
+
       assert.deepEqual(h.core.config.getSection('poll'), h.core.config.getSection('poll'))
     } finally {
       await h.close()
@@ -156,7 +153,6 @@ describe('配置', () => {
   it('首次启动总是写入内置默认值', async () => {
     const h = await createHarness()
     try {
-      assert.equal(h.core.config.seededFrom(), 'built-in')
       assert.deepEqual(Object.keys(h.core.config.get()).sort(), [...CONFIG_SECTION_NAMES].sort())
       assert.equal(h.core.config.getSection('poll').cron, '30 */2 * * * *')
     } finally {

@@ -8,12 +8,12 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { useRetryJob } from '@/lib/use-retry-job'
 import { cn } from '@/lib/utils'
 
-/** 六步流水线。悬浮步骤可查看状态，并从提示里的刷新按钮选择重跑起点。 */
+/** 六步流水线。悬浮步骤可查看状态，并从提示里的刷新按钮选择重跑起点 */
 export function JobPipeline(props: { job: SummaryJob }) {
   const { job } = props
   const retry = useRetryJob(job.id)
   const byStep = new Map(job.steps.map((s) => [s.step, s]))
-  // 跑着的任务点了也会被后端挡回来，别给一个假的可点。
+
   const canRerun = job.status !== 'running' && job.status !== 'pending'
 
   return (
@@ -36,10 +36,7 @@ export function JobPipeline(props: { job: SummaryJob }) {
   )
 }
 
-/**
- * 这一步跑了多久。一次 LLM 调用要一两分钟且中途没有任何事件，
- * 不显示秒数的话「在跑」和「卡死」在页面上长得一样。
- */
+/** 这一步跑了多久。一次 LLM 调用要一两分钟且中途没有任何事件， 不显示秒数的话「在跑」和「阻塞」在页面上长得一样 */
 function Elapsed(props: { since: number }) {
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {

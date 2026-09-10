@@ -6,10 +6,7 @@ import { describe, it } from 'node:test'
 import type { JobsResponse } from '#shared/contract/api.ts'
 import { bili, llmOk, player, rig, ZH_TRACK } from './support/queue-rig.ts'
 
-/**
- * 总结队列端到端：抓到视频 → 入队 → 取字幕 → 调 LLM → 落库落盘。
- * 假的只有 fetch，队列、并发、仓储、Markdown 渲染与落盘都是真在跑。
- */
+/** 总结队列端到端：抓到视频 → 入队 → 取字幕 → 调 LLM → 落库落盘。 假的只有 fetch，队列、并发、仓储、Markdown 渲染与落盘都是真在跑 */
 
 describe('总结队列', () => {
   it('抓到视频自动入队，跑完落库落盘，阶段与完成都发了 SSE', async () => {
@@ -30,14 +27,14 @@ describe('总结队列', () => {
     assert.equal(summary?.tldr, '这个视频讲清了一件事，并给出了结论。')
     assert.match(summary?.article ?? '', /第一步：先量再改/)
     assert.equal(summary?.transcriptSource, 'subtitle')
-    // 章节链接要能点回 B 站的那一秒。
+
     assert.match(summary?.fullMd ?? '', /01:23/)
     assert.match(summary?.fullMd ?? '', /## Overview/)
 
     const md = readFileSync(join(h.dataDir, 'summaries', 'BV1x.md'), 'utf8')
     assert.equal(md, summary?.fullMd)
 
-    // token 记账逐次记，页面上的用量是从它数出来的。
+    // token 记账逐次记，页面上的用量是从它数出来的
     assert.equal(h.core.repos.llmCalls.usageSince(0).inTokens, 120)
 
     const stages = events.filter((e) => e.type === 'job.changed').map((e) => e.stage)
@@ -49,7 +46,7 @@ describe('总结队列', () => {
   })
 
   it('LLM 挂了：任务失败但留下最小可推送内容，重跑成功且不产生重复数据', async () => {
-    // 第一次鉴权就没过（不重试的那类错），重跑时正常。
+    // 第一次鉴权就没过（不重试的那类错），重跑时正常
     const fetch = bili([{ status: 401, raw: { error: { message: 'invalid api key' } } }, llmOk])
     fetch.on('player/wbi/v2', player([ZH_TRACK]))
     const { h, events } = await rig(fetch)
@@ -59,13 +56,13 @@ describe('总结队列', () => {
 
     const failed = h.core.repos.jobs.getByBvid('BV1x')
     assert.equal(failed?.status, 'failed')
-    // 全链路失败也要有能推的东西：标题、封面、链接、失败原因。
+
     const minimal = h.core.repos.summaries.get('BV1x')
     assert.equal(minimal?.degradePath, 'link-only')
     assert.match(minimal?.fullMd ?? '', /# 视频标题/)
     assert.match(minimal?.fullMd ?? '', /https:\/\/c\/av\.jpg/)
     assert.match(minimal?.fullMd ?? '', /生成总结：/)
-    // 失败事件要说清卡在哪一步，不能报入队时的 queued。
+    // 失败事件要明确说明卡在哪一步，不能报入队时的 queued
     const failedEvent = events.find((e) => e.type === 'job.changed' && e.status === 'failed')
     assert.equal(failedEvent?.type === 'job.changed' ? failedEvent.stage : null, 'reduce')
 

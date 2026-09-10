@@ -3,18 +3,18 @@ import type { PollResult, PollSnapshot } from '#shared/contract/api.ts'
 import type { UpdateWithRaw } from '#shared/contract/update.ts'
 import { nextAnchors, type AnchorItem } from '../domain/anchor.ts'
 import { errFields, failureFields, tookMs } from '../log-fields.ts'
-import type { BiliReader, ParsedDynamic } from '../ports/bili.ts'
-import type { Cancel, Clock } from '../ports/clock.ts'
-import type { ConfigStore } from '../ports/config-store.ts'
-import type { EventBus } from '../ports/event-bus.ts'
-import type { Logger } from '../ports/logger.ts'
-import type { AnchorRepo, SubscriptionRepo, UpdateRepo } from '../ports/repo.ts'
-import type { StateRepo } from '../ports/state.ts'
+import type { BiliReader, ParsedDynamic } from '../types/bili.ts'
+import type { Cancel, Clock } from '../types/platform.ts'
+import type { ConfigStore } from '../types/persistence.ts'
+import type { EventBus } from '../types/platform.ts'
+import type { Logger } from '../types/platform.ts'
+import type { AnchorRepo, SubscriptionRepo, UpdateRepo } from '../types/persistence.ts'
+import type { StateRepo } from '../types/persistence.ts'
 import type { RuleService } from './rules.ts'
 
-/** 单轮最大翻页数，避免无限翻页；停机补偿由 catchup 处理。 */
+
 const MAX_PAGES = 3
-/** 分级退避的上限。再久就该人来看一眼了，继续加倍没意义。 */
+
 const MAX_BACKOFF_MS = 30 * 60_000
 
 export interface PollDeps {
@@ -28,22 +28,22 @@ export interface PollDeps {
   clock: Clock
   logger: Logger
   events: EventBus
-  /** 登录态可用吗。false 就整轮跳过 —— 没登录的聚合流只会回空或 -101。 */
+  /** 登录态可用吗。false 就整轮跳过 —— 没登录的聚合流只会回空或 -101 */
   loggedIn: () => boolean
-  /** 新视频入队用。同步返回、不 await：抓取速度不该被总结拖住。 */
+
   onVideo: (v: { bvid: string; updateId: string }) => void
 }
 
 export class Poller {
   private readonly deps: PollDeps
   private readonly logger: Logger
-  /** 抓取时间下限（秒）；进程启动时重算，不补抓停机期间内容。 */
+  /** 抓取时间下限（秒）；进程启动时重算，不补抓停机期间内容 */
   private readonly floorTs: number
   private running = false
   private cancelCron: Cancel | null = null
   private cancelConfig: Cancel | null = null
   private cancelAuth: Cancel | null = null
-  /** 退避到什么时候。0 = 不在退避中。 */
+
   private resumeAt = 0
   private consecutiveFailures = 0
   private lastRunAt: number | null = null
@@ -63,7 +63,7 @@ export class Poller {
     this.cancelConfig = this.deps.config.onChange((section) => {
       if (section === 'poll') this.schedule()
     })
-    // 重新登录上了就自动接着轮询，不用重启进程。
+    // 重新登录上了就自动接着轮询，不用重启进程
     this.cancelAuth = this.deps.events.on((e) => {
       if (e.type === 'auth.changed' && e.loggedIn) this.resume()
     })
@@ -90,7 +90,7 @@ export class Poller {
     }
   }
 
-  /** 鉴权恢复后重新开工。登录流程成功时调它。 */
+  /** 鉴权恢复后重新开工。登录流程成功时调它 */
   resume(): void {
     this.authStopped = false
     this.resumeAt = 0
@@ -98,9 +98,9 @@ export class Poller {
     this.schedule()
   }
 
-  /** 执行一轮轮询；捕获全部异常以避免 cron 未处理拒绝。 */
+  /** 执行一轮轮询；捕获全部异常以避免 cron 未处理拒绝 */
   async pollOnce(): Promise<PollResult> {
-    // 上一轮未完成时跳过，避免轮询积压。
+
     if (this.running) return skip('上一轮还没跑完，这次跳过')
     const reader = this.deps.reader
     if (reader === null) return skip('读接口未接入')

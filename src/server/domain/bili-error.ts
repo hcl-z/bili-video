@@ -1,30 +1,30 @@
 import type { Failure, FailureKind } from '#shared/contract/failure.ts'
 
-/** B 站错误码的纯失败分类；未知错误码归为 fatal，避免不安全重试。 */
+/** B 站错误码的纯失败分类；未知错误码归为 fatal，避免不安全重试 */
 
-/** 退避建议；null 表示不重试。 */
+/** 退避建议；null 表示不重试 */
 export const RETRY_AFTER_MS: Record<FailureKind, number | null> = {
-  // -352/-403 视为非终态，退避 5 分钟。
+
   'risk-control': 5 * 60_000,
   'rate-limit': 60_000,
   transient: 10_000,
-  // 等人重新扫码。cron 该停，不是该等。
+  // 等人重新扫码。cron 应停，不是应等
   'auth-lost': null,
   fatal: null,
 }
 
-/** 已确认含义的错误码表；未知码由 fatal 兜底。 */
+
 const CODE_KINDS = new Map<number, FailureKind>([
   [-101, 'auth-lost'], // 账号未登录
   [-111, 'auth-lost'], // csrf 校验失败：bili_jct 与 SESSDATA 不咬合
   [-352, 'risk-control'], // 风控校验失败
   [-403, 'risk-control'], // 访问权限不足（B 站这里给的其实是风控）
-  [-412, 'risk-control'], // 请求被拦截
-  [-509, 'rate-limit'], // 请求过于频繁
-  [-799, 'rate-limit'], // 请求过于频繁（另一个口径）
-  [-400, 'fatal'], // 请求错误
-  [-404, 'fatal'], // 啥都木有
-  [-110, 'fatal'], // 未绑定手机，要人去处理
+  [-412, 'risk-control'],
+  [-509, 'rate-limit'],
+  [-799, 'rate-limit'],
+  [-400, 'fatal'],
+  [-404, 'fatal'],
+  [-110, 'fatal'],
 ])
 
 const make = (kind: FailureKind, code: number | null, message: string): Failure => ({
@@ -34,12 +34,12 @@ const make = (kind: FailureKind, code: number | null, message: string): Failure 
   retryAfterMs: RETRY_AFTER_MS[kind],
 })
 
-/** @returns code 为 0 时返回 null。 */
+
 export function classifyBiliCode(code: number, message: string): Failure | null {
   if (code === 0) return null
   const kind = CODE_KINDS.get(code)
   if (kind !== undefined) return make(kind, code, message)
-  // 未知码：保留原文，它是排查时唯一的线索。
+  // 未知码：保留原文，它是排查时唯一的线索
   return make('fatal', code, `未知错误码 ${code}：${message}`)
 }
 

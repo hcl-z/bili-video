@@ -4,12 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
-/**
- * 密钥输入框：只写不读。
- *
- * 掩码只出现在 placeholder 和旁边的 Badge 里，绝不作为 value —— 那样一保存就会把
- * 「sk-1****9abc」当成新 key 写回去。后端还有一道同样的防线（domain/secret-write.ts）。
- */
+/** 密钥输入框：只写不读。 掩码只出现在 placeholder 和旁边的 Badge 里，绝不作为 value —— 那样一保存就会把 「sk-1****9abc」当成新 key 写回去。后端还有一道同样的防线（domain/secret-write.ts） */
 export function SecretField(props: {
   id: string
   label: string

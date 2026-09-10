@@ -4,9 +4,9 @@ import { join } from 'node:path'
 
 import type { AsrConfig } from '#shared/contract/config.ts'
 import type { Cue } from '#shared/contract/summary.ts'
-import type { Asr } from '../../ports/asr.ts'
-import type { CommandRunner } from '../../ports/command.ts'
-import type { Logger } from '../../ports/logger.ts'
+import type { Asr } from '../../types/ai.ts'
+import type { CommandRunner } from '../../types/platform.ts'
+import type { Logger } from '../../types/platform.ts'
 import { tail } from '../command/tail.ts'
 import { parseWhisperJson } from './whisper-json.ts'
 

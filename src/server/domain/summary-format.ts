@@ -8,28 +8,25 @@ import { chapterLink, hms, videoUrl } from '#shared/format.ts'
 
 import { fatalFailure } from './bili-error.ts'
 
-/** 总结的纯逻辑：提示词、收模型回的正文、渲染落盘的 Markdown。 */
+/** 总结的纯逻辑：提示词、收模型回的正文、渲染落盘的 Markdown */
 
 export interface VideoMeta {
   bvid: string
   title: string
   url: string
   upName: string | null
-  /** 全链路失败时，封面是「最小可推送内容」的一部分。 */
+
   cover?: string | null
 }
 
-/**
- * 解析到哪一步了。任务比总结优先：重跑时库里既有旧总结又有 pending 任务，
- * 这时候该说「排队中」。
- */
+/** 解析到哪一步了。任务比总结优先：重跑时库里既有旧总结又有 pending 任务， 这时候应说「排队中」 */
 export function parseState(job: SummaryJob | null, hasSummary: boolean): ParseState {
   if (job !== null && job.status !== 'done') return job.status
   if (hasSummary) return 'done'
   return 'none'
 }
 
-/** 仅当过滤条目未入队且无总结时显示「已拦下」；否则按解析状态显示。 */
+/** 仅当过滤条目未入队且无总结时显示「已拦下」；否则按解析状态显示 */
 export function feedState(
   u: Update | null,
   job: SummaryJob | null,
@@ -39,13 +36,13 @@ export function feedState(
   return parseState(job, hasSummary)
 }
 
-/** 阅读页一行的可显示部分。本地库的行和空间流的条目各自能凑出这些字段。 */
+
 export type ReaderItemBase = Pick<
   ReaderItem,
   'dynId' | 'uid' | 'type' | 'pubTs' | 'title' | 'text' | 'desc' | 'cover' | 'pics' | 'bvid' | 'url'
 >
 
-/** 将显示字段和本地状态合成为阅读页条目；filtered 不影响手动解析状态。 */
+
 export function readerItem(
   base: ReaderItemBase,
   local: { update: Update | null; summary: Summary | null; job: SummaryJob | null },
@@ -53,7 +50,7 @@ export function readerItem(
   return {
     ...base,
     inDb: local.update !== null,
-    // 没有 bvid 就永远不会有总结，别让它显示「未解析」那种像是在等什么的状态。
+
     state: base.bvid === null ? 'none' : parseState(local.job, local.summary !== null),
     degradePath: local.summary?.degradePath ?? null,
     filterReason: local.update?.filterReason ?? null,
@@ -61,7 +58,7 @@ export function readerItem(
   }
 }
 
-/** 提示词字幕行：压缩空白以减少 token，并与分段计数使用相同格式。 */
+/** 提示词字幕行：压缩空无效以减少 token，并与分段计数使用相同格式 */
 export const cueLine = (c: Cue): string => `[${hms(c.from)}]${squeeze(c.text)}`
 
 const squeeze = (text: string): string => text.trim().replace(/\s+/g, ' ')
@@ -220,7 +217,7 @@ function stripFence(reply: string): string {
   return trimmed.slice(firstBreak + 1, end)
 }
 
-/** 推送导语取正文首个非标题段落，最长 80 字。 */
+
 export function leadLine(article: string): string {
   for (const raw of article.split('\n')) {
     const line = raw.trim()

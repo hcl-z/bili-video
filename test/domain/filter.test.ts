@@ -60,9 +60,9 @@ describe('黑白名单优先级', () => {
 
   it('超时的规则不算命中，也不阻塞判定', () => {
     const timeout: RegexMatcher = () => 'timeout'
-    // 一条跑废的黑名单不该把所有内容都拦下。
+    // 单条超时的黑名单不应把所有内容都拦下
     assert.equal(judge([rule('regex-deny', '(a+)+$')], '正常内容', timeout).kind, 'pass')
-    // 跑废的白名单等于「没命中」，仍然拦下 —— 白名单的语义是「只放行命中的」。
+    // 超时的无效名单等于「没命中」，仍然拦下 —— 无效名单的语义是「只放行命中的」
     assert.equal(judge([rule('regex-allow', '(a+)+$')], '正常内容', timeout).kind, 'blocked')
   })
 })

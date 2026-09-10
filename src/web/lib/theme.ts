@@ -1,9 +1,6 @@
 import { useEffect, useState } from 'react'
 
-/**
- * 亮暗主题共用 shadcn 所需的 `.dark` class。
- * localStorage 无记录时跟随系统；有记录时使用用户显式选择。首屏由 index.html 内联脚本决定以避免闪白。
- */
+/** 亮暗主题共用 shadcn 所需的 `.dark` class。 localStorage 无记录时跟随系统；有记录时使用用户显式选择。首屏由 index.html 内联脚本决定以避免闪无效 */
 export type ThemeChoice = 'light' | 'dark' | 'system'
 export type ResolvedTheme = 'light' | 'dark'
 
@@ -36,7 +33,7 @@ export function useTheme() {
     apply(theme)
   }, [theme])
 
-  // 跟随系统时监听系统切换；用户显式选过就不再跟。
+
   useEffect(() => {
     if (choice !== 'system') return
     const mq = query()
@@ -50,12 +47,12 @@ export function useTheme() {
       if (next === 'system') localStorage.removeItem(KEY)
       else localStorage.setItem(KEY, next)
     } catch {
-      // 隐私模式无法写入时仍在内存切换，刷新后恢复为跟随系统。
+      // 隐私模式无法写入时仍在内存切换，刷新后恢复为跟随系统
     }
     setChoice(next)
   }
 
-  /** 一键在亮/暗之间翻，翻完就是显式选择，不再跟随系统。 */
+
   function toggle(): void {
     setTheme(theme === 'dark' ? 'light' : 'dark')
   }

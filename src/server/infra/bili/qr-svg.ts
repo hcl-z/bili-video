@@ -1,18 +1,13 @@
 import QRCode from 'qrcode-terminal/vendor/QRCode/index.js'
 
-/**
- * 把登录二维码渲染成 SVG，供工作台的系统页显示。
- *
- * 复用 qrcode-terminal 里那份编码器，不为一张码再装第二个 QR 依赖；
- * 它渲染的是终端字符画，矩阵本身在 vendor 那层是通用的。
- */
+/** 把登录二维码渲染成 SVG，供工作台的系统页显示。 复用 qrcode-terminal 里那份编码器，不为单个二维码再装第二个 QR 依赖； 它渲染的是终端字符画，矩阵本身在 vendor 那层是通用的 */
 export function renderQrSvg(text: string): string {
-  const qr = new QRCode(-1, 1) // -1 = 自动选版本，1 = 纠错级别 L
+  const qr = new QRCode(-1, 1)
   qr.addData(text)
   qr.make()
 
   const n = qr.getModuleCount()
-  // 留 4 模块静默区，少于这个宽度有些扫码器认不出来。
+
   const quiet = 4
   const size = n + quiet * 2
   const rects: string[] = []

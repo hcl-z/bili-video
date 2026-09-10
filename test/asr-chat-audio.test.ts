@@ -5,11 +5,11 @@ import { join } from 'node:path'
 import { describe, it } from 'node:test'
 
 import { ChatAudioAsr } from '../src/server/infra/asr/chat-audio.ts'
-import type { CommandResult, CommandRunner } from '../src/server/ports/command.ts'
+import type { CommandResult, CommandRunner } from '../src/server/types/platform.ts'
 import { FakeFetch } from './fakes/bili-fetch.ts'
 import { CollectingLogger } from './fakes/logger.ts'
 
-/** chat-audio 那类接口：音频塞进 chat，回来只有文字，时间戳靠切段补出来。 */
+/** chat-audio 那类接口：音频塞进 chat，回来只有文字，时间戳靠切段补出来 */
 
 const CFG = {
   provider: 'chat-audio' as const,
@@ -21,7 +21,7 @@ const CFG = {
   segmentSec: 120,
 }
 
-/** 假 ffmpeg：不真转码，按段数在输出目录里造几个文件。 */
+/** 假 ffmpeg：不真转码，按段数在输出目录里造几个文件 */
 function fakeFfmpeg(parts: number): CommandRunner {
   return {
     probe: async () => ({ found: true, detail: 'fake' }),

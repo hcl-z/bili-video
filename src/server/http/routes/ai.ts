@@ -6,10 +6,7 @@ import { LocalAsrUnavailableError } from '../../domain/asr-provider.ts'
 import { errorBody } from '../errors.ts'
 import { parseBody } from '../parse.ts'
 
-/**
- * AI 与 ASR 的配置面。响应里的 apiKey 永远只有掩码 —— 明文出不了服务端，
- * 这条约束落在这一层而不是 SecretStore（服务端自己要拿明文去调模型）。
- */
+/** AI 与 ASR 的配置面。响应里的 apiKey 永远只有掩码 —— 明文出不了服务端， 应项约束落在这一层而不是 SecretStore（服务端自己要拿明文去调模型） */
 export function aiRoutes(ai: AiService): Hono {
   return new Hono()
     .get('/', (c) => c.json(ai.settings()))

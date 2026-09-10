@@ -10,7 +10,7 @@ import { FakeFetch, type FakeResponse } from './fakes/bili-fetch.ts'
 import { createHarness } from './support/harness.ts'
 import { pubAt } from './support/time.ts'
 
-/** 分栏阅读的数据面：索引每行的状态，以及阅读栏一次要齐的那一坨。 */
+
 
 const IMG = 'https://i0.hdslb.com/bfs/wbi/aaaaaaaabbbbbbbbccccccccdddddddd.png'
 const SUB = 'https://i0.hdslb.com/bfs/wbi/11111111222222223333333344444444.png'
@@ -109,7 +109,7 @@ describe('总结分栏阅读', () => {
     const blocked = list.items.find((i) => i.bvid === 'BV1no')
     assert.equal(ok?.state, 'done')
     assert.equal(ok?.degradePath, 'subtitle')
-    // 被规则拦下的条目状态就是「没解析」：拦的是自动解析与推送，不是这条视频。
+
     assert.equal(blocked?.state, 'none')
     assert.match(blocked?.filterReason ?? '', /广告/)
 
@@ -124,10 +124,10 @@ describe('总结分栏阅读', () => {
     assert.equal(detail.job?.status, 'done')
     assert.equal(detail.usage.inTokens, 120)
     assert.equal(detail.usage.calls, 1)
-    // 还没推过：推送那两票没做，页面据此显示「未推送」而不是空白。
+
     assert.deepEqual(detail.deliveries, [])
 
-    // 库里没有的 bvid 也是 200：阅读栏要显示「还没总结」，不是报错。
+
     const unknown = (await (
       await h.server.app.request('/api/summaries/BV1none')
     ).json()) as SummaryDetailResponse
@@ -136,7 +136,7 @@ describe('总结分栏阅读', () => {
     assert.equal(unknown.update, null)
     assert.equal(unknown.usage.calls, 0)
 
-    // 不像 id 的路径段直接 400，别拿它去查库。
+
     const bad = await h.server.app.request('/api/summaries/..%2F..%2Fetc')
     assert.equal(bad.status, 400)
 
@@ -172,7 +172,7 @@ describe('总结分栏阅读', () => {
       fetch,
       cookies: ['SESSDATA=fake; Path=/; Domain=.bilibili.com'],
     })
-    // enableAi 关着抓一轮：这就是「一堆未总结」的来路。
+
     h.core.repos.subscriptions.upsert({
       uid: '111',
       name: 'UP-111',
@@ -204,11 +204,7 @@ describe('总结分栏阅读', () => {
     const missing = await h.server.app.request('/api/summaries/BV1none/run', { method: 'POST' })
     assert.equal(missing.status, 404)
 
-    // 都总结过了，批量补队就没得补。
-    const all = await h.server.app.request('/api/summaries/run-all', { method: 'POST' })
-    assert.deepEqual(await all.json(), { queued: 0, skipped: 1 })
-
-    // 完整字幕单独一个端点，带时间戳，原样存着。
+    // 完整字幕单独一个端点，带时间戳，原样存着
     const tr = (await (
       await h.server.app.request('/api/summaries/BV1ok/transcript')
     ).json()) as TranscriptResponse

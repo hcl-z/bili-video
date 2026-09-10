@@ -19,10 +19,7 @@ after(() => {
   for (const d of dirs) rmSync(d, { recursive: true, force: true })
 })
 
-/**
- * transport 在 worker 线程里写，close 返回不等于文件已落地。
- * 固定 sleep 在并行跑整个 test 目录时会不够，所以轮询到有内容为止。
- */
+
 async function waitForLog(dir: string, wantLines: number): Promise<string> {
   for (let i = 0; i < 100; i++) {
     const files = readdirSync(dir).filter((f) => f.endsWith('.log'))

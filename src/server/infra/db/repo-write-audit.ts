@@ -1,6 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite'
 
-import type { NewWriteCall, WriteAuditRepo, WriteCallRecord } from '../../ports/repo.ts'
+import type { NewWriteCall, WriteAuditRepo, WriteCallRecord } from '../../types/persistence.ts'
 import { num, numOrNull, str, strOrNull, toBool, toInt, type Row } from './sqlite.ts'
 
 const toRecord = (r: Row): WriteCallRecord => ({
@@ -14,7 +14,7 @@ const toRecord = (r: Row): WriteCallRecord => ({
   message: strOrNull(r['message']),
 })
 
-/** 写接口的账本。成败都记 —— 失败的那次也真的发出去了，风控照样算它一笔。 */
+/** 写接口的账本。成败都记 —— 失败的那次也真的发出去了，风控照样算它一笔 */
 export class SqliteWriteAuditRepo implements WriteAuditRepo {
   private readonly db: DatabaseSync
 

@@ -3,15 +3,13 @@ import type {
   Notifier,
   NotifyChannel,
   NotifyMessage,
-} from '../../src/server/ports/notifier.ts'
+} from '../../src/server/types/delivery.ts'
 
-/**
- * 记录型通知器。两段推送、投递去重、免扰时段、告警只发一次 —— 这些全靠断言它收到了什么。
- */
+
 export class RecordingNotifier implements Notifier {
   readonly channel: NotifyChannel
   readonly sent: NotifyMessage[] = []
-  /** 置为非 null 时，send 一律失败，用来测重试与投递记账。 */
+  /** 置为非 null 时，send 一律失败，用来测重试与投递记账 */
   failWith: string | null = null
 
   constructor(channel: NotifyChannel = 'ntfy') {

@@ -1,14 +1,9 @@
 import type { ProbeResult, ProbeStage } from '#shared/contract/probe.ts'
 
-/**
- * 连通性测试的失败分级。纯函数：给一个 HTTP 状态码和响应体，答「卡在哪一步」。
- *
- * 分级本身就是这一票的价值 —— 「测试失败」这四个字对排查毫无帮助，
- * 而「连上了但 model 不存在」直接指向要改哪个框。
- */
+/** 连通性测试的失败分级。纯函数：给一个 HTTP 状态码和响应体，答「卡在哪一步」。 分级本身就是这一票的价值 —— 「测试失败」这四个字对排查毫无帮助， 而「连上了但 model 不存在」直接指向要改哪个框 */
 export function classifyProbe(status: number, body: string): { stage: ProbeStage; detail: string } {
   const msg = summarize(body)
-  // 状态码一路带上：429 和 5xx 都落在 unknown 里，只有它能让人分清限流和上游炸了。
+  // 状态码一路带上：429 和 5xx 都落在 unknown 里，只有它能便于使用分清限流和上游失败了
   const detail = msg === null ? `HTTP ${status}` : `HTTP ${status}：${msg}`
   if (status === 401 || status === 403) return { stage: 'auth', detail }
   // 404 在 OpenAI 兼容实现里既可能是「模型不存在」也可能是「baseURL 少了 /v1」，

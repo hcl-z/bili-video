@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Ban,
   ChevronDown,
@@ -13,12 +13,13 @@ import {
 import type { LucideIcon } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
+import { toast } from 'sonner'
 
 import type { SummaryDetailResponse } from '#shared/contract/api.ts'
 import type { SummaryJob } from '#shared/contract/job.ts'
 import { JOB_STAGE_LABEL } from '#shared/contract/job.ts'
 import { DEGRADE_LABEL, TRANSCRIPT_SOURCE_LABEL } from '#shared/contract/summary.ts'
-import { chapterLink, hms, videoUrl } from '#shared/format.ts'
+import { chapterLink, videoUrl } from '#shared/format.ts'
 import { Markdown } from '@/components/markdown'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -28,9 +29,8 @@ import { api } from '@/lib/api'
 import { formatCount, formatDuration, formatTime } from '@/lib/format'
 import { keys } from '@/lib/query'
 import { useRetryJob } from '@/lib/use-retry-job'
-import { useRunSummary } from '@/lib/use-run-summary'
 
-/** 右栏：把总结当文章读。限宽 720px，与原型 variant=B 一致。 */
+
 export function SummaryReader(props: { bvid: string }) {
   const q = useQuery({
     queryKey: [...keys.summaries, props.bvid],
@@ -62,7 +62,7 @@ export function SummaryReader(props: { bvid: string }) {
       return <Article detail={d} />
     case 'failed':
       if (d.job === null) return <NotInDb bvid={d.bvid} />
-      // 重跑挂了但库里还留着上一次的好总结：给文章，失败原因挂在顶上。
+      // 重跑挂了但库里还留着上一次的好总结：给文章，失败原因挂在顶上
       return d.summary !== null && d.summary.degradePath !== 'link-only' ? (
         <Article detail={d} notice={<FailNotice job={d.job} />} />
       ) : (
@@ -70,7 +70,7 @@ export function SummaryReader(props: { bvid: string }) {
       )
     case 'pending':
     case 'running':
-      // 重跑：库里还留着上一次的总结，先给旧文章看，别把页面清空。
+      // 重跑：库里还留着上一次的总结，先给旧文章看，避免把页面清空
       return d.summary !== null ? (
         <Article detail={d} rerunning />
       ) : (
@@ -359,7 +359,16 @@ function Filtered(props: { detail: SummaryDetailResponse }) {
 
 /** 抓到过但没进队列：多半是开关后来才打开的，那一轮已经过去了，所以给一颗手动的按钮。 */
 function NotQueued(props: { bvid: string }) {
-  const run = useRunSummary(props.bvid)
+  const qc = useQueryClient()
+  const run = useMutation({
+    mutationFn: () => api.runSummary(props.bvid),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: keys.jobs })
+      void qc.invalidateQueries({ queryKey: keys.summaries })
+      toast.success('已排上队')
+    },
+    onError: (err: Error) => toast.error('没排上队', { description: err.message }),
+  })
   return (
     <Empty icon={FileQuestion} title="这条没进队列">
       <p>

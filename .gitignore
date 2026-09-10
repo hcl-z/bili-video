@@ -2,8 +2,8 @@ node_modules/
 dist/
 *.tsbuildinfo
 
-# 运行时数据。data/master.key 丢失后所有已加密的 cookie 与 apiKey 一次性不可恢复，
-# 它必须进你的备份清单（见 README「备份清单」）。
+# 运行时数据。data/master.key 丢失后所有已加密的 cookie 与 apiKey 一次性不可恢复
+# 它必须进你的备份清单（见 README「备份清单」）
 data/master.key
 data/app.db
 data/app.db-shm
@@ -12,14 +12,14 @@ data/audio/
 data/summaries/
 data/logs/
 
-# demo 试跑的数据（假 B 站，随时可删）
-.demo-data/
-
 .env
 .env.local
 .DS_Store
 
 .scratch/
 
-# 参考实现（只读，不进构建）
+
 ref/
+
+.pi/
+.playwright-mcp/

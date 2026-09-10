@@ -1,26 +1,21 @@
 import { createHash } from 'node:crypto'
 
-/**
- * WBI 为读接口补 `wts` 和 `w_rid`；签名错误会触发 -352 风控并退避。
- * 密钥取自 nav 的两个 32 字符文件名，64 项混淆表由配置注入，避免前端变更或配置错误造成静默失败。
- */
+/** WBI 为读接口补 `wts` 和 `w_rid`；签名错误会触发 -352 风控并退避。 密钥取自 nav 的两个 32 字符文件名，64 项混淆表由配置注入，避免前端变更或配置错误造成静默失败 */
 
 export interface WbiKeys {
   imgKey: string
   subKey: string
-  /** 取回时刻。命中风控时要清空重取，调用方靠这个判断新旧。 */
+  /** 取回时刻。命中风控时要清空重取，调用方靠这个判断新旧 */
   fetchedAt: number
 }
 
 const MIXIN_LENGTH = 64
 const MIXIN_KEY_LENGTH = 32
 
-/** 签名前要从参数值里剔除的字符。B 站前端就是这么干的，不跟着做就签不上。 */
+
 const STRIPPED = /[!'()*]/g
 
-/**
- * 把 `imgKey + subKey` 的 64 个字符按混淆表重排，取前 32 位当签名密钥。
- */
+/** 把 `imgKey + subKey` 的 64 个字符按混淆表重排，取前 32 位当签名密钥 */
 export function mixinKey(keys: WbiKeys, table: readonly number[]): string {
   const raw = keys.imgKey + keys.subKey
   if (raw.length !== MIXIN_LENGTH) {

@@ -6,10 +6,7 @@ import { shapeFailure } from '../../domain/bili-error.ts'
 
 import { keyFromUrl, type WbiKeys } from './wbi.ts'
 
-/**
- * `bili_ticket` 是带 TTL 的 Web 凭据；命中 -352 时需重取。
- * keyId 与 hmacKey 是公开 JS 常量，配置而非 secrets；不写死以避免错误导致静默换取失败。
- */
+/** `bili_ticket` 是带 TTL 的 Web 凭据；命中 -352 时需重取。 keyId 与 hmacKey 是公开 JS 常量，配置而非 secrets；不写死以避免错误导致静默换取失败 */
 
 export const TICKET_URL =
   'https://api.bilibili.com/bapis/bilibili.api.ticket.v1.Ticket/GenWebTicket'
@@ -21,13 +18,13 @@ export interface TicketKeys {
 
 export interface WebTicket {
   ticket: string
-  /** 到期时刻（epoch ms）。快到了就提前换，别等 401。 */
+  /** 到期时刻（epoch ms）。快到了就提前换，避免等 401 */
   expiresAt: number
-  /** 同一响应里顺带回的 WBI key；没有就是 null，调用方再去打 nav。 */
+  /** 同一响应里顺带回的 WBI key；没有就是 null，调用方再去打 nav */
   keys: WbiKeys | null
 }
 
-/** HMAC-SHA256(hmacKey, "ts" + ts) 的十六进制。 */
+
 export function ticketHexSign(hmacKey: string, tsSec: number): string {
   return createHmac('sha256', hmacKey).update(`ts${tsSec}`).digest('hex')
 }

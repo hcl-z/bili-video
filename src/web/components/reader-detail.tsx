@@ -17,17 +17,10 @@ import { formatTime } from '@/lib/format'
 import { keys } from '@/lib/query'
 import { useParseItem } from '@/lib/use-parse-item'
 
-/**
- * 右栏：默认是原动态，解析完了才多一个「解析信息」的标签页。
- *
- * 没解析完不给第二个标签 —— 一个点不动的标签比没有标签更让人以为坏了。
- */
+
 export function ReaderDetail(props: { item: ReaderItem; ups: UpsMap }) {
   const { item } = props
-  /**
-   * 解析状态只认详情这一份：它挂在 SSE 上，左栏那份是打开时的初值。
-   * 两处各自判断的话，跑完之后左栏和右栏会说两句不一样的话。
-   */
+  /** 解析状态只认详情这一份：它挂在 SSE 上，左栏那份是打开时的初值。 两处各自判断的话，完成之后左栏和右栏会说两句不一样的话 */
   const detail = useQuery({
     queryKey: [...keys.summaries, item.bvid],
     queryFn: () => api.summary(item.bvid ?? ''),
@@ -37,7 +30,7 @@ export function ReaderDetail(props: { item: ReaderItem; ups: UpsMap }) {
   const state = live === undefined ? item.state : live.state === 'filtered' ? 'none' : live.state
   const parsed = state === 'done'
 
-  // null = 还没手动切过，那就跟着状态走：跑完自动落到文章上，不用刷新。
+
   const [picked, setPicked] = useState<string | null>(null)
   const tab = picked ?? (parsed ? 'summary' : 'origin')
 
@@ -62,7 +55,7 @@ export function ReaderDetail(props: { item: ReaderItem; ups: UpsMap }) {
   )
 }
 
-/** 原动态：B 站上那条长什么样，加上「要不要解析」这一个动作。 */
+
 function Origin(props: {
   item: ReaderItem
   ups: UpsMap
@@ -72,13 +65,13 @@ function Origin(props: {
 }) {
   const { item: it } = props
   const up = props.ups[it.uid]
-  // 命中过规则（黑名单或免扰）。它拦的是自动解析与推送，不是这条视频。
+
   const blocked = it.filterReason
 
   return (
     <div className="mx-auto w-full max-w-[720px] px-5 pt-6 pb-24 md:px-7">
       {it.cover !== null && (
-        // B 站图床按 Referer 挡外链。
+        // B 站图床按 Referer 挡外链
         <img
           src={it.cover}
           alt=""

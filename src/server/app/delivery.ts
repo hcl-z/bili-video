@@ -1,17 +1,17 @@
 import { inQuietHours } from '../domain/filter.ts'
 import { errFields } from '../log-fields.ts'
-import type { Cancel, Clock } from '../ports/clock.ts'
-import type { ConfigStore } from '../ports/config-store.ts'
-import type { EventBus } from '../ports/event-bus.ts'
-import type { Logger } from '../ports/logger.ts'
-import type { Notifier, NotifyChannel, NotifyMessage } from '../ports/notifier.ts'
+import type { Cancel, Clock } from '../types/platform.ts'
+import type { ConfigStore } from '../types/persistence.ts'
+import type { EventBus } from '../types/platform.ts'
+import type { Logger } from '../types/platform.ts'
+import type { Notifier, NotifyChannel, NotifyMessage } from '../types/delivery.ts'
 import type {
   DeliveryRecord,
   DeliveryRepo,
   SubscriptionRepo,
   SummaryRepo,
   UpdateRepo,
-} from '../ports/repo.ts'
+} from '../types/persistence.ts'
 import type { DeliveryKind } from '#shared/contract/job.ts'
 import type { Update } from '#shared/contract/update.ts'
 

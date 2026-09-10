@@ -4,16 +4,16 @@ import type { JobsResponse } from '#shared/contract/api.ts'
 import { PipelineStepSchema } from '#shared/contract/job.ts'
 import type { SummaryQueue } from '../../app/queue-runner.ts'
 import { videoRef } from '../../domain/summary-format.ts'
-import type { Ports } from '../../ports/index.ts'
+import type { ServerDeps } from '../../types/index.ts'
 import { errorBody } from '../errors.ts'
 
-export function jobRoutes(ports: Ports, queue: SummaryQueue): Hono {
+export function jobRoutes(deps: ServerDeps, queue: SummaryQueue): Hono {
   return new Hono()
     .get('/', (c) => {
-      const jobs = ports.repos.jobs.list({ limit: 200 })
+      const jobs = deps.repos.jobs.list({ limit: 200 })
       const body: JobsResponse = { jobs, videos: {} }
       for (const job of jobs) {
-        const update = ports.repos.updates.get(job.updateId) ?? null
+        const update = deps.repos.updates.get(job.updateId) ?? null
         body.videos[job.bvid] = {
           ...videoRef(job.bvid, update),
           readerPath: update === null ? null : `/reader/${update.uid}/${update.dynId}`,
@@ -40,7 +40,7 @@ export function jobRoutes(ports: Ports, queue: SummaryQueue): Hono {
       if (res === 'missing') return c.json(errorBody('not-found', '没有这条任务'), 404)
       if (res === 'busy') return c.json(errorBody('conflict', '这条任务正在队列里，不用重跑'), 409)
 
-      const job = ports.repos.jobs.get(id)
+      const job = deps.repos.jobs.get(id)
       if (job === null) return c.json(errorBody('not-found', '没有这条任务'), 404)
       return c.json(job)
     })

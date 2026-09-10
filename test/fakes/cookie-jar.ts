@@ -1,10 +1,7 @@
 import { parseSetCookie } from '../../src/server/infra/bili/cookie-jar.ts'
-import type { CookieJar } from '../../src/server/ports/cookie-jar.ts'
+import type { CookieJar } from '../../src/server/types/bili.ts'
 
-/**
- * 内存 cookie jar。假的只有「存哪儿」—— Set-Cookie 的解析仍然走真实现，
- * 否则测试会绕开这套系统里最容易出错的一段（Max-Age 与 Expires 的优先级）。
- */
+/** 内存 cookie jar。假的只有「存何处」—— Set-Cookie 的解析仍然走真实现， 否则测试会绕开这套系统里最容易出错的一段（Max-Age 与 Expires 的优先级） */
 export class MemoryCookieJar implements CookieJar {
   private readonly jar = new Map<string, { value: string; expires: number | null }>()
   readonly received: string[] = []

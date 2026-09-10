@@ -3,13 +3,13 @@ import { z } from 'zod'
 import { fail, ok, type Result } from '#shared/contract/failure.ts'
 import { classifyQrPoll } from '../../domain/auth.ts'
 import { fatalFromThrown, shapeFailure } from '../../domain/bili-error.ts'
-import type { AuthStatus, BiliAuth, QrLogin, QrLoginState } from '../../ports/bili.ts'
-import type { Clock } from '../../ports/clock.ts'
-import type { CookieJar } from '../../ports/cookie-jar.ts'
-import type { Logger } from '../../ports/logger.ts'
+import type { AuthStatus, BiliAuth, QrLogin, QrLoginState } from '../../types/bili.ts'
+import type { Clock } from '../../types/platform.ts'
+import type { CookieJar } from '../../types/bili.ts'
+import type { Logger } from '../../types/platform.ts'
 import { failureFields } from '../../log-fields.ts'
 
-// NAV_URL 只定义一处：http 层取 WBI key 时也要用它，两份常量必然有一天对不上。
+// NAV_URL 只定义一处：http 层取 WBI key 时也要用它，两份常量必然有一天对不上
 import { NAV_URL, type BiliHttp } from './http-client.ts'
 import {
   correspondPath,
@@ -18,13 +18,7 @@ import {
   parseRefreshResult,
 } from './refresh.ts'
 
-/**
- * 扫码登录 + cookie 续期。
- *
- * 这里唯一在意的事情是：**登录态的每一次变化都必须是显式的**。
- * 「不知道自己有没有登录」比「知道自己没登录」糟得多 —— 后者会去扫码，
- * 前者会带着废 cookie 一直轮询，直到某天有人发现推送早就停了。
- */
+/** 扫码登录 + cookie 续期。 这里唯一在意的事情是：**登录态的每一次变化都必须是显式的**。 「不知道自己有没有登录」比「知道自己没登录」糟得多 —— 后者会去扫码， 前者会带着废 cookie 一直轮询，直到某天有人发现推送早就停了 */
 
 export const QR_GENERATE_URL =
   'https://passport.bilibili.com/x/passport-login/web/qrcode/generate'
@@ -36,7 +30,7 @@ export const CONFIRM_REFRESH_URL =
   'https://passport.bilibili.com/x/passport-login/web/confirm/refresh'
 const CORRESPOND_URL = 'https://www.bilibili.com/correspond/1/'
 
-/** refresh_token 是凭据，落库要加密 —— 所以存取由外面注入，这里不认识 SQLite。 */
+/** refresh_token 是凭据，落库要加密 —— 所以存取由外面注入，这里无法识别 SQLite */
 export interface TokenStore {
   get(): string | null
   set(token: string | null): void
@@ -52,10 +46,7 @@ export interface BiliAuthDeps {
   clock: Clock
   logger: Logger
   config: () => BiliAuthConfig
-  /**
-   * refresh_token 存哪儿。**必填**：给它一个进程内的默认实现看着方便，
-   * 代价是重启后续期链静默失效 —— 那种「一个月后才发现要重新扫码」的 bug 不值得省这几行。
-   */
+  /** refresh_token 存何处。**必填**：给它一个进程内的默认实现看着方便， 代价是重启后续期链静默失效 —— 那种「一个月后才发现要重新扫码」的 bug 不值得省这几行 */
   tokens: TokenStore
 }
 
@@ -90,10 +81,7 @@ export class BiliAuthClient implements BiliAuth {
     return ok({ qrcodeKey: parsed.data.qrcode_key, url: parsed.data.url })
   }
 
-  /**
-   * 轮询一次。注意这里有两层 code：外层信封的 code 恒为 0，
-   * 真正的扫码状态在 `data.code` 里 —— 只看外层会觉得「一直成功」。
-   */
+
   async pollQrLogin(qrcodeKey: string): Promise<Result<QrLoginState>> {
     const res = await this.deps.http.get<unknown>(POLL_URL, { qrcode_key: qrcodeKey })
     if (!res.ok) return fail(res.failure)
@@ -104,11 +92,11 @@ export class BiliAuthClient implements BiliAuth {
     if (state.state === 'failed') return fail(state.failure)
     if (state.state !== 'confirmed') return ok({ state: state.state })
 
-    // 到这里 cookie 已经由 http 层从 Set-Cookie 收进 jar 了。
+    // 到这里 cookie 已经由 http 层从 Set-Cookie 收进 jar 了
     if (parsed.data.refresh_token !== undefined) {
       this.tokens.set(parsed.data.refresh_token)
     } else {
-      // 不是致命问题：登录能用，只是到期后续不了，只能重新扫码。说清楚就行。
+      // 不是致命问题：登录能用，只是到期后续不了，只能重新扫码。明确说明楚就行
       this.logger.warn({}, '登录成功但缺少 refresh_token，到期后须重新扫码')
     }
 
@@ -127,7 +115,7 @@ export class BiliAuthClient implements BiliAuth {
   }
 
   async status(): Promise<Result<AuthStatus>> {
-    // 没有 cookie 就不必问 B 站 —— 答案已经确定了。
+    // 没有 cookie 就不必问 B 站 —— 答案已经确定了
     if (this.deps.cookies.isEmpty()) {
       return ok({ loggedIn: false, uid: null, uname: null, expiresAt: null, needsRefresh: false })
     }
@@ -147,12 +135,7 @@ export class BiliAuthClient implements BiliAuth {
     })
   }
 
-  /**
-   * cookie/info → correspond/1 → cookie/refresh → confirm/refresh。
-   *
-   * 任一步失败都返回失败并保持旧 cookie 不动：换到一半的 cookie 比旧 cookie 更糟。
-   * 唯一的例外是最后一步 confirm，它失败只意味着旧 token 没被吊销，新 cookie 已经能用了。
-   */
+  /** cookie/info → correspond/1 → cookie/refresh → confirm/refresh。 任一步失败都返回失败并保持旧 cookie 不动：换到半数的 cookie 比旧 cookie 更糟。 唯一的例外是最后一步 confirm，它失败只意味着旧 token 没被吊销，新 cookie 已经能用了 */
   async refreshCookies(): Promise<Result<void>> {
     const csrf = this.deps.cookies.csrf()
     if (csrf === null) {

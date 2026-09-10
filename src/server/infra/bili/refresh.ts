@@ -4,16 +4,9 @@ import { z } from 'zod'
 import { fail, ok, type Result } from '#shared/contract/failure.ts'
 import { shapeFailure } from '../../domain/bili-error.ts'
 
-/**
- * cookie 续期链上的两个纯步骤。抽出来单独放，是因为它们是整条链里唯一能被彻底测死的部分：
- * `correspondPath` 可以用本地生成的密钥对验证（解出来必须是 `refresh_<ts>`），
- * `parseRefreshCsrf` 可以用真实页面结构的片段验证。
- *
- * RSA 公钥（PEM）由配置注入，不写死在代码里 —— 它会随 B 站前端发版变化，
- * 而写错的后果是续期永远失败，且失败得很安静。
- */
+/** cookie 续期链上的两个纯步骤。抽出来单独放，是因为它们是整条链里唯一能被彻底测死的部分： `correspondPath` 可以用本地生成的密钥对验证（解出来必须是 `refresh_<ts>`）， `parseRefreshCsrf` 可以用真实页面结构的片段验证。 RSA 公钥（PEM）由配置注入，不写死在代码里 —— 它会随 B 站前端发版变化， 而写错的后果是续期永远失败，且失败得很安静 */
 
-/** RSA-OAEP(SHA-256) 加密 `refresh_<timestamp>`，输出小写十六进制。 */
+/** RSA-OAEP(SHA-256) 加密 `refresh_<timestamp>`，输出小写十六进制 */
 export function correspondPath(publicKeyPem: string, timestampMs: number): string {
   if (publicKeyPem.trim() === '') {
     throw new Error('correspond/1 的 RSA 公钥未配置（config.bili.correspondPublicKeyPem）')

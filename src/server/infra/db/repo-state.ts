@@ -1,9 +1,9 @@
 import type { DatabaseSync } from 'node:sqlite'
 
-import type { StateKey, StateRepo } from '../../ports/state.ts'
+import type { StateKey, StateRepo } from '../../types/persistence.ts'
 import { str, type Row } from './sqlite.ts'
 
-/** runtime_state 表。存的是纯文本，不加密 —— 这里没有秘密，秘密都在 secrets/cookies。 */
+/** runtime_state 表。存的是纯文本，不加密 —— 这里没有秘密，秘密都在 secrets/cookies */
 export class SqliteStateRepo implements StateRepo {
   private readonly db: DatabaseSync
   private readonly now: () => number

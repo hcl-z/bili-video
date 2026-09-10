@@ -14,23 +14,8 @@ import {
 import type { LucideIcon } from 'lucide-react'
 
 import { AppShell } from '@/components/app-shell'
-import { AiPage } from '@/pages/ai'
-import { JobsPage } from '@/pages/jobs'
-import { LogsPage } from '@/pages/logs'
-import { OverviewPage } from '@/pages/overview'
-import { ReaderPage } from '@/pages/reader'
-import { RulesPage } from '@/pages/rules'
-import { SubsPage } from '@/pages/subs'
-import { SystemPage } from '@/pages/system'
-import { TargetsPage } from '@/pages/targets'
-import { UpdatesPage } from '@/pages/updates'
 
-/**
- * 10 页（spec Q34）。总结详情不是独立一页，而是 /reader/:uid/:dynId 的右栏。
- *
- * 导航分三组：看什么发生了 / 管订阅与过滤 / 配置。分组是为了让「可观测性」那几页
- * 排在最前 —— 这个工作台的核心不是改配置。
- */
+/** 10 页（spec Q34）。总结详情不是独立一页，而是 /reader/:uid/:dynId 的右栏。 导航分三组：看什么发生了 / 管订阅与过滤 / 配置。分组是为了让「可观测性」那几页 排在最前 —— 这个工作台的核心不是改配置 */
 export interface NavItem {
   to: string
   label: string
@@ -57,23 +42,59 @@ export const router = createBrowserRouter([
     element: <AppShell />,
     children: [
       { index: true, element: <Navigate to="/overview" replace /> },
-      { path: 'overview', element: <OverviewPage /> },
-      { path: 'updates', element: <UpdatesPage /> },
-      // 同一个页面：选中的 UP 和条目都在 URL 里，左栏不会因为选一条而重挂。
-      // 不带 uid 时页面自己落到第一个订阅上。
-      { path: 'reader', element: <ReaderPage /> },
-      { path: 'reader/:uid', element: <ReaderPage /> },
-      { path: 'reader/:uid/:dynId', element: <ReaderPage /> },
-      // 旧链接：总结页已经并进阅读页，别让收藏夹里的地址 404。
+      {
+        path: 'overview',
+        lazy: async () => ({ Component: (await import('@/pages/overview')).OverviewPage }),
+      },
+      {
+        path: 'updates',
+        lazy: async () => ({ Component: (await import('@/pages/updates')).UpdatesPage }),
+      },
+      // 同一个页面：选中的 UP 和条目都在 URL 里，左栏不会因为选单条而重挂
+      // 不带 uid 时页面自己落到第一个订阅上
+      {
+        path: 'reader',
+        lazy: async () => ({ Component: (await import('@/pages/reader')).ReaderPage }),
+      },
+      {
+        path: 'reader/:uid',
+        lazy: async () => ({ Component: (await import('@/pages/reader')).ReaderPage }),
+      },
+      {
+        path: 'reader/:uid/:dynId',
+        lazy: async () => ({ Component: (await import('@/pages/reader')).ReaderPage }),
+      },
+      // 旧链接：总结页已经并进阅读页，避免让收藏夹里的地址 404
       { path: 'summaries', element: <Navigate to="/reader" replace /> },
       { path: 'summaries/:bvid', element: <Navigate to="/reader" replace /> },
-      { path: 'jobs', element: <JobsPage /> },
-      { path: 'subs', element: <SubsPage /> },
-      { path: 'rules', element: <RulesPage /> },
-      { path: 'targets', element: <TargetsPage /> },
-      { path: 'ai', element: <AiPage /> },
-      { path: 'logs', element: <LogsPage /> },
-      { path: 'system', element: <SystemPage /> },
+      {
+        path: 'jobs',
+        lazy: async () => ({ Component: (await import('@/pages/jobs')).JobsPage }),
+      },
+      {
+        path: 'subs',
+        lazy: async () => ({ Component: (await import('@/pages/subs')).SubsPage }),
+      },
+      {
+        path: 'rules',
+        lazy: async () => ({ Component: (await import('@/pages/rules')).RulesPage }),
+      },
+      {
+        path: 'targets',
+        lazy: async () => ({ Component: (await import('@/pages/targets')).TargetsPage }),
+      },
+      {
+        path: 'ai',
+        lazy: async () => ({ Component: (await import('@/pages/ai')).AiPage }),
+      },
+      {
+        path: 'logs',
+        lazy: async () => ({ Component: (await import('@/pages/logs')).LogsPage }),
+      },
+      {
+        path: 'system',
+        lazy: async () => ({ Component: (await import('@/pages/system')).SystemPage }),
+      },
       { path: '*', element: <Navigate to="/overview" replace /> },
     ],
   },

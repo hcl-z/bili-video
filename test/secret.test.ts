@@ -6,7 +6,7 @@ import { after, describe, it } from 'node:test'
 
 import { MIN_KEY_LENGTH, loadMasterKey } from '../src/server/infra/secret/key-manager.ts'
 import { maskSecret, open, parseBox, seal } from '../src/server/infra/secret/secret-box.ts'
-import { openCore } from '../src/server/wiring.ts'
+import { openCore } from '../src/server/server.ts'
 import { FakeClock } from './fakes/clock.ts'
 import { CollectingLogger } from './fakes/logger.ts'
 import { InMemoryEventBus } from '../src/server/infra/event-bus/in-memory.ts'
@@ -88,7 +88,7 @@ describe('master key', () => {
       '不该留下临时文件',
     )
 
-    // 第二次读的是同一把 key，且不再报 created。
+
     const second = loadMasterKey({ path })
     assert.equal(second.key, first.key)
     assert.equal(second.created, false)
@@ -142,7 +142,7 @@ describe('secret store', () => {
     assert.ok(!stored.includes('sk-live'), '库里不能有明文')
     a.close()
 
-    // 重启：master.key 从文件读回，密文照样解得开。
+
     const b = core(dir)
     assert.equal(b.secrets.get('ai.apiKey'), 'sk-live-0123456789')
     assert.deepEqual(b.secrets.keys(), ['ai.apiKey'])

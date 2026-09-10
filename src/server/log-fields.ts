@@ -1,13 +1,10 @@
 import type { Failure } from '#shared/contract/failure.ts'
-import type { LogLevel } from './ports/logger.ts'
+import type { LogLevel } from './types/platform.ts'
 import type { LogLine } from '#shared/contract/events.ts'
 
-/**
- * 日志字段的零依赖叶模块，供 app 与 infra 共享而不破坏依赖方向。
- * 错误使用 `err` + `stack`，失败使用 `kind` + `code` + `err`，便于按字段查询。
- */
 
-/** 抛出来的东西 → 日志字段。堆栈也带上：它只进文件，不进 SSE。 */
+
+/** 抛出来的数据 → 日志字段。堆栈也带上：它只进文件，不进 SSE */
 export function errFields(err: unknown): { err: string; stack?: string } {
   if (err instanceof Error) {
     const line = err.name === 'Error' ? err.message : `${err.name}: ${err.message}`

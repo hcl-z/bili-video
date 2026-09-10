@@ -6,7 +6,7 @@ import { describe, it } from 'node:test'
 
 import type { AsrConfig } from '#shared/contract/config.ts'
 import { MlxAudioAsr } from '../src/server/infra/asr/mlx-audio.ts'
-import type { CommandRunner } from '../src/server/ports/command.ts'
+import type { CommandRunner } from '../src/server/types/platform.ts'
 import { CollectingLogger } from './fakes/logger.ts'
 
 const config: AsrConfig = {

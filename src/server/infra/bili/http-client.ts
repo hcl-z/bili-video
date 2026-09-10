@@ -7,26 +7,20 @@ import {
   classifyThrown,
   fatalFromThrown,
 } from '../../domain/bili-error.ts'
-import type { Clock } from '../../ports/clock.ts'
-import type { CookieJar } from '../../ports/cookie-jar.ts'
-import type { Logger } from '../../ports/logger.ts'
+import type { Clock } from '../../types/platform.ts'
+import type { CookieJar } from '../../types/bili.ts'
+import type { Logger } from '../../types/platform.ts'
 import { errFields, failureFields } from '../../log-fields.ts'
 
 import type { BrowserIdentity } from './browser-identity.ts'
 import { keyFromUrl, signWbi, type WbiKeys } from './wbi.ts'
 import { TICKET_URL, parseTicketResponse, ticketFormBody, type WebTicket } from './ticket.ts'
 
-/**
- * 所有对 B 站的请求都从这里出去。集中在一处的理由有三个：
- *
- * 1. 浏览器身份必须每个请求都一致（UA 与客户端提示头咬合），散落各处必然漂。
- * 2. 「命中风控 → 清 WBI key → 重取 ticket → 重试一次」只应实现一遍。
- * 3. 每个响应都要过错误码分类，不允许任何调用方裸 catch 混过去。
- */
+/** 所有对 B 站的请求都从这里出去。集中在一处的理由有三个： 1. 浏览器身份必须每个请求都一致（UA 与客户端提示头咬合），散落各处必然漂。 2. 「命中风控 → 清 WBI key → 重取 ticket → 重试一次」只应实现一次。 3. 每个响应都要过错误码分类，不允许任何调用方裸 catch 混过去 */
 
 export type FetchLike = typeof fetch
 
-/** 每次用时读，所以工作台改完配置立刻生效。 */
+
 export interface BiliHttpConfig {
   wbiMixinTable: readonly number[]
   ticket: { keyId: string; hmacKey: string }
@@ -42,21 +36,21 @@ export interface BiliHttpDeps {
 }
 
 export interface RequestOptions {
-  /** 要不要签 WBI。签不上（没配混淆表）会直接返回 fatal，不发请求。 */
+  /** 要不要签 WBI。签不上（没配混淆表）会直接返回 fatal，不发请求 */
   wbi?: boolean
-  /** B 站对 Referer 敏感，默认给 www 首页。 */
+  /** B 站对 Referer 敏感，默认给 www 首页 */
   referer?: string
-  /** 关掉「风控重试一次」，续期链这种带副作用的调用不该被自动重放。 */
+  /** 关掉「风控重试一次」，续期链这种带副作用的调用不应被自动重放 */
   noRetry?: boolean
 }
 
-/** WBI key 的兜底来源，也是「我是谁」的唯一权威接口。 */
+/** WBI key 的兜底来源，也是「我是谁」的唯一权威接口 */
 export const NAV_URL = 'https://api.bilibili.com/x/web-interface/nav'
 const DEFAULT_REFERER = 'https://www.bilibili.com/'
-/** WBI key 一天一换足够；B 站实际是按日轮换的。 */
+/** WBI key 一天一换足够；B 站实际是按日轮换的 */
 const WBI_TTL_MS = 12 * 3_600_000
 
-/** Result 的内部变体：失败时也留着 data。可以赋给 Result<T>，反之不行。 */
+
 type Raw<T> = { ok: true; value: T } | { ok: false; failure: Failure; data?: unknown }
 
 const EnvelopeSchema = z.object({
@@ -74,7 +68,7 @@ export class BiliHttp {
   private readonly logger: Logger
   private wbiKeys: WbiKeys | null = null
   private ticket: WebTicket | null = null
-  /** nav / ticket 的取用互相依赖，同时进来两个请求会白打两次网络。 */
+
   private pendingKeys: Promise<Result<WbiKeys>> | null = null
 
   constructor(deps: BiliHttpDeps) {
@@ -82,7 +76,7 @@ export class BiliHttp {
     this.logger = deps.logger.child({ mod: 'bili-http' })
   }
 
-  /** 供测试与「风控后重取」使用：把签名相关的缓存全丢掉。 */
+  /** 供测试与「风控后重取」使用：把签名相关的缓存全丢掉 */
   resetSigning(): void {
     this.wbiKeys = null
     this.ticket = null
@@ -96,10 +90,7 @@ export class BiliHttp {
     return this.withRiskRetry(opts, () => this.attemptGet<T>(url, params, opts))
   }
 
-  /**
-   * 取一个非 JSON 的页面（续期链里的 `correspond/1/<path>` 就是 HTML）。
-   * 不过信封解析，但照样带身份、带 cookie、按 HTTP 状态分类。
-   */
+  /** 取一个非 JSON 的页面（续期链里的 `correspond/1/<path>` 就是 HTML）。 不过信封解析，但照样带身份、带 cookie、按 HTTP 状态分类 */
   async getText(url: string, opts: RequestOptions = {}): Promise<Result<string>> {
     let res: Response
     try {

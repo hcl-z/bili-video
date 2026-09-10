@@ -1,9 +1,4 @@
-/**
- * 同 `http-client.test.ts`：对 spec「`infra/` 适配器不写自动化测试」的有意偏离，
- * 假的只有 `fetch`。这里钉的是票 02 的两条硬要求：登录轮询的 86101/86090/0 状态机，
- * 以及 cookie 续期那条四步链（`cookie/info` → `correspond/1` → `refresh` → `confirm`）。
- * 续期一年才走一次，没有测就等于没写。
- */
+/** 同 `http-client.test.ts`：对 spec「`infra/` 适配器不写自动化测试」的有意偏离， 假的只有 `fetch`。这里钉的是票 02 的两条硬性要求：登录轮询的 86101/86090/0 状态机， 以及 cookie 续期应项四步链（`cookie/info` → `correspond/1` → `refresh` → `confirm`）。 续期一年才走一次，没有测就等于没写 */
 import assert from 'node:assert/strict'
 import { generateKeyPairSync } from 'node:crypto'
 import { describe, it } from 'node:test'
@@ -45,14 +40,14 @@ function rig(cookies: Record<string, string> = {}, opts: RigOptions = {}) {
       },
     },
   })
-  // token 从注入的 store 里读，而不是让生产代码多长一个只有测试用的 getter。
+  // token 从注入的 store 里读，而不是让生产代码多长一个只有测试用的 getter
   return { auth, fetch, jar, logger, now, token: () => token }
 }
 
 interface RigOptions {
-  /** 预置的 refresh_token（模拟「上次登录留下的」）。 */
+  /** 预置的 refresh_token（模拟「上次登录留下的」） */
   refreshToken?: string
-  /** correspond/1 用的 RSA 公钥 PEM。 */
+
   pem?: string
 }
 
@@ -110,7 +105,7 @@ describe('infra/bili 扫码登录', () => {
     assert.equal(third.value.uid, '12345')
     assert.equal(third.value.uname, '小号甲')
 
-    // cookie 必须真的进了 jar，否则「登录成功」是句空话。
+    // cookie 必须真的进了 jar，否则「登录成功」是句空话
     assert.equal(r.jar.get('SESSDATA'), 'sess-value')
     assert.equal(r.jar.csrf(), 'jct-value')
   })
@@ -210,7 +205,7 @@ describe('infra/bili cookie 续期链', () => {
     privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
   })
   const LOGGED_IN = { SESSDATA: 'old-sess', bili_jct: 'old-jct', DedeUserID: '42' }
-  /** 真实的 refresh_csrf 是 32 位十六进制，测试数据也照这个形状来。 */
+  /** 真实的 refresh_csrf 是 32 位十六进制，测试数据也照这个形状来 */
   const REFRESH_CSRF = '0123456789abcdef0123456789abcdef'
   const CORRESPOND_PAGE = `<html><body><div id="1-name">${REFRESH_CSRF}</div></body></html>`
 

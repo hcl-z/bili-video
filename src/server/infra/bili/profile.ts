@@ -2,13 +2,10 @@ import { z } from 'zod'
 
 import { fail, ok, type Result } from '#shared/contract/failure.ts'
 import { shapeFailure } from '../../domain/bili-error.ts'
-import type { BiliProfile, UpCard } from '../../ports/bili.ts'
+import type { BiliProfile, UpCard } from '../../types/bili.ts'
 import type { BiliHttp } from './http-client.ts'
 
-/**
- * 名片接口。挑它而不是 `x/space/wbi/acc/info` 是因为**这个不用 WBI 签名** ——
- * 混淆表是留空待填的配置，订阅页不该因为它没填就连昵称都查不到。
- */
+/** 名片接口。挑它而不是 `x/space/wbi/acc/info` 是因为**这个不用 WBI 签名** —— 混淆表是留空待填的配置，订阅页不应因为它没填就连昵称都查不到 */
 const CARD_URL = 'https://api.bilibili.com/x/web-interface/card'
 
 const CardSchema = z.object({
@@ -37,7 +34,7 @@ export class BiliProfileClient implements BiliProfile {
     return ok({
       uid: String(card.mid),
       name: card.name,
-      // 空字符串当没有：前端要据此决定画头像还是画首字母，'' 会渲染出一个碎图标。
+
       face: card.face === '' ? null : card.face,
     })
   }

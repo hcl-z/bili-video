@@ -1,6 +1,6 @@
 {
-  // 后端。types: ["node"] 但 lib 不含 DOM —— 服务端代码引用 document / window / fetch 的
-  // 浏览器专属重载会编译不过。只出 .d.ts：运行时直接由 Node 24 剥类型跑 .ts 源码。
+
+
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "composite": true,

@@ -16,12 +16,7 @@ export const TYPE_LABEL: Record<ReaderItem['type'], string> = {
   ARTICLE: '专栏',
 }
 
-/**
- * 左栏一行：96px 封面 + 两行标题 + 解析状态。选中用强调色左边框。
- *
- * 命中过过滤规则的条目在这儿不降饱和、不打删除线 —— 规则拦的是自动解析与推送，
- * 不是这条视频本身。
- */
+/** 左栏一行：96px 封面 + 两行标题 + 解析状态。选中用强调色左边框。 命中过过滤规则的条目在此处不降饱和、不打删除线 —— 规则拦的是自动解析与推送， 不是应项视频本身 */
 export function ReaderRow(props: {
   item: ReaderItem
   ups: UpsMap
@@ -46,7 +41,7 @@ export function ReaderRow(props: {
             <span className="text-muted-foreground text-[11px]">{TYPE_LABEL[it.type]}</span>
           </div>
         ) : (
-          // B 站图床按 Referer 挡外链。
+          // B 站图床按 Referer 挡外链
           <img
             src={it.cover}
             alt=""

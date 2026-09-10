@@ -1,11 +1,4 @@
-/**
- * 对 spec「`infra/` 里对真外部的适配器不写自动化测试」的一处有意偏离。
- *
- * 那条取舍的理由是「给它们写 mock 测试只会测到 mock 自己」。这里假的只有 `fetch`
- * 这一个进程边界，签名、身份、Set-Cookie 收集、错误码分类跑的都是真代码，所以测到的不是 mock。
- * 而票 02 要求「命中风控时先清空签名 key、重取 ticket 并重试一次」——
- * 那条链只有在这一层才编排得出来：它一次成功的表现是「什么都没发生」，最需要钉死。
- */
+/** 对 spec「`infra/` 里对真外部的适配器不写自动化测试」的一处有意偏离。 应项取舍的理由是「给它们写 mock 测试只会测到 mock 自己」。这里假的只有 `fetch` 这一个进程边界，签名、身份、Set-Cookie 收集、错误码分类跑的都是实际代码，所以测到的不是 mock。 而票 02 要求「命中风控时先清空签名 key、重取 ticket 并重试一次」—— 应项链只有在这一层才编排得出来：它一次成功的表现是「什么都没发生」，最需要固定验证 */
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
@@ -59,7 +52,7 @@ function rig(config: Partial<BiliHttpConfig> = {}, cookies: Record<string, strin
   }
 }
 
-/** 换 ticket 的标准成功响应，顺带给 WBI key。 */
+/** 换 ticket 的标准成功响应，顺带给 WBI key */
 const ticketOk = { code: 0, data: { ticket: 'tk', ttl: 259_200, nav: { img: { img_url: IMG }, sub: { sub_url: SUB } } } }
 
 describe('infra/bili HTTP 客户端：身份与信封', () => {
@@ -73,7 +66,7 @@ describe('infra/bili HTTP 客户端：身份与信封', () => {
 
     const req = r.fetch.requests[0]!
     assert.match(req.headers['user-agent']!, /Chrome\/\d+/)
-    // UA 与客户端提示头必须咬合，否则这套身份本身就是风控信号。
+    // UA 与客户端提示头必须咬合，否则这套身份本身就是风控信号
     const major = /Chrome\/(\d+)/.exec(req.headers['user-agent']!)![1]!
     assert.ok(req.headers['sec-ch-ua']!.includes(`v="${major}"`))
     assert.equal(req.headers['cookie'], 'SESSDATA=sess; bili_jct=jct')
@@ -173,7 +166,7 @@ describe('infra/bili HTTP 客户端：WBI 签名', () => {
     const res = await r.http.get('https://api.bilibili.com/x/space', { mid: 1 }, { wbi: true })
     assert.ok(res.ok)
     assert.equal(r.fetch.countOf('GenWebTicket'), 0)
-    // nav 回 -101 不影响取 key：wbi_img 是公开的。
+    // nav 回 -101 不影响取 key：wbi_img 是公开的
     assert.equal(r.fetch.countOf('/x/web-interface/nav'), 1)
   })
 
@@ -206,7 +199,7 @@ describe('infra/bili HTTP 客户端：风控重试一次', () => {
     assert.ok(res.ok)
     assert.deepEqual(res.value.list, [1])
     assert.equal(r.fetch.countOf('/x/space'), 2)
-    // 第一次取 key + 风控后重取，正好两次。
+    // 第一次取 key + 风控后重取，正好两次
     assert.equal(r.fetch.countOf('GenWebTicket'), 2)
   })
 

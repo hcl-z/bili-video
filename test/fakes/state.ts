@@ -1,6 +1,6 @@
-import type { StateKey, StateRepo } from '../../src/server/ports/state.ts'
+import type { StateKey, StateRepo } from '../../src/server/types/persistence.ts'
 
-/** 内存运行态。真实现（SQLite）另有单测，这里只是让 app 层的测试不必开库。 */
+/** 内存运行态。真实现（SQLite）另有单测，这里只是让 app 层的测试不必开库 */
 export class MemoryStateRepo implements StateRepo {
   private readonly map = new Map<StateKey, string>()
 

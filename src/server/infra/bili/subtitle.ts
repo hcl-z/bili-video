@@ -3,8 +3,8 @@ import { z } from 'zod'
 import { fail, ok, type Result } from '#shared/contract/failure.ts'
 import type { Cue } from '#shared/contract/summary.ts'
 import { fatalFailure, shapeFailure } from '../../domain/bili-error.ts'
-import type { SubtitleFetcher } from '../../ports/bili.ts'
-import type { Logger } from '../../ports/logger.ts'
+import type { SubtitleFetcher } from '../../types/bili.ts'
+import type { Logger } from '../../types/platform.ts'
 import type { BiliHttp } from './http-client.ts'
 
 /**

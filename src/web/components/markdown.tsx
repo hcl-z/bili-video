@@ -1,11 +1,6 @@
 import { Fragment, type ReactNode } from 'react'
 
-/**
- * 够用的 Markdown 渲染：标题、列表、引用、段落，行内支持粗体、行内代码和链接。
- *
- * 不引解析库也不用 dangerouslySetInnerHTML —— 这段文本来自模型，
- * 直接拼 HTML 就是把注入风险接进来。
- */
+/** 够用的 Markdown 渲染：标题、列表、引用、段落，行内支持粗体、行内代码和链接。 不引解析库也不用 dangerouslySetInnerHTML —— 这段文本来自模型， 直接拼 HTML 就是把注入风险接进来 */
 export function Markdown(props: { text: string }) {
   return <div className="space-y-3.5">{blocks(props.text)}</div>
 }

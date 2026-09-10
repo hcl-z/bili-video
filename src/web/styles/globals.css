@@ -3,30 +3,19 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/*
- * 设计 token 层。
- *
- * 规则：**覆盖 shadcn 的 CSS 变量，不另起一套**。
- * shadcn 生成的组件全都读 --primary / --border / --radius 这些名字，另起一套的话
- * 每个 CLI 生成的组件都得手改一遍，下次 `shadcn add` 又会被覆盖回去。
- *
- * 三条硬约束（见 docs/spec，与工作台原型 variant=B 一致）：
- * 1. 单一强调色：B 站粉。除它之外不引入第二个强调色，状态色只用中性灰 + 语义红/绿。
- * 2. 三档圆角：14 / 10 / 7px，分别给卡片、控件、徽标。没有第四档。
- * 3. 亮暗双主题跟随系统（见 lib/theme.ts）。
- */
+/* 设计 token 层。 规则：**覆盖 shadcn 的 CSS 变量，不另起一套**。 shadcn 生成的组件全都读 --primary / --border / --radius 这些名字，另起一套的话 每个 CLI 生成的组件都得手改一次，下次 `shadcn add` 又会被覆盖回去。 三条硬约束（见 docs/spec，与工作台原型 variant=B 一致）： 1. 单一强调色：B 站粉。除它之外不引入第二个强调色，状态色只用中性灰 + 语义红/绿。 2. 三档圆角：14 / 10 / 7px，分避免给卡片、控件、徽标。没有第四档。 3. 亮暗双主题跟随系统（见 lib/theme.ts） */
 
 :root {
-  /* 三档圆角。shadcn 的 --radius-xl 也收敛到 lg，避免长出第四档。 */
-  --radius: 0.875rem; /* 14px */
-  --radius-lg: 0.875rem; /* 14px 卡片、面板 */
-  --radius-md: 0.625rem; /* 10px 按钮、输入框 */
-  --radius-sm: 0.4375rem; /* 7px 徽标、tag */
+
+  --radius: 0.875rem;
+  --radius-lg: 0.875rem;
+  --radius-md: 0.625rem;
+  --radius-sm: 0.4375rem;
   --radius-xl: 0.875rem;
 
-  /* 单一强调色：B 站粉。 */
+
   --accent-brand: #fb7299;
-  /* 同一个粉压深一档，专门给小号文字和细边线用：#fb7299 压在白底上只有 2.6:1，过不了 AA。 */
+
   --brand-ink: #d6396b;
 
   --background: oklch(1 0 0);
@@ -43,7 +32,7 @@
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
   --muted-foreground: oklch(0.556 0 0);
-  /* 注意：shadcn 的 --accent 是「hover 底色」，不是强调色。别把品牌色塞这里。 */
+
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
 
@@ -62,13 +51,13 @@
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: var(--accent-brand);
 
-  /* 工作台外壳：顶栏 60px，索引栏 260px（原型 variant=B 的两栏比例）。 */
+
   --appbar-h: 60px;
   --index-w: 260px;
 }
 
 .dark {
-  /* 暗色下把粉提亮一档，否则压在深底上会发闷。提亮后本身就够 AA，不用再压深。 */
+
   --accent-brand: #ff89a9;
   --brand-ink: var(--accent-brand);
 

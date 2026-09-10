@@ -3,8 +3,8 @@ import { basename } from 'node:path'
 
 import type { AsrConfig } from '#shared/contract/config.ts'
 import type { Cue } from '#shared/contract/summary.ts'
-import type { Asr } from '../../ports/asr.ts'
-import type { Logger } from '../../ports/logger.ts'
+import type { Asr } from '../../types/ai.ts'
+import type { Logger } from '../../types/platform.ts'
 import { errFields } from '../../log-fields.ts'
 import { joinUrl } from '../ai/openai-compat.ts'
 import { maskSecret } from '../secret/secret-box.ts'
@@ -19,7 +19,7 @@ export interface OpenAiCompatAsrDeps {
 
 const TIMEOUT_MS = 30 * 60_000
 
-/** 云端转写。容器里只能走这条（拿不到 Metal）。 */
+
 export class OpenAiCompatAsr implements Asr {
   readonly provider = 'openai-compat' as const
   private readonly deps: OpenAiCompatAsrDeps
@@ -33,7 +33,7 @@ export class OpenAiCompatAsr implements Asr {
     if (cfg.baseURL.trim() === '') throw new Error('云端转写没配 baseURL')
 
     const form = new FormData()
-    // openAsBlob 是流式的：一小时的音频不会整个读进内存。
+    // openAsBlob 是流式的：一小时的音频不会整个读进内存
     const file = await openAsBlob(audioPath)
     const language = opts.language ?? cfg.language
     form.set('file', file, basename(audioPath))
@@ -44,7 +44,7 @@ export class OpenAiCompatAsr implements Asr {
     const key = this.deps.apiKey()
     const url = joinUrl(cfg.baseURL, '/audio/transcriptions')
     // 云端转写最常见的坑是 baseURL 拼错、model 名不对、语言码不认，所以把送出去的
-    // 每个字段原样记一遍（key 只记掩码）。对着日志比对文档就能定位。
+
     this.deps.logger.info(
       {
         url,

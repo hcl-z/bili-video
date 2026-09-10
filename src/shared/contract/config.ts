@@ -1,44 +1,41 @@
 import { z } from 'zod'
 
-/** 配置以数据库为唯一真相；首次启动由内置默认值初始化。 */
+/** 配置以数据库为唯一真相；首次启动由内置默认值初始化 */
 
 export const ServerConfigSchema = z.object({
-  /** 只听回环地址。改成 0.0.0.0 等于放弃「无登录系统」这个前提，别改（spec Q31a）。 */
+  /** 只听回环地址。改成 0.0.0.0 等于放弃「无登录系统」这个前提，避免改（spec Q31a） */
   host: z.string().default('127.0.0.1'),
-  /** 0 = 让内核分配一个空闲端口。测试用它，生产别用（客户端没法猜到端口）。 */
+  /** 0 = 让内核分配一个空闲端口。测试用它，生产避免用（客户端没法猜到端口） */
   port: z.number().int().min(0).max(65535).default(8788),
 })
 
 export const PollConfigSchema = z.object({
   enabled: z.boolean().default(true),
-  /** 秒位错到 :30，避开全网客户端堆在整分的流量尖峰。 */
+
   cron: z.string().default('30 */2 * * * *'),
 })
 
 export const QuietHoursSchema = z.object({
   enabled: z.boolean().default(false),
-  /** 本地时间 HH:mm，允许跨午夜（start > end 表示跨天）。 */
+
   start: z.string().regex(/^\d{2}:\d{2}$/).default('23:30'),
   end: z.string().regex(/^\d{2}:\d{2}$/).default('07:30'),
 })
 
 export const FilterConfigSchema = z.object({
   quietHours: QuietHoursSchema.default({}),
-  /** 用户手写正则的执行超时，防 ReDoS 把轮询卡死。 */
+  /** 用户手写正则的执行超时，防 ReDoS 把轮询阻塞 */
   regexTimeoutMs: z.number().int().min(1).max(5000).default(100),
 })
 
 export const ChunkConfigSchema = z.object({
-  /** 全文超过这个 token 数才分段，否则整篇一次总结。 */
+  /** 全文超过这个 token 数才分段，否则整篇一次总结 */
   thresholdTokens: z.number().int().min(1000).default(12000),
   sizeTokens: z.number().int().min(500).default(8000),
   overlapTokens: z.number().int().min(0).default(400),
 })
 
-/**
- * WBI 签名的 64 位混淆表：按表重排 `imgKey + subKey` 的 64 个字符，取前 32 位为密钥。
- * 留空时需要 WBI 的接口明确报错，避免错误签名触发 -352 风控退避。
- */
+/** WBI 签名的 64 位混淆表：按表重排 `imgKey + subKey` 的 64 个字符，取前 32 位为密钥。 留空时需要 WBI 的接口明确报错，避免错误签名触发 -352 风控退避 */
 const MixinTableSchema = z
   .array(z.number().int().min(0).max(63))
   .refine((a) => a.length === 0 || a.length === 64, '混淆表必须正好 64 项，或留空表示未配置')
@@ -46,25 +43,22 @@ const MixinTableSchema = z
   .default([])
 
 export const BiliConfigSchema = z.object({
-  /** 提前多少天开始续 cookie。B 站的 SESSDATA 是月级有效期。 */
+  /** 提前多少天开始续 cookie。B 站的 SESSDATA 是月级有效期 */
   refreshThresholdDays: z.number().int().min(1).max(60).default(15),
   wbiMixinTable: MixinTableSchema,
-  /**
-   * `bili_ticket` 的签名参数。空 = 未配置，风控重试链里「重取 ticket」那一步会跳过并说明原因。
-   * 这些是 B 站 web 端 JS 里的公开常量，不是密钥，所以放配置而不是 secrets。
-   */
+  /** `bili_ticket` 的签名参数。空 = 未配置，风控重试链里「重取 ticket」那一步会跳过并说明原因。 这些是 B 站 web 端 JS 里的公开常量，不是密钥，所以放配置而不是 secrets */
   ticket: z
     .object({
       keyId: z.string().default(''),
       hmacKey: z.string().default(''),
     })
     .default({}),
-  /** cookie 续期链里 `correspond/1` 用的 RSA 公钥（PEM）。空 = 不做自动续期，到期只能重新扫码。 */
+  /** cookie 续期链里 `correspond/1` 用的 RSA 公钥（PEM）。空 = 不做自动续期，到期只能重新扫码 */
   correspondPublicKeyPem: z.string().default(''),
-  /** 自动关注这一唯一写接口的独立限流，与读接口轮询无关；写接口风控更严，限额保守。 */
+  /** 自动关注这一唯一写接口的独立限流，与读接口轮询无关；写接口风控更严，限额保守 */
   write: z
     .object({
-      /** 刹车。关掉后订阅照样能加，只是不再自动关注，得自己去 B 站点关注。 */
+      /** 刹车。关掉后订阅照样能加，只是不再自动关注，得自己去 B 站点关注 */
       autoFollow: z.boolean().default(true),
       minIntervalMs: z.number().int().min(0).max(60_000).default(3_000),
       maxPerHour: z.number().int().min(1).max(200).default(20),
@@ -73,15 +67,15 @@ export const BiliConfigSchema = z.object({
 })
 
 export const AiConfigSchema = z.object({
-  /** 总开关。关掉后只推送不总结，AI 成本归零。 */
+
   enabled: z.boolean().default(true),
-  /** OpenAI 兼容即可，不绑任何 SDK。apiKey 不在这里 —— 它加密存 secrets 表。 */
+  /** OpenAI 兼容即可，不绑任何 SDK。apiKey 不在这里 —— 它加密存 secrets 表 */
   baseURL: z.string().default(''),
   model: z.string().default(''),
   temperature: z.number().min(0).max(2).default(0.3),
   chunk: ChunkConfigSchema.default({}),
   llmConcurrency: z.number().int().min(1).max(8).default(2),
-  /** 阅读版总结可能输出上万 token，调用需数分钟；流式另有 90s 空闲超时处理假死。 */
+  /** 阅读版总结可能输出上万 token，调用需数分钟；流式另有 90s 空闲超时处理假死 */
   timeoutMs: z.number().int().min(10_000).max(1_800_000).default(600_000),
 })
 
@@ -91,30 +85,25 @@ export type AsrProvider = z.infer<typeof AsrProviderSchema>
 export const REMOTE_ASR_PROVIDERS = ['openai-compat', 'chat-audio'] as const satisfies readonly AsrProvider[]
 
 export const AsrConfigSchema = z.object({
-  /**
-   * 容器里拿不到 Metal，必须是云端那两种；启动校验会断言这条。
-   *
-   * openai-compat = Whisper 那套 /audio/transcriptions；
-   * chat-audio = 把音频塞进 chat/completions 的 input_audio（MiMo、Qwen-Omni 这类）。
-   */
+  /** 容器里拿不到 Metal，必须是云端那两种；启动校验会断言应项。 openai-compat = Whisper 那套 /audio/transcriptions； chat-audio = 把音频塞进 chat/completions 的 input_audio（MiMo、Qwen-Omni 这类） */
   provider: z.preprocess(
     (value) => (value === 'mlx-whisper' ? 'mlx-audio' : value),
     AsrProviderSchema.default('mlx-audio'),
   ),
-  /** 只有云端两种用得上；mlx-audio 是本地进程，没有 baseURL。apiKey 同 LLM，加密存 secrets 表。 */
+  /** 只有云端两种用得上；mlx-audio 是本地进程，没有 baseURL。apiKey 同 LLM，加密存 secrets 表 */
   baseURL: z.string().default(''),
   model: z.string().default('mlx-community/Qwen3-ASR-0.6B-4bit'),
   language: z.string().default('Chinese'),
-  /** 关闭后不请求官方字幕，直接下载音频走 ASR。 */
+  /** 关闭后不请求官方字幕，直接下载音频走 ASR */
   useOfficialSubtitles: z.boolean().default(true),
-  /** ASR 是分钟级重活，并发 1 —— 免得把 16GB 内存吃满。 */
+  /** ASR 是分钟级重活，并发 1 —— 避免把 16GB 内存吃满 */
   concurrency: z.literal(1).default(1),
-  /** chat-audio 分段时长（秒）；分段是取得时间戳的唯一方式，段长决定精度，且需满足请求体上限。 */
+  /** chat-audio 分段时长（秒）；分段是取得时间戳的唯一方式，段长决定精度，且需满足请求体上限 */
   segmentSec: z.number().int().min(30).max(1800).default(120),
 })
 
 export const OutputConfigSchema = z.object({
-  /** 总结 Markdown 的落盘目录。相对路径按 DATA_DIR 解析。 */
+  /** 总结 Markdown 的落盘目录。相对路径按 DATA_DIR 解析 */
   markdownDir: z.string().min(1).default('summaries'),
 })
 
@@ -122,7 +111,7 @@ export const NotifyConfigSchema = z.object({
   wxpusher: z
     .object({
       enabled: z.boolean().default(false),
-      /** appToken 加密存 secrets 表，不在这里。 */
+      /** appToken 加密存 secrets 表，不在这里 */
       uids: z
         .array(z.string().min(1))
         .transform((values) => [...new Set(values)])
@@ -165,9 +154,9 @@ export const NotifyConfigSchema = z.object({
 })
 
 export const CatchupConfigSchema = z.object({
-  /** 睡眠/停机唤醒后补推的时间窗；更老的只入库。 */
+
   windowHours: z.number().int().min(1).max(168).default(24),
-  /** 窗口内积压超过这个条数就只发一条汇总，不逐条轰炸。 */
+
   overflowThreshold: z.number().int().min(1).default(20),
 })
 
@@ -203,7 +192,7 @@ export type ChunkConfig = z.infer<typeof ChunkConfigSchema>
 export type OutputConfig = z.infer<typeof OutputConfigSchema>
 export type NotifyConfig = z.infer<typeof NotifyConfigSchema>
 
-/** section 名 → 该 section 的 schema。配置的按段读写都过这张表。 */
+
 export const CONFIG_SECTIONS = {
   server: ServerConfigSchema,
   poll: PollConfigSchema,

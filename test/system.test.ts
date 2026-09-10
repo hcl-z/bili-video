@@ -5,21 +5,16 @@ import { SystemResponseSchema } from '#shared/contract/api.ts'
 import { createHarness, type Harness } from './support/harness.ts'
 import { FakeFetch } from './fakes/bili-fetch.ts'
 
-/**
- * 登录全流程走主测试缝：只有 fetch 是假的，SQLite、加密、签名、错误分类全是真的在跑。
- *
- * 这里刻意不去 stub BiliAuth 端口。端口一 stub，被 stub 掉的正好是最容易写错的两处：
- * 轮询响应的两层 code，和「cookie 是从响应头里来的」这件事。
- */
+/** 登录全流程走主测试缝：只有 fetch 是假的，SQLite、加密、签名、错误分类全是真的在跑。 这里刻意不去 stub BiliAuth 接口。接口一 stub，被 stub 掉的正好是最容易写错的两处： 轮询响应的两层 code，和「cookie 是从响应头里来的」这件事 */
 
 const UID = 20250907
 const UNAME = '小号阿玖'
-/** 真 cookie 是 ASCII，值里塞中文会在 Headers 那层就炸掉。 */
+/** 真 cookie 是 ASCII，值里塞中文会在 Headers 那层就失败 */
 const SESSDATA = 'f00dcafe%2C1790000000%2Cabcd1%2Ac1'
 const CSRF = '0123456789abcdef0123456789abcdef'
 const FAR_FUTURE = 'Tue, 07 Sep 2027 12:00:00 GMT'
 
-/** 扫码登录成功那一刻 B 站塞回来的三条 cookie。 */
+/** 扫码登录成功那一刻 B 站塞回来的三条 cookie */
 function loginCookies(): string[] {
   return [
     `SESSDATA=${SESSDATA}; Path=/; Domain=.bilibili.com; Expires=${FAR_FUTURE}; HttpOnly`,
@@ -90,7 +85,7 @@ describe('扫码登录全流程（主测试缝）', () => {
       assert.ok(!sessdata.blob_json.includes(SESSDATA), `SESSDATA 明文落库了：${sessdata.blob_json}`)
       assert.equal(sessdata.expires, Date.parse(FAR_FUTURE))
       // 读回来是原值：加密的是「存法」，不是内容。
-      assert.equal(h.ports.cookies.get('SESSDATA'), SESSDATA)
+      assert.equal(h.deps.cookies.get('SESSDATA'), SESSDATA)
 
       // refresh_token 是凭据，走加密的 secrets 表，不进 runtime_state。
       assert.equal(h.core.secrets.get('bili-refresh-token'), 'rt-first')
@@ -153,7 +148,7 @@ describe('扫码登录全流程（主测试缝）', () => {
       assert.ok(sys.auth.remainingMs! > 0)
 
       // cookie 是从库里解出来的（新进程、新 jar），身份也还是同一份。
-      assert.equal(second.ports.cookies.get('SESSDATA'), SESSDATA)
+      assert.equal(second.deps.cookies.get('SESSDATA'), SESSDATA)
       assert.equal(second.core.secrets.get('bili-refresh-token'), 'rt-first')
       assert.equal(second.core.identity.userAgent, first.core.identity.userAgent)
       // 这一轮是真去核对过的：nav + cookie/info。

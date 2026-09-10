@@ -13,7 +13,7 @@ import type { SummaryQueue } from '../app/queue-runner.ts'
 import type { RuleService } from '../app/rules.ts'
 import type { SubscriptionService } from '../app/subscriptions.ts'
 import type { UpFeedService } from '../app/up-feed.ts'
-import type { Ports } from '../ports/index.ts'
+import type { ServerDeps } from '../types/index.ts'
 import { errorBody, makeErrorHandler } from './errors.ts'
 import { aiRoutes } from './routes/ai.ts'
 import { configRoutes } from './routes/config.ts'
@@ -32,11 +32,11 @@ import { eventRoutes } from './sse.ts'
 
 export interface HttpOptions {
   startedAt: number
-  /** 生产模式下托管 vite build 的产物；dev 期由 Vite 自己伺服，传 null。 */
+
   webRoot: string | null
-  /** app 层的登录态服务。null = 这个进程没装 B 站适配器。 */
+  /** app 层的登录态服务。null = 这个进程没装 B 站适配器 */
   auth: AuthLifecycle | null
-  /** 订阅服务。仓储永远在，所以它不会是 null —— 关注适配器缺席只影响「关不上」。 */
+  /** 订阅服务。仓储永远在，所以它不会是 null —— 关注适配器缺席只影响「关不上」 */
   subs: SubscriptionService
   poll: Poller
   rules: RuleService
@@ -46,23 +46,21 @@ export interface HttpOptions {
   ups: UpFeedService
   health: HealthMonitor
   backup: BackupService
-  /** 最近若干行日志。日志页接上时先补历史，否则刷一下页面就是空的。 */
+
   logs: LogBuffer
 }
 
-/**
- * Hono 装配：服务仅监听 127.0.0.1，安全边界是文件系统权限而非自写登录（spec Q31a）；改 host 前须重审此假设。
- */
-export function createHttpApp(ports: Ports, opts: HttpOptions): Hono {
+/** Hono 装配：服务仅监听 127.0.0.1，安全边界是文件系统权限而非自写登录（spec Q31a）；改 host 前须重审此假设 */
+export function createHttpApp(deps: ServerDeps, opts: HttpOptions): Hono {
   const app = new Hono()
 
-  app.onError(makeErrorHandler(ports.logger))
+  app.onError(makeErrorHandler(deps.logger))
 
   const api = new Hono()
-  api.route('/health', healthRoutes(ports, opts.startedAt))
+  api.route('/health', healthRoutes(deps, opts.startedAt))
   api.route(
     '/system',
-    systemRoutes(ports, {
+    systemRoutes(deps, {
       startedAt: opts.startedAt,
       auth: opts.auth,
       poll: opts.poll,
@@ -71,26 +69,26 @@ export function createHttpApp(ports: Ports, opts: HttpOptions): Hono {
   )
   api.route(
     '/overview',
-    overviewRoutes(ports, {
+    overviewRoutes(deps, {
       startedAt: opts.startedAt,
       auth: opts.auth,
       poll: opts.poll,
       health: opts.health,
     }),
   )
-  api.route('/config', configRoutes(ports))
+  api.route('/config', configRoutes(deps))
   api.route('/subscriptions', subscriptionRoutes(opts.subs))
-  api.route('/updates', updateRoutes(ports, opts.poll))
+  api.route('/updates', updateRoutes(deps, opts.poll))
   api.route('/rules', ruleRoutes(opts.rules))
-  api.route('/jobs', jobRoutes(ports, opts.queue))
-  api.route('/summaries', summaryRoutes(ports, opts.queue))
-  api.route('/ups', upRoutes(ports, opts.ups))
+  api.route('/jobs', jobRoutes(deps, opts.queue))
+  api.route('/summaries', summaryRoutes(deps, opts.queue))
+  api.route('/ups', upRoutes(deps, opts.ups))
   api.route('/ai', aiRoutes(opts.ai))
   api.route('/notify', notifyRoutes(opts.notify))
-  api.route('/events', eventRoutes(ports))
-  // 日志使用独立流，避免每秒数十行日志挤掉队列进度。
-  api.route('/logs', logRoutes(ports.events, opts.logs))
-  // 未匹配的 /api 路径统一返回结构化 404，不回退到静态 index.html。
+  api.route('/events', eventRoutes(deps))
+
+  api.route('/logs', logRoutes(deps.events, opts.logs))
+  // 未匹配的 /api 路径统一返回结构化 404，不回退到静态 index.html
   api.all('*', (c) => c.json(errorBody('not-found', `没有这个端点：${c.req.path}`), 404))
   app.route('/api', api)
 

@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { describe, it } from 'node:test'
 
 import { YtDlpDownloader } from '../src/server/infra/audio/yt-dlp.ts'
-import type { CommandResult, CommandRunner } from '../src/server/ports/command.ts'
+import type { CommandResult, CommandRunner } from '../src/server/types/platform.ts'
 import { FakeClock } from './fakes/clock.ts'
 import { CollectingLogger } from './fakes/logger.ts'
 
@@ -38,7 +38,7 @@ const cookies = {
 async function downloader(dir: string, commands: CommandRunner) {
   return new YtDlpDownloader({
     commands,
-    // 只用到 snapshot，其余方法这条路径上不会碰。
+
     cookies: cookies as never,
     clock: new FakeClock(1_000),
     logger: new CollectingLogger(),
@@ -60,12 +60,12 @@ describe('音频下载', () => {
     assert.equal(commands.runs, 1)
     assert.equal(first.bytes, big.length)
 
-    // 第二次：文件还在，yt-dlp 一次都不该跑。
+    // 第二次：文件还在，yt-dlp 一次都不应跑
     const second = await dl.download('BV1x')
     assert.equal(commands.runs, 1)
     assert.equal(second.path, first.path)
 
-    // cookie 文件是一次性的，两次都不留在盘上。
+    // cookie 文件是一次性的，两次都不留在盘上
     assert.deepEqual(await readdir(dir), ['BV1x.m4a'])
     await rm(dir, { recursive: true, force: true })
   })

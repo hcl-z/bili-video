@@ -2,8 +2,8 @@ import type { SendResponse, WxPusherResponse } from 'push-all-in-one'
 import { WxPusher } from 'push-all-in-one'
 
 import type { NotifyConfig } from '#shared/contract/config.ts'
-import type { Logger } from '../../ports/logger.ts'
-import type { DeliveryResult, Notifier, NotifyMessage } from '../../ports/notifier.ts'
+import type { Logger } from '../../types/platform.ts'
+import type { DeliveryResult, Notifier, NotifyMessage } from '../../types/delivery.ts'
 
 interface PushNotifierDeps {
   config: () => NotifyConfig

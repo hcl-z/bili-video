@@ -1,9 +1,11 @@
+import { Suspense } from 'react'
 import { Moon, Sun } from 'lucide-react'
 import { NavLink, Outlet } from 'react-router-dom'
 
 import { HealthDot } from '@/components/health-dot'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { useServerEvents } from '@/lib/use-sse'
@@ -12,15 +14,10 @@ import { NAV, type NavItem } from '@/router'
 
 const GROUPS: NavItem['group'][] = ['监听', '订阅', '系统']
 
-/**
- * 分栏阅读：60px 顶栏 + 260px 索引栏 + 正文。
- *
- * 正文列限宽（`max-w-[72ch]` 由各页自己控制），因为这个工作台一半时间是在**读总结**，
- * 不是在填表 —— 通栏的一行字看着累。
- */
+
 export function AppShell() {
   const { theme, toggle } = useTheme()
-  // 全站一条 SSE 连接，事件到了自动失效对应查询。
+  // 全站单条 SSE 连接，事件到了自动失效对应查询
   useServerEvents()
 
   return (
@@ -77,9 +74,19 @@ export function AppShell() {
         </ScrollArea>
       </nav>
 
-      {/* 内边距在 Page 里给，不在这儿 —— 总结页要通栏铺满，自己控制留白。 */}
+      {}
       <main className="md:pl-[var(--index-w)]" style={{ paddingTop: 'var(--appbar-h)' }}>
-        <Outlet />
+        <Suspense
+          fallback={
+            <div className="mx-auto w-full max-w-[72ch] space-y-4 px-6 py-6">
+              <Skeleton className="h-7 w-28" />
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-24 w-full" />
+            </div>
+          }
+        >
+          <Outlet />
+        </Suspense>
       </main>
     </div>
   )

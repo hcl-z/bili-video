@@ -2,18 +2,18 @@ import type { AuthSnapshot, Fault, FaultKind, HealthSnapshot, PollSnapshot } fro
 import { FAULT_LABEL } from '#shared/contract/api.ts'
 import { detectFaults, type DetectedFault } from '../domain/health.ts'
 import { errFields } from '../log-fields.ts'
-import type { Cancel, Clock } from '../ports/clock.ts'
-import type { ConfigStore } from '../ports/config-store.ts'
-import type { EventBus } from '../ports/event-bus.ts'
-import type { Logger } from '../ports/logger.ts'
-import type { Notifier } from '../ports/notifier.ts'
-import type { DeliveryRepo, JobRepo } from '../ports/repo.ts'
+import type { Cancel, Clock } from '../types/platform.ts'
+import type { ConfigStore } from '../types/persistence.ts'
+import type { EventBus } from '../types/platform.ts'
+import type { Logger } from '../types/platform.ts'
+import type { Notifier } from '../types/delivery.ts'
+import type { DeliveryRepo, JobRepo } from '../types/persistence.ts'
 
-/** 数最近这么多次转写结果就够判连败了，再往前翻没有意义。 */
+
 const ASR_WINDOW = 10
 
 export interface HealthDeps {
-  /** 当前登录态。为 null 表示这个进程没装 B 站适配器，登录那一类就不判。 */
+  /** 当前登录态。为 null 表示这个进程没装 B 站适配器，登录那一类就不判 */
   auth: () => AuthSnapshot | null
   poll: () => PollSnapshot
   jobs: JobRepo
@@ -25,11 +25,11 @@ export interface HealthDeps {
   events: EventBus
 }
 
-/** 定时自查与告警；每个内存中的故障期仅发送一次故障通知和一次恢复通知。 */
+/** 定时自查与告警；每个内存中的故障期仅发送一次故障通知和一次恢复通知 */
 export class HealthMonitor {
   private readonly deps: HealthDeps
   private readonly logger: Logger
-  /** 正在进行中的故障期。key 是故障类型，值是这一段的开始时刻与当时的原因。 */
+
   private readonly active = new Map<FaultKind, Fault>()
   private lastCheckAt: number | null = null
   private cancelCron: Cancel | null = null
@@ -65,11 +65,9 @@ export class HealthMonitor {
     }
   }
 
-  /**
-   * 跑一轮自查。**永不抛**：cron 的回调没人 catch，抛出去就是一次静默的进程级未处理拒绝。
-   */
+  /** 跑一轮自查。**永不抛**：cron 的回调没人 catch，抛出去就是一次静默的进程级未处理拒绝 */
   async checkNow(): Promise<HealthSnapshot> {
-    // 撞上就跳过：推送可能要等好几秒，重入只会把同一条告警发两遍。
+    // 遇到就跳过：推送可能要等好几秒，重入只会把同单条告警发两遍
     if (this.running) return this.snapshot()
     this.running = true
     try {
@@ -115,7 +113,7 @@ export class HealthMonitor {
     })
   }
 
-  /** 从最近的转写结果里数连着失败几次。跳过的那些不算 —— 有字幕就不转写，不是失败。 */
+
   private asrStreak(): { consecutiveFailures: number; lastError: string | null } {
     const recent = this.deps.jobs.recentSteps('asr', ASR_WINDOW)
     let n = 0
@@ -126,7 +124,7 @@ export class HealthMonitor {
     return { consecutiveFailures: n, lastError: n === 0 ? null : (recent[0]?.note ?? null) }
   }
 
-  /** 向各渠道投递告警；以 `alert:类型:故障开始时刻` 作为唯一键防止重复投递。 */
+  /** 向各渠道投递告警；以 `alert:类型:故障开始时刻` 作为唯一键防止重复投递 */
   private async push(fault: Fault, phase: 'down' | 'up'): Promise<void> {
     const label = FAULT_LABEL[fault.kind]
     const title = phase === 'down' ? `【故障】${label}` : `【已恢复】${label}`

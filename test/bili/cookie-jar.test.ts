@@ -14,7 +14,7 @@ describe('infra/bili Set-Cookie 解析', () => {
     )
     assert.ok(c)
     assert.equal(c.name, 'SESSDATA')
-    // 值保持原样（URL 编码的逗号不能解，B 站要的就是这串）。
+    // 值保持原样（URL 编码的逗号不能解，B 站要的就是这串）
     assert.equal(c.value, 'abc%2Cdef')
     assert.equal(c.expires, Date.parse('Tue, 09 Sep 2036 12:00:00 GMT'))
   })
@@ -44,7 +44,7 @@ describe('infra/bili Set-Cookie 解析', () => {
   it('空的、没有 = 的、只有属性的都返回 null，不产生垃圾条目', () => {
     assert.equal(parseSetCookie('', NOW), null)
     assert.equal(parseSetCookie('   ', NOW), null)
-    assert.equal(parseSetCookie('Path=/; HttpOnly', NOW)?.name, 'Path') // 这确实像个 cookie，调用方按名字白名单收
+    assert.equal(parseSetCookie('Path=/; HttpOnly', NOW)?.name, 'Path') // 这确实像个 cookie，调用方按名字无效名单收
     assert.equal(parseSetCookie('novalue', NOW), null)
   })
 })
@@ -65,7 +65,7 @@ describe('infra/bili cookie 落库', () => {
     assert.equal(h.core.cookies.get('SESSDATA'), 'secret-sess')
     assert.equal(h.core.cookies.csrf(), 'csrf-token')
 
-    // 库里那一行必须是密文。
+    // 库里那一行必须是密文
     const row = h.core.db.prepare('SELECT blob_json FROM cookies WHERE name = ?').get('SESSDATA')
     const blob = String((row as Record<string, unknown>)['blob_json'])
     assert.ok(!blob.includes('secret-sess'), `明文进了库：${blob}`)

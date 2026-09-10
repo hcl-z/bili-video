@@ -11,7 +11,7 @@ import type { BackupFile } from '../src/server/app/backup.ts'
 import { FakeFetch } from './fakes/bili-fetch.ts'
 import { createHarness } from './support/harness.ts'
 
-/** 页面上的运维动作：出码、续期、改 cron、看占用、导备份。 */
+/** 页面上的运维动作：出码、续期、改 cron、看占用、导备份 */
 
 const FAR_FUTURE = 'Tue, 07 Sep 2027 12:00:00 GMT'
 
@@ -23,7 +23,7 @@ function waitingForScan(): FakeFetch {
         qrcode_key: 'qk-web',
       },
     })
-    // 挂住不回：否则假时钟下那 90 轮问询会瞬间跑完，「码在等人扫」根本来不及断言。
+
     .onHang('qrcode/poll')
 }
 
@@ -36,7 +36,7 @@ describe('系统页', () => {
       )
       assert.equal(started.started, true)
 
-      // 出码是异步的（beginLogin 不等人扫），让它跑到「码已生成、正在等扫」。
+
       await new Promise((r) => setTimeout(r, 0))
 
       const res = await h.server.app.request('/api/system/qr')
@@ -44,10 +44,10 @@ describe('系统页', () => {
       const qr = QrResponseSchema.parse(await res.json())
       assert.match(qr.url, /qrcode_key=qk-web/)
       assert.match(qr.svg, /^<svg /)
-      // 终端那条路也还在，但页面这条不依赖它。
+
       assert.equal(h.server.services.auth!.snapshot().state, 'waiting-scan')
 
-      // 第二次点不再出第二张码。
+
       const again = LoginStartResponseSchema.parse(
         await (await h.server.app.request('/api/system/login', { method: 'POST' })).json(),
       )
@@ -61,7 +61,7 @@ describe('系统页', () => {
     const fetch = new FakeFetch()
       .on('web-interface/nav', { data: { isLogin: true, mid: 1, uname: '小号' } })
       .on('cookie/info', { data: { refresh: true, timestamp: 1_757_000_000_000 } })
-      // 续期链的第一步就走不通：没配 RSA 公钥。原因要原样回给页面。
+      // 续期链的第一步就走不通：没配 RSA 公钥。原因要原样回给页面
       .on('correspond/1', { raw: '<html></html>' })
 
     const h = await createHarness({

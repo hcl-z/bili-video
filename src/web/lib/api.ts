@@ -2,7 +2,6 @@ import type { AppConfig, ConfigSection } from '#shared/contract/config.ts'
 import type {
   AiSettingsResponse,
   AiTestResponse,
-  ConfigResponse,
   ErrorResponse,
   HealthResponse,
   HealthSnapshot,
@@ -19,7 +18,6 @@ import type {
   ReaderItemResponse,
   RefreshResponse,
   RulesResponse,
-  RunAllSummariesResponse,
   StorageResponse,
   SubscriptionResult,
   SubscriptionsResponse,
@@ -34,12 +32,7 @@ import type {
 import type { PipelineStep, SummaryJob } from '#shared/contract/job.ts'
 import type { RuleKind } from '#shared/contract/subscription.ts'
 
-/**
- * 数据层：所有请求走这一个函数，因此「怎么报错」只有一种写法。
- *
- * 后端只听 127.0.0.1，没有登录系统（spec Q31a），所以这里没有 token、没有 401 处理。
- * dev 下 /api 由 Vite 代理到 8788；打包后前端由后端自己伺服，同源。
- */
+/** 数据层：所有请求走这一个函数，因此「如何报错」只有一种写法。 后端只听 127.0.0.1，没有登录系统（spec Q31a），所以这里没有 token、没有 401 处理。 dev 下 /api 由 Vite 代理到 8788；打包后前端由后端自己伺服，同源 */
 export class ApiError extends Error {
   readonly status: number
   readonly code: string
@@ -81,12 +74,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export const api = {
   health: () => request<HealthResponse>('/health'),
 
-  config: () => request<ConfigResponse>('/config'),
+  config: () => request<AppConfig>('/config'),
 
   // PATCH 回的是**整份**配置（和 GET 同一个 body），不是被改的那一段 ——
   // 于是页面拿到的永远是服务端认过的全量真相，不需要自己合并。
   patchConfig: <S extends ConfigSection>(section: S, patch: Partial<AppConfig[S]>) =>
-    request<ConfigResponse>(`/config/${section}`, {
+    request<AppConfig>(`/config/${section}`, {
       method: 'PATCH',
       body: JSON.stringify(patch),
     }),
@@ -156,13 +149,13 @@ export const api = {
   summaries: (before?: number) =>
     request<SummariesResponse>(`/summaries${before === undefined ? '' : `?before=${before}`}`),
 
-  /** 某个 UP 的空间流。**每页都是一次出网请求**，别拿它做预取。 */
+
   upFeed: (uid: string, offset?: string) =>
     request<UpFeedResponse>(
       `/ups/${uid}/feed${offset === undefined ? '' : `?offset=${encodeURIComponent(offset)}`}`,
     ),
 
-  /** 手动排一条解析。轮询只抓启动后新发的，历史投稿靠这个。 */
+
   parseUpItem: (uid: string, dynId: string) =>
     request<SummaryJob>(`/ups/${uid}/items/${dynId}/parse`, { method: 'POST' }),
 
@@ -174,9 +167,6 @@ export const api = {
   /** 手动把一条视频排上队。轮询只管新抓到的，旧的靠这个补。 */
   runSummary: (bvid: string) => request<SummaryJob>(`/summaries/${bvid}/run`, { method: 'POST' }),
 
-  runAllSummaries: () =>
-    request<RunAllSummariesResponse>('/summaries/run-all', { method: 'POST' }),
-
   jobs: () => request<JobsResponse>('/jobs'),
 
   // from = 从哪一步起跑，它之前的产物照用；不传是从头。
@@ -187,7 +177,7 @@ export const api = {
 
   aiSettings: () => request<AiSettingsResponse>('/ai'),
 
-  // apiKey 留空表示不修改。表单只写不读，所以「没动过」和「空」是同一件事。
+  // apiKey 留空表示不修改。表单只写不读，所以「没动过」和「空」是同一件事
   patchAiSettings: (patch: PatchAiSettingsRequest) =>
     request<AiSettingsResponse>('/ai', { method: 'PATCH', body: JSON.stringify(patch) }),
 

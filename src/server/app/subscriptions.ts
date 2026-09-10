@@ -1,35 +1,35 @@
 import type { Subscription } from '#shared/contract/subscription.ts'
 import { fail, ok, type Result } from '#shared/contract/failure.ts'
 import { parseUid } from '../domain/subscription.ts'
-import type { BiliProfile, BiliRelationWriter } from '../ports/bili.ts'
-import type { Clock } from '../ports/clock.ts'
-import type { Logger } from '../ports/logger.ts'
+import type { BiliProfile, BiliRelationWriter } from '../types/bili.ts'
+import type { Clock } from '../types/platform.ts'
+import type { Logger } from '../types/platform.ts'
 import { failureFields } from '../log-fields.ts'
-import type { SubscriptionRepo } from '../ports/repo.ts'
+import type { SubscriptionRepo } from '../types/persistence.ts'
 
 export interface SubscriptionDeps {
   subs: SubscriptionRepo
   clock: Clock
   logger: Logger
-  /** null = 关注适配器还没接上（或本进程不装）。订阅照样能加，只是关不上。 */
+  /** null = 关注适配器还没接上（或本进程不装）。订阅照样能加，只是关不上 */
   relations: BiliRelationWriter | null
-  /** 自动关注总开关，调用时读取；适配器另行强制校验。 */
+  /** 自动关注总开关，调用时读取；适配器另行强制校验 */
   autoFollow: () => boolean
-  /** null = 查不到昵称头像，退回用 uid 当名字，不因此拒绝订阅。 */
+  /** null = 查不到昵称头像，退回用 uid 当名字，不因此拒绝订阅 */
   profile: BiliProfile | null
 }
 
-/** 三个 per-UP 开关的补丁。缺省字段表示不改。 */
+
 export interface TogglePatch {
   enableDynamic?: boolean
   enableVideo?: boolean
   enableAi?: boolean
 }
 
-/** 添加订阅包含入库和关注；关注失败不回滚订阅，通过 notice 返回。 */
+/** 添加订阅包含入库和关注；关注失败不回滚订阅，通过 notice 返回 */
 export interface AddOutcome {
   sub: Subscription
-  /** 关注没成功时的人话原因；成功就是 null。 */
+  /** 关注没成功时的可读原因；成功就是 null */
   notice: string | null
 }
 
@@ -50,11 +50,7 @@ export class SubscriptionService {
     return this.deps.subs.get(uid)
   }
 
-  /**
-   * 粘一个 uid 或空间链接就完成订阅。
-   *
-   * 认不出 uid 是用户输入问题（fatal，页面照原样显示）；查名片失败不拦路。
-   */
+  /** 粘一个 uid 或空间链接就完成订阅。 无法识别 uid 是用户输入问题（fatal，页面照原样显示）；查名片失败不拦路 */
   async add(input: string): Promise<Result<AddOutcome>> {
     const uid = parseUid(input)
     if (uid === null) {
@@ -69,7 +65,7 @@ export class SubscriptionService {
     const existing = this.deps.subs.get(uid)
     const card = await this.fetchCard(uid, existing)
 
-    // 已存在就只更新名片，不动三个开关 —— 重复粘一次不该把用户的设置重置掉。
+
     this.deps.subs.upsert({
       uid,
       name: card.name,
@@ -84,7 +80,7 @@ export class SubscriptionService {
   }
 
   remove(uid: string): void {
-    // 只删订阅，不取消关注：取关是另一个写请求，删一行本地记录不值得去碰风控面。
+    // 只删订阅，不取消关注：取关是另一个写请求，删一行本地记录不值得去碰风控面
     this.deps.subs.remove(uid)
     this.logger.info({ uid }, '订阅已删除')
   }
@@ -101,11 +97,11 @@ export class SubscriptionService {
       enableAi: patch.enableAi ?? cur.enableAi,
       followedAt: cur.followedAt,
     })
-    // 开关不缓存在任何地方，轮询每轮从库里读，所以改完下一轮就生效，不用重启。
+    // 开关不缓存在任何地方，轮询每轮从库里读，所以改完下一轮就生效，不用重启
     return this.require(uid)
   }
 
-  /** 启动时补关注：所有还没关上的订阅，一次批量查关系，只补缺的。 */
+  /** 启动时补关注：所有还没关上的订阅，一次批量查关系，只补缺的 */
   async syncFollows(): Promise<{ followed: number; notice: string | null }> {
     const pending = this.deps.subs
       .list()
@@ -117,7 +113,7 @@ export class SubscriptionService {
     return { followed: r.followed.length, notice: r.notice }
   }
 
-  /** 批量查询关注关系后，仅对未关注用户发送关注请求，以减少写请求和风控风险。 */
+  /** 批量查询关注关系后，仅对未关注用户发送关注请求，以减少写请求和风控风险 */
   async ensureFollowed(uids: string[]): Promise<{ followed: string[]; notice: string | null }> {
     if (uids.length === 0) return { followed: [], notice: null }
 

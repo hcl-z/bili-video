@@ -31,7 +31,7 @@ export function UpdatesPage() {
   const [showFiltered, setShowFiltered] = useState(true)
 
   const updates = useQuery({
-    // showFiltered 进 key，两种视图各自缓存；SSE 按 ['updates'] 前缀失效，两边都会重取。
+    // showFiltered 进 key，两种视图各自缓存；SSE 按 ['updates'] 前缀失效，两边都会重取
     queryKey: [...keys.updates, showFiltered],
     queryFn: () => api.updates({ includeFiltered: showFiltered }),
   })

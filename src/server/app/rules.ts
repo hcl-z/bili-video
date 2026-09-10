@@ -9,31 +9,31 @@ import {
   type FilterTarget,
   type RegexMatcher,
 } from '../domain/filter.ts'
-import type { Clock } from '../ports/clock.ts'
-import type { ConfigStore } from '../ports/config-store.ts'
-import type { Logger } from '../ports/logger.ts'
-import type { FilterRuleRepo } from '../ports/repo.ts'
+import type { Clock } from '../types/platform.ts'
+import type { ConfigStore } from '../types/persistence.ts'
+import type { Logger } from '../types/platform.ts'
+import type { FilterRuleRepo } from '../types/persistence.ts'
 
 export interface RuleDeps {
   rules: FilterRuleRepo
   config: ConfigStore
   clock: Clock
   logger: Logger
-  /** 带超时的正则匹配器。超时中断需要 node:vm，所以它是注入的 infra。 */
+  /** 带超时的正则匹配器。超时中断需要 node:vm，所以它是注入的 infra */
   match: RegexMatcher
 }
 
 export interface RuleProbe {
   hits: { id: number; label: string; timedOut: boolean }[]
   verdict: Evaluation['verdict']
-  /** 这次判定实际用了哪一套规则（per-UP 覆盖全局之后的结果）。 */
+
   used: FilterRule[]
 }
 
 export class RuleService {
   private readonly deps: RuleDeps
   private readonly logger: Logger
-  /** 正则超时次数，按规则 id 记。规则页要能看见「这条规则一直在跑废」。 */
+  /** 正则超时次数，按规则 id 记。规则页要能看见「应项规则一直在超时」 */
   private readonly timeouts = new Map<number, number>()
 
   constructor(deps: RuleDeps) {
@@ -67,10 +67,7 @@ export class RuleService {
     this.timeouts.delete(id)
   }
 
-  /**
-   * 启动校验：库里可能有更早版本写进去的坏正则，或者手工改过库。
-   * 返回编译不过的那几条，调用方据此报错并指名道姓。
-   */
+
   validateAll(): FilterRule[] {
     const broken = this.deps.rules.list().filter((r) => badPattern(r.kind, r.pattern) !== null)
     if (broken.length > 0) {
@@ -79,7 +76,7 @@ export class RuleService {
     return broken
   }
 
-  /** 轮询每条动态都过这里。规则和配置都是用时读的，页面改完下一条就生效。 */
+
   judge(uid: string, target: FilterTarget): Evaluation {
     const rules = resolveRules(uid, this.deps.rules.listEffective(uid))
     const result = this.run(rules, target)
@@ -92,7 +89,7 @@ export class RuleService {
     return result
   }
 
-  /** 样本测试框：贴一段文本，回「命中了哪些规则 + 最终判定」。 */
+  /** 样本测试框：贴一段文本，回「命中了哪些规则 + 最终判定」 */
   probe(input: { uid: string | null; sample: string }): RuleProbe {
     const used =
       input.uid === null
@@ -124,7 +121,7 @@ export class RuleService {
     })
   }
 
-  /** 免扰时段判的是本地时间。 */
+
   private minuteOfDay(): number {
     const d = new Date(this.deps.clock.now())
     return d.getHours() * 60 + d.getMinutes()

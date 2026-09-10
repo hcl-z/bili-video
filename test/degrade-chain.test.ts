@@ -6,11 +6,9 @@ import type { FakeFetch } from './fakes/bili-fetch.ts'
 import type { Harness, HarnessOptions } from './support/harness.ts'
 import { avItem, bili, DEFAULT_SUB, llmOk, player, rig, ZH_TRACK } from './support/queue-rig.ts'
 
-/**
- * 四级降级链走一遍。字幕、音频、转写都是假件，队列、状态机、落库落盘是真的。
- */
+/** 四级降级链走一次。字幕、音频、转写都是测试替身，队列、状态机、落库落盘是真的 */
 
-/** 跑一轮轮询 + 队列。 */
+
 async function run(fetch: FakeFetch, extra: Partial<HarnessOptions> = {}): Promise<{ h: Harness }> {
   const { h } = await rig(fetch, extra)
   await h.server.services.poll.pollOnce()
@@ -53,13 +51,13 @@ describe('降级链', () => {
     assert.equal(s?.degradePath, 'asr')
     assert.equal(s?.transcriptSource, 'asr')
     assert.equal(s?.confidence, 'high')
-    // 模型回的正文要原样落库，也要进落盘的那份 Markdown。
+    // 模型回的正文要原样落库，也要进落盘的那份 Markdown
     assert.match(s?.article ?? '', /Overview/)
     assert.match(s?.article ?? '', /第一步：先量再改/)
     assert.match(s?.fullMd ?? '', /## Overview/)
     assert.deepEqual(audio.downloaded, ['BV1x'])
     assert.deepEqual(audio.cleaned, ['/tmp/fake/BV1x.m4a'])
-    // 正文要说清它是怎么走到这一级的。
+
     assert.match(s?.fullMd ?? '', /官方字幕：/)
 
     await h.close()
@@ -77,7 +75,7 @@ describe('降级链', () => {
     assert.equal(s?.degradePath, 'meta-only')
     assert.equal(s?.transcriptSource, 'none')
     assert.equal(s?.confidence, 'low')
-    // 没有时间轴就不给章节。
+
     assert.match(s?.article ?? '', /讲清了一件事/)
     assert.match(s?.fullMd ?? '', /未获取到语音内容/)
     assert.match(s?.fullMd ?? '', /语音转写：/)

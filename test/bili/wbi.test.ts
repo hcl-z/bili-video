@@ -3,13 +3,13 @@ import { describe, it } from 'node:test'
 
 import { mixinKey, signWbi, type WbiKeys } from '../../src/server/infra/bili/wbi.ts'
 
-/** 恒等表：mixinKey 就是 raw 的前 32 位，于是重排逻辑可以被单独看清。 */
+
 const IDENTITY = Array.from({ length: 64 }, (_, i) => i)
-/** 倒序表：拿来确认「真的按表取字符」而不是碰巧切了个前缀。 */
+
 const REVERSED = Array.from({ length: 64 }, (_, i) => 63 - i)
 
 const KEYS: WbiKeys = {
-  // 各 32 字符，拼起来正好 64 —— 和真实的 imgKey/subKey 长度一致。
+
   imgKey: 'abcdefghijklmnopqrstuvwxyz012345',
   subKey: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ678901',
   fetchedAt: 0,
@@ -56,7 +56,7 @@ describe('infra/bili WBI 签名', () => {
     const withSpecials = sign({ keyword: "a!b'c(d)e*f" })
     const without = sign({ keyword: 'abcdef' })
     assert.equal(withSpecials['w_rid'], without['w_rid'])
-    // 但发出去的参数保留原值，只有签名用的那份被剔除过。
+
     assert.equal(withSpecials['keyword'], "a!b'c(d)e*f")
   })
 

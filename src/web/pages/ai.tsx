@@ -9,7 +9,6 @@ import type { ProbeStage } from '#shared/contract/probe.ts'
 import type { AsrConfig } from '#shared/contract/config.ts'
 import { Page } from '@/components/page'
 import { SecretField } from '@/components/secret-field'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -51,7 +50,7 @@ export function AiPage() {
   )
 }
 
-/** 字段全放本地草稿，一次性提交。逐字段自动保存会把半截的 baseURL 也写进库。 */
+/** 字段全放本地草稿，一次性提交。逐字段自动保存会把半截的 baseURL 也写进库 */
 function AiForm(props: { settings: AiSettingsResponse }) {
   const qc = useQueryClient()
   const init = props.settings
@@ -99,14 +98,14 @@ function AiForm(props: { settings: AiSettingsResponse }) {
           useOfficialSubtitles: asr.useOfficialSubtitles,
           segmentSec: numOr(asr.segmentSec, init.asr.segmentSec),
         },
-        // 空串不传：后端把「没有这个字段」当作不修改，而不是清空。
+
         ...(llm.apiKey.trim() === '' ? {} : { llmApiKey: llm.apiKey.trim() }),
         ...(asr.apiKey.trim() === '' ? {} : { asrApiKey: asr.apiKey.trim() }),
       }),
     onSuccess: (data) => {
       qc.setQueryData(keys.ai, data)
       void qc.invalidateQueries({ queryKey: keys.config })
-      // 输入框清回空 —— 留着明文没用，页面也不该再显示它。
+
       setLlm((s) => ({ ...s, apiKey: '' }))
       setAsr((s) => ({ ...s, apiKey: '' }))
       toast.success('已保存', { description: '不用重启，下一次调用就按新配置走' })
@@ -114,7 +113,7 @@ function AiForm(props: { settings: AiSettingsResponse }) {
     onError: (err: Error) => toast.error('保存失败', { description: err.message }),
   })
 
-  // 单独一条 PATCH：只带 null 的那个字段，免得把输入框里没写完的草稿一起存了。
+
   const clearKey = useMutation({
     mutationFn: (which: 'llm' | 'asr') =>
       api.patchAiSettings(which === 'llm' ? { llmApiKey: null } : { asrApiKey: null }),
@@ -332,7 +331,7 @@ function AiForm(props: { settings: AiSettingsResponse }) {
           <CardContent className="space-y-3 py-4">
             <ProbeRow label="LLM" result={probe.llm} />
             <ProbeRow label="ASR" result={probe.asr} />
-            {/* 测的是当前存库的配置，不是输入框里的草稿。 */}
+            {}
             <p className="text-muted-foreground text-xs">测的是已保存的配置，改完记得先保存。</p>
           </CardContent>
         </Card>

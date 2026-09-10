@@ -17,7 +17,7 @@ import type {
   JobRepo,
   JobStepOutcome,
   SummaryRepo,
-} from '../../ports/repo.ts'
+} from '../../types/persistence.ts'
 import { num, str, strOrNull, type Row } from './sqlite.ts'
 
 const toStep = (r: Row): JobStep => ({
@@ -34,7 +34,7 @@ export class SqliteJobRepo implements JobRepo {
     this.db = db
   }
 
-  /** 一个 bvid 一条任务。重复入队 = 复位这一行重跑，不是插第二条。 */
+  /** 一个 bvid 单条任务。重复入队 = 复位这一行重跑，不是插第二条 */
   enqueue(job: {
     bvid: string
     updateId: string

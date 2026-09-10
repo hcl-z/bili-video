@@ -39,7 +39,7 @@ export function RulesPage() {
       void qc.invalidateQueries({ queryKey: keys.rules })
       toast.success('已添加')
     },
-    // 正则编译不过后端回 400，原文直接给人看。
+
     onError: (err: Error) => toast.error('加不上', { description: err.message }),
   })
 

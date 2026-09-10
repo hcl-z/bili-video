@@ -124,7 +124,7 @@ function JobRow(props: {
             </div>
           </div>
 
-          {/* 跑着的不给重跑按钮：点了也只会被后端挡回来。 */}
+          {/* 运行中的不给重跑按钮：点了也只会被后端挡回来 */}
           {job.status !== 'running' && job.status !== 'pending' && (
             <Button
               variant="outline"

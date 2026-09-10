@@ -6,11 +6,7 @@ import { JOB_STAGE_LABEL } from '#shared/contract/job.ts'
 import { api } from '@/lib/api'
 import { keys } from '@/lib/query'
 
-/**
- * 队列页和阅读栏共用：重跑一条任务，两处的列表都要跟着变。
- *
- * 传 from 就是「从这一步重跑」，它之前的产物照用；不传是从头来一遍。
- */
+/** 队列页和阅读栏共用：重跑单条任务，两处的列表都要跟着变。 传 from 就是「从这一步重跑」，它之前的产物照用；不传是从头来一次 */
 export function useRetryJob(id: number) {
   const qc = useQueryClient()
   return useMutation({

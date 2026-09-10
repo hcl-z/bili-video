@@ -3,16 +3,16 @@ import type { ProbeResult } from '#shared/contract/probe.ts'
 import { fail, ok, type Result } from '#shared/contract/failure.ts'
 import { classifyProbe, networkProbe, notConfigured, probeOk } from '../../domain/ai-probe.ts'
 import { llmFailure, llmTransient } from '../../domain/llm-error.ts'
-import type { Clock } from '../../ports/clock.ts'
-import type { Llm, LlmCompletion, LlmMessage, LlmOptions } from '../../ports/llm.ts'
-import type { Logger } from '../../ports/logger.ts'
+import type { Clock } from '../../types/platform.ts'
+import type { Llm, LlmCompletion, LlmMessage, LlmOptions } from '../../types/ai.ts'
+import type { Logger } from '../../types/platform.ts'
 import { failureFields } from '../../log-fields.ts'
 
 export interface OpenAiCompatDeps {
   fetch: typeof fetch
   clock: Clock
   logger: Logger
-  /** 用时读：页面上改完 baseURL / model，下一次调用就按新的来，不重启。 */
+  /** 用时读：页面上改完 baseURL / model，下一次调用就按新的来，不重启 */
   config: () => AiConfig
   apiKey: () => string | null
 }
@@ -63,12 +63,7 @@ export class OpenAiCompatLlm implements Llm {
     }
   }
 
-  /**
-   * 最小请求：`max_tokens: 1` 的一次 chat/completions。
-   *
-   * 不用 `/models` 列表 —— 它过得去不代表指定的 model 能用（很多兼容实现的 /models
-   * 是写死的一张表），而「model 不存在」正是要区分出来的三种失败之一。
-   */
+  /** 最小请求：`max_tokens: 1` 的一次 chat/completions。 不用 `/models` 列表 —— 它过得去不代表指定的 model 能用（很多兼容实现的 /models 是写死的单个表），而「model 不存在」正是要区分出来的三种失败之一 */
   async ping(): Promise<ProbeResult> {
     const cfg = this.deps.config()
     if (cfg.baseURL.trim() === '') return notConfigured('baseURL')

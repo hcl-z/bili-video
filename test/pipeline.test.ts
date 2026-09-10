@@ -5,9 +5,7 @@ import type { JobsResponse } from '#shared/contract/api.ts'
 import type { PipelineStep, StepStatus } from '#shared/contract/job.ts'
 import { bili, llmOk, player, rig, ZH_TRACK } from './support/queue-rig.ts'
 
-/**
- * 六步流水线：每一步的状态落库，重跑能从任意一步起 —— 前面那几步的产物照用。
- */
+/** 六步流水线：每一步的状态落库，重跑能从任意一步起 —— 前面那几步的产物照用 */
 
 const steps = (job: { steps: { step: PipelineStep; status: StepStatus }[] }) =>
   Object.fromEntries(job.steps.map((s) => [s.step, s.status]))
@@ -25,14 +23,14 @@ describe('任务流水线', () => {
     assert.equal(job?.status, 'done')
     assert.deepEqual(steps(job!), {
       subtitle: 'done',
-      // 有字幕就不下音频，这两步是「不用走」而不是「没跑成」。
+
       download: 'skipped',
       asr: 'skipped',
       chunk: 'skipped',
       reduce: 'done',
       persist: 'done',
     })
-    // 每一步的产物都留着，下一次重跑才能挑起点。
+    // 每一步的产物都留着，下一次重跑才能挑起点
     assert.notEqual(h.core.repos.artifacts.get('BV1x', 'transcript'), null)
     assert.notEqual(h.core.repos.artifacts.get('BV1x', 'draft'), null)
 

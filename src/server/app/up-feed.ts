@@ -3,21 +3,17 @@ import { fail, ok, type Result } from '#shared/contract/failure.ts'
 import type { SummaryJob } from '#shared/contract/job.ts'
 import { fatalFailure } from '../domain/bili-error.ts'
 import { readerItem } from '../domain/summary-format.ts'
-import type { BiliReader, ParsedDynamic } from '../ports/bili.ts'
-import type { Clock } from '../ports/clock.ts'
-import type { Logger } from '../ports/logger.ts'
-import type { JobRepo, SubscriptionRepo, SummaryRepo, UpdateRepo } from '../ports/repo.ts'
+import type { BiliReader, ParsedDynamic } from '../types/bili.ts'
+import type { Clock } from '../types/platform.ts'
+import type { Logger } from '../types/platform.ts'
+import type { JobRepo, SubscriptionRepo, SummaryRepo, UpdateRepo } from '../types/persistence.ts'
 import type { SummaryQueue } from './queue-runner.ts'
 
-/**
- * 阅读页的数据源：某个 UP 的空间流，现拉 B 站。
- *
- * 轮询只抓启动之后新发的，所以历史投稿在本地库里不存在 —— 这条路径就是去够它们的。
- */
+/** 阅读页的数据源：某个 UP 的空间流，现拉 B 站。 轮询只抓启动之后新发的，所以历史投稿在本地库里不存在 —— 应项路径就是去够它们的 */
 
-/** 翻过的条目留在内存里，手动排解析时不用为了拿标题再打一次 B 站。 */
+/** 翻过的条目留在内存里，手动排解析时不用为了拿标题再打一次 B 站 */
 const CACHE_MAX = 500
-/** 缓存里没有那条时，最多往前翻几页去找。 */
+/** 缓存里没有应项时，最多往前翻几页去找 */
 const LOOKUP_PAGES = 3
 
 export interface UpFeedDeps {
@@ -59,12 +55,7 @@ export class UpFeedService {
     })
   }
 
-  /**
-   * 手动排一条解析。**先把这条动态落库再入队**：标题、封面、简介兜底都从 updates 里读，
-   * 不落库的话总结出来是一条只有 BV 号的空壳。
-   *
-   * 手动排队不判过滤规则 —— 点了就是意图。
-   */
+  /** 手动排单条解析。**先把应项动态落库再入队**：标题、封面、简介兜底都从 updates 里读， 不落库的话总结出来是单条只有 BV 号的空壳。 手动排队不判过滤规则 —— 点了就是意图 */
   async parse(uid: string, dynId: string): Promise<Result<SummaryJob>> {
     const item = await this.locate(uid, dynId)
     if (!item.ok) return item
@@ -94,7 +85,7 @@ export class UpFeedService {
     ])
     this.logger.info({ uid, bvid: dyn.bvid, dynId: dyn.dynId }, '手动解析已入队')
 
-    // 已经有任务的走重跑，免得同一个视频攒出两条任务，也免得「重新解析」点了没反应。
+    // 已经有任务的走重跑，避免同一个视频攒出两条任务，也避免「重新解析」点了没反应
     const existing = this.deps.jobs.getByBvid(dyn.bvid)
     if (existing === null) {
       return ok(this.deps.queue.enqueue({ bvid: dyn.bvid, updateId: dyn.dynId }))
@@ -103,7 +94,7 @@ export class UpFeedService {
     return ok(this.deps.jobs.get(existing.id) ?? existing)
   }
 
-  /** 缓存里没有就现翻几页找。翻不到多半是这条已经很老了，让页面提示往下翻。 */
+  /** 缓存里没有就现翻几页找。翻不到多半是应项已经很老了，让页面提示往下翻 */
   private async locate(uid: string, dynId: string): Promise<Result<ParsedDynamic>> {
     const cached = this.seen.get(dynId)
     if (cached !== undefined) return ok(cached)
@@ -129,7 +120,7 @@ export class UpFeedService {
       this.seen.delete(i.dynId)
       this.seen.set(i.dynId, i)
     }
-    // 先进先出地丢掉最老的：Map 的迭代顺序就是插入顺序。
+
     while (this.seen.size > CACHE_MAX) {
       const oldest = this.seen.keys().next()
       if (oldest.done === true) break
@@ -137,7 +128,7 @@ export class UpFeedService {
     }
   }
 
-  /** 现拉的条目 + 本地库那点状态。库里没有就是「从没抓到过」，不是异常。 */
+
   private decorate(i: ParsedDynamic): ReaderItem {
     return readerItem(
       {

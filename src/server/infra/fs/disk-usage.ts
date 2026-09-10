@@ -1,13 +1,13 @@
 import { readdir, stat } from 'node:fs/promises'
 import { isAbsolute, join, resolve } from 'node:path'
 
-import type { DiskUsage, StorageStats } from '../../ports/storage.ts'
+import type { DiskUsage, StorageStats } from '../../types/delivery.ts'
 
 export interface FsStorageDeps {
   dataDir: string
   dbFile: string
   audioDir: string
-  /** 用时读：落盘目录是配置项，改完这里就该报新目录的占用。 */
+  /** 用时读：落盘目录是配置项，改完这里就应报新目录的占用 */
   markdownDir: () => string
 }
 
@@ -22,7 +22,7 @@ export class FsStorageStats implements StorageStats {
     const db = this.deps.dbFile
     const audioDir = this.deps.audioDir
     const markdownDir = this.resolveMarkdownDir()
-    // WAL 模式下未 checkpoint 的写入全在 -wal 里，只 stat 主文件会少算一大截。
+    // WAL 模式下未 checkpoint 的写入全在 -wal 里，只 stat 主文件会少算一大截
     const [main, wal, shm, audioBytes, markdownBytes] = await Promise.all([
       fileSize(db),
       fileSize(`${db}-wal`),

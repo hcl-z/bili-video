@@ -1,0 +1,15 @@
+services:
+  bili-video:
+    build:
+      context: .
+    image: bili-video:local
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8788:8788"
+    environment:
+      MASTER_KEY: ${MASTER_KEY:?set MASTER_KEY in .env (at least 16 characters)}
+    volumes:
+      - bili-video-data:/app/data
+
+volumes:
+  bili-video-data:

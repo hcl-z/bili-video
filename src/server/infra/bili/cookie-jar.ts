@@ -1,9 +1,9 @@
 import type { DatabaseSync } from 'node:sqlite'
 
-import type { CookieJar } from '../../ports/cookie-jar.ts'
+import type { CookieJar } from '../../types/bili.ts'
 import { num, numOrNull, str, type Row } from '../db/sqlite.ts'
 
-/** 加密收口。注入进来而不是直接依赖 master key，jar 才能在没有密钥的测试里被单独驱动。 */
+/** 加密收口。注入进来而不是直接依赖 master key，jar 才能在没有密钥的测试里被单独驱动 */
 export interface Cipher {
   seal(plaintext: string): string
   open(sealed: string): string
@@ -12,16 +12,11 @@ export interface Cipher {
 export interface ParsedCookie {
   name: string
   value: string
-  /** 绝对到期时间（epoch ms）；null = 会话 cookie。 */
+  /** 绝对到期时间（epoch ms）；null = 会话 cookie */
   expires: number | null
 }
 
-/**
- * 解析一条 Set-Cookie。
- *
- * 关键一点：**Max-Age 换算成绝对时间**再存。存相对秒数的话，重启一次有效期就凭空多出来一截，
- * 于是「还有 20 天」这种显示永远是错的。RFC 6265：Max-Age 优先于 Expires。
- */
+/** 解析单条 Set-Cookie。 关键一点：**Max-Age 换算成绝对时间**再存。存相对秒数的话，重启一次有效期就凭空多出来一截， 于是「还有 20 天」这种显示永远是错的。RFC 6265：Max-Age 优先于 Expires */
 export function parseSetCookie(line: string, now: number): ParsedCookie | null {
   const parts = line.split(';')
   const first = parts[0]?.trim() ?? ''
@@ -29,7 +24,7 @@ export function parseSetCookie(line: string, now: number): ParsedCookie | null {
   if (eq <= 0) return null
 
   const name = first.slice(0, eq).trim()
-  // 值里可能还有 `=`（base64），只切第一个。
+
   const value = first.slice(eq + 1).trim()
   if (name === '') return null
 
@@ -52,10 +47,7 @@ export function parseSetCookie(line: string, now: number): ParsedCookie | null {
   return { name, value, expires: maxAge ?? expires }
 }
 
-/**
- * cookies 表的读写。值加密，到期时间明文（要能用 SQL 直接问「最早什么时候到期」，
- * 而且它本身不是秘密）。
- */
+/** cookies 表的读写。值加密，到期时间明文（要能用 SQL 直接问「最早什么时候到期」， 而且它本身不是秘密） */
 export class SqliteCookieJar implements CookieJar {
   private readonly cache = new Map<string, string>()
   private loaded = false

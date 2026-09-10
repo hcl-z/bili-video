@@ -2,9 +2,9 @@ import { readFile, rm } from 'node:fs/promises'
 
 import type { AsrConfig } from '#shared/contract/config.ts'
 import type { Cue } from '#shared/contract/summary.ts'
-import type { Asr } from '../../ports/asr.ts'
-import type { CommandRunner } from '../../ports/command.ts'
-import type { Logger } from '../../ports/logger.ts'
+import type { Asr } from '../../types/ai.ts'
+import type { CommandRunner } from '../../types/platform.ts'
+import type { Logger } from '../../types/platform.ts'
 import { joinUrl } from '../ai/openai-compat.ts'
 import { maskSecret } from '../secret/secret-box.ts'
 import { splitAudio } from './audio-split.ts'
@@ -19,12 +19,7 @@ export interface ChatAudioAsrDeps {
 
 const TIMEOUT_MS = 10 * 60_000
 
-/**
- * 把音频塞进 chat/completions 的那一类转写接口（小米 MiMo、Qwen-Omni 等）。
- *
- * 和 Whisper 那套差两件事：音频是 data URL 塞在消息里，且回来的只有纯文本、没有时间轴。
- * 所以先按固定时长切段，段序号就是时间戳 —— 精度等于段长，但至少章节能落回原视频。
- */
+/** 把音频塞进 chat/completions 的那一类转写接口（小米 MiMo、Qwen-Omni 等）。 和 Whisper 那套差两件事：音频是 data URL 塞在消息里，且回来的只有纯文本、没有时间轴。 所以先按固定时长切段，段序号就是时间戳 —— 精度等于段长，但至少章节能落回原视频 */
 export class ChatAudioAsr implements Asr {
   readonly provider = 'chat-audio' as const
   private readonly deps: ChatAudioAsrDeps
@@ -46,7 +41,7 @@ export class ChatAudioAsr implements Asr {
 
     try {
       const cues: Cue[] = []
-      // 顺序跑：这类接口的限流普遍很紧，并发发出去只会换成 429。
+      // 顺序跑：这类接口的限流普遍很紧，并发发出去只会换成 429
       for (const [i, file] of files.entries()) {
         const text = await this.one(file, cfg, opts, i)
         if (text !== '') cues.push({ from: i * seg, to: (i + 1) * seg, text })

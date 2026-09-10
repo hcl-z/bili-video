@@ -12,7 +12,7 @@ describe('nextAnchors', () => {
   })
 
   it('只推进到「早于最早失败项」的最大成功时间戳', () => {
-    // 失败卡在 200，所以 300/400 成功了也不能算 —— 否则 200 那条永远补不回来。
+    // 失败卡在 200，所以 300/400 成功了也不能算 —— 否则 200 应项永远补不回来
     const items = [item('1', 100, true), item('1', 200, false), item('1', 300, true), item('1', 400, true)]
     assert.equal(nextAnchors(items, new Map()).get('1'), 100)
   })

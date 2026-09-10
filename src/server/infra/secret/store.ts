@@ -1,16 +1,10 @@
 import type { DatabaseSync } from 'node:sqlite'
 
-import type { SecretDescription, SecretKey, SecretStore } from '../../ports/secret-store.ts'
+import type { SecretDescription, SecretKey, SecretStore } from '../../types/persistence.ts'
 import { num, str, type Row } from '../db/sqlite.ts'
 import { maskSecret, open, parseBox, seal } from './secret-box.ts'
 
-/**
- * secrets 表的读写。明文在内存里缓存 —— 每次解密都要跑一次 scrypt（~50ms），
- * 而 B 站请求会频繁取 SESSDATA。
- *
- * get() 返回明文是有意的（服务端要拿它去调外部 API）；「页面上只显示掩码」这条约束
- * 由 HTTP 层只暴露 describe() 来保证。
- */
+/** secrets 表的读写。明文在内存里缓存 —— 每次解密都要跑一次 scrypt（~50ms）， 而 B 站请求会频繁取 SESSDATA。 get() 返回明文是有意的（服务端要拿它去调外部 API）；「页面上只显示掩码」应项约束 由 HTTP 层只暴露 describe() 来保证 */
 export class SqliteSecretStore implements SecretStore {
   readonly #cache = new Map<SecretKey, string>()
 
@@ -76,7 +70,7 @@ export class SqliteSecretStore implements SecretStore {
       .map((r) => str((r as Row)['key']))
   }
 
-  /** 库里有密文而 master key 是新生成的 —— 这种组合只可能是 key 丢了。 */
+  /** 库里有密文而 master key 是新生成的 —— 这种组合只可能是 key 丢了 */
   countStored(): number {
     const r = this.db.prepare('SELECT COUNT(*) AS n FROM secrets').get()
     return r ? num((r as Row)['n']) : 0

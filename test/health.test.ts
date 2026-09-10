@@ -5,12 +5,9 @@ import { OverviewResponseSchema } from '#shared/contract/api.ts'
 import { FakeFetch } from './fakes/bili-fetch.ts'
 import { createHarness, type Harness } from './support/harness.ts'
 
-/**
- * 健康自查与告警。可控时钟 + 记录型通知器：连续失败只推一条、恢复推一条，
- * 全靠断言那台假通知器收到了什么。
- */
 
-/** -400 是 fatal：它不带退避建议，所以三轮失败能连着发生，不用等退避窗口。 */
+
+
 const BROKEN = { code: -400, message: '请求错误' }
 const OK_FEED = { data: { items: [], has_more: false, offset: '', update_baseline: 'b1' } }
 
@@ -50,7 +47,7 @@ describe('健康自查与故障告警', () => {
       }
       assert.equal(poll.snapshot().consecutiveFailures, 3)
 
-      // 第一轮自查发现故障，推一条。
+
       const first = await health.checkNow()
       assert.deepEqual(
         first.faults.map((f) => f.kind),
@@ -58,26 +55,26 @@ describe('健康自查与故障告警', () => {
       )
       assert.deepEqual(h.notifier.titles(), ['【故障】连续拉取失败'])
 
-      // 故障还挂着，再查两轮也不该刷屏。
+
       h.clock.advance(30 * 60_000)
       await health.checkNow()
       h.clock.advance(30 * 60_000)
       await health.checkNow()
       assert.equal(h.notifier.sent.length, 1, '同一段故障推了多条')
 
-      // 拉取恢复：连败清零，下一轮自查恰好推一条「已恢复」。
+
       assert.equal((await poll.pollOnce()).ok, true)
       assert.equal(poll.snapshot().consecutiveFailures, 0)
       const back = await health.checkNow()
       assert.deepEqual(back.faults, [])
       assert.deepEqual(h.notifier.titles(), ['【故障】连续拉取失败', '【已恢复】连续拉取失败'])
 
-      // 恢复之后不再重复发。
+
       h.clock.advance(30 * 60_000)
       await health.checkNow()
       assert.equal(h.notifier.sent.length, 2)
 
-      // 两条都进了投递账本，都记成 alert。
+
       const alerts = h.core.repos.deliveries.recent(10)
       assert.equal(alerts.length, 2)
       assert.ok(alerts.every((d) => d.kind === 'alert' && d.status === 'sent'))
@@ -191,7 +188,7 @@ describe('健康自查与故障告警', () => {
       assert.equal(res.status, 200)
       assert.match(res.headers.get('content-type') ?? '', /text\/event-stream/)
 
-      // 补历史是逐行写的，每行一个 chunk，所以要多读几次才拿得齐。
+
       const reader = res.body!.getReader()
       const decoder = new TextDecoder()
       let chunk = ''
@@ -201,12 +198,12 @@ describe('健康自查与故障告警', () => {
       await reader.cancel()
 
       assert.match(chunk, /任务失败/)
-      // 结构化字段和错误摘要一起过来，否则日志页只剩一句话可看。
+
       assert.match(chunk, /BV1x/)
       assert.match(chunk, /转写结果是空的/)
-      // fatal 比 error 更糟，看 error 的时候藏起来就是个 bug。
+
       assert.match(chunk, /启动失败/)
-      // 精确过滤：选 error 就只有 error 那一档，别的档一行都不该漏出来。
+      // 精确过滤：选 error 就只有 error 那一档，避免的档一行都不应漏出来
       assert.doesNotMatch(chunk, /轮询完成/)
       assert.doesNotMatch(chunk, /轮询退避/, 'warn 档的行漏进了 error 档')
     } finally {

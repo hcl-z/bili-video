@@ -4,14 +4,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Download, Loader2, QrCode, RefreshCw, Save, ShieldAlert } from 'lucide-react'
 import { toast } from 'sonner'
 
-import type { ConfigResponse, SystemResponse } from '#shared/contract/api.ts'
+import type { AppConfig } from '#shared/contract/config.ts'
+import type { SystemResponse } from '#shared/contract/api.ts'
 import { AUTH_STATE_LABEL } from '#shared/contract/api.ts'
 import { Page } from '@/components/page'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
@@ -37,14 +37,14 @@ export function SystemPage() {
           <AuthCard system={system.data} />
           <PollCard config={config.data} />
           <DataCard />
-          <TruthCard config={config.data} />
+          <TruthCard />
         </div>
       )}
     </Page>
   )
 }
 
-/** 扫码与续期。二维码由服务端渲染成 SVG，前端只负责显示。 */
+/** 扫码与续期。二维码由服务端渲染成 SVG，前端只负责显示 */
 function AuthCard(props: { system: SystemResponse }) {
   const qc = useQueryClient()
   const auth = props.system.auth
@@ -168,16 +168,16 @@ function AuthCard(props: { system: SystemResponse }) {
 }
 
 /** 轮询节奏。cron 由后端预编译校验，非法表达式在这里当场被拒。 */
-function PollCard(props: { config: ConfigResponse }) {
+function PollCard(props: { config: AppConfig }) {
   const qc = useQueryClient()
-  const poll = props.config.config.poll
+  const poll = props.config.poll
   const [cron, setCron] = useState(poll.cron)
 
   const save = useMutation({
     mutationFn: (patch: { cron?: string; enabled?: boolean }) => api.patchConfig('poll', patch),
     onSuccess: (data) => {
       qc.setQueryData(keys.config, data)
-      setCron(data.config.poll.cron)
+      setCron(data.poll.cron)
       toast.success('已生效', { description: '不用重启，下一次排程就按新的来' })
     },
     onError: (err: Error) => toast.error('没改成', { description: err.message }),
@@ -273,16 +273,13 @@ function DataCard() {
   )
 }
 
-/** 两件容易在三个月后咬人的事：YAML 已经不生效了，master key 丢了就全没了。 */
-function TruthCard(props: { config: ConfigResponse }) {
+/** 配置由数据库管理；master key 需要单独备份。 */
+function TruthCard() {
   return (
     <Card>
       <CardContent className="text-muted-foreground space-y-2.5 py-4 text-sm">
         <p>
-          配置已由本页面管理；修改默认配置需更新应用内的 <code className="font-mono">INITIAL_CONFIG</code>。
-          {props.config.seededFrom === null
-            ? '（当前配置来自数据库）'
-            : `（首次启动时从 ${props.config.seededFrom} 导入过一次）`}
+          配置已由本页面管理；修改出厂默认值需更新应用内的 <code className="font-mono">INITIAL_CONFIG</code>。
         </p>
         <p className="flex gap-2">
           <ShieldAlert className="text-destructive mt-0.5 size-4 shrink-0" />

@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-/** 一条字幕/转写。ASR 与官方字幕归一到同一形状。 */
+/** 单条字幕/转写。ASR 与官方字幕归一到同一形状 */
 export const CueSchema = z.object({
   from: z.number(),
   to: z.number(),
@@ -8,11 +8,11 @@ export const CueSchema = z.object({
 })
 export type Cue = z.infer<typeof CueSchema>
 
-/** 转写文本的来源，决定这份总结的可信度。 */
+
 export const TranscriptSourceSchema = z.enum(['subtitle', 'asr', 'none'])
 export type TranscriptSource = z.infer<typeof TranscriptSourceSchema>
 
-/** 四级降级路径。绝不静默丢弃：走到哪一级都要推，都要标注。 */
+/** 四级降级路径。绝不静默丢弃：走到哪一级都要推，都要标注 */
 export const DegradePathSchema = z.enum(['subtitle', 'asr', 'meta-only', 'link-only'])
 export type DegradePath = z.infer<typeof DegradePathSchema>
 
@@ -31,15 +31,15 @@ export const TRANSCRIPT_SOURCE_LABEL: Record<TranscriptSource, string> = {
 
 export const SummarySchema = z.object({
   bvid: z.string(),
-  /** 一句话导语，从正文首段截出来的，给推送用。 */
+
   tldr: z.string(),
-  /** 模型回的正文，Markdown。阅读栏直接渲染它。 */
+  /** 模型回的正文，Markdown。阅读栏直接渲染它 */
   article: z.string(),
-  /** 落盘的那份：正文加上标题、链接、来源与降级说明。 */
+  /** 落盘的那份：正文加上标题、链接、来源与降级说明 */
   fullMd: z.string(),
   transcriptSource: TranscriptSourceSchema,
   degradePath: DegradePathSchema,
-  /** meta-only 是低置信度，正文里必须写明「未获取语音内容，基于简介推测」。 */
+  /** meta-only 是低置信度，正文里必须写明「未获取语音内容，基于简介推测」 */
   confidence: z.enum(['high', 'low']),
   createdAt: z.number().int(),
 })

@@ -26,7 +26,7 @@ const VERDICT: Record<'pass' | 'blocked' | 'held', { text: string; variant: 'def
     held: { text: '免扰挂起', variant: 'secondary' },
   }
 
-/** 样本测试框：贴一段文本，看命中了哪些规则、最终判定是什么。只读，不落库。 */
+/** 样本测试框：贴一段文本，看命中了哪些规则、最终判定是什么。只读，不落库 */
 export function RuleTester(props: { subs: Subscription[] }) {
   const [sample, setSample] = useState('')
   const [uid, setUid] = useState('global')

@@ -1,12 +1,10 @@
 import { mkdir, readdir, rm, stat, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
-import type { AudioDownloader, DownloadedAudio } from '../../ports/audio.ts'
+import type { AudioDownloader, DownloadedAudio } from '../../types/ai.ts'
 import type { BrowserIdentity } from '../bili/browser-identity.ts'
-import type { Clock } from '../../ports/clock.ts'
-import type { CommandRunner } from '../../ports/command.ts'
-import type { CookieJar } from '../../ports/cookie-jar.ts'
-import type { Logger } from '../../ports/logger.ts'
+import type { Clock, CommandRunner, Logger } from '../../types/platform.ts'
+import type { CookieJar } from '../../types/bili.ts'
 import { tail } from '../command/tail.ts'
 
 export interface YtDlpDeps {

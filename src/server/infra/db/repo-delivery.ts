@@ -2,8 +2,8 @@ import type { DatabaseSync } from 'node:sqlite'
 
 import type { VideoUsage } from '#shared/contract/api.ts'
 import type { DeliveryKind, DeliveryStatus } from '#shared/contract/job.ts'
-import type { DeliveryRecord, DeliveryRepo, LlmCallRepo } from '../../ports/repo.ts'
-import type { NotifyChannel } from '../../ports/notifier.ts'
+import type { DeliveryRecord, DeliveryRepo, LlmCallRepo } from '../../types/persistence.ts'
+import type { NotifyChannel } from '../../types/delivery.ts'
 import { num, str, strOrNull, type Row } from './sqlite.ts'
 
 const toDelivery = (r: Row): DeliveryRecord => ({
@@ -24,12 +24,7 @@ export class SqliteDeliveryRepo implements DeliveryRepo {
     this.db = db
   }
 
-  /**
-   * 去重机制就是那条唯一索引本身，不是应用层的「先查再插」（那中间有窗口）。
-   * 返回 false = 这条 (update, channel, kind) 已经投过或正在投，调用方直接不发。
-   *
-   * 已经 failed 的允许重新占用，否则一次网络抖动就永久拉黑这条投递。
-   */
+  /** 去重机制就是应项唯一索引本身，不是应用层的「先查再插」（那中间有窗口）。 返回 false = 应项 (update, channel, kind) 已经投过或正在投，调用方直接不发。 已经 failed 的允许重新占用，否则一次网络抖动就永久拉黑应项投递 */
   claim(d: {
     updateId: string
     channel: NotifyChannel

@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import process from 'node:process'
 
-import type { RuntimeInfo } from '../../ports/runtime.ts'
+import type { RuntimeInfo } from '../../types/platform.ts'
 
 const CONTAINER_MARKERS = /(?:docker|containerd|kubepods|podman)/i
 

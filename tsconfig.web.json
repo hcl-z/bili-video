@@ -1,6 +1,6 @@
 {
-  // 前端。lib 含 DOM 但 types 不含 node —— 前端代码引用 process / Buffer / node:fs 会编译不过。
-  // 构建由 Vite 负责，这里只做类型检查。
+
+
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "composite": true,

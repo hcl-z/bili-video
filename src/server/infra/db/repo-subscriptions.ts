@@ -1,7 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite'
 
 import type { FilterRule, RuleKind, Subscription } from '#shared/contract/subscription.ts'
-import type { FilterRuleRepo, SubscriptionRepo } from '../../ports/repo.ts'
+import type { FilterRuleRepo, SubscriptionRepo } from '../../types/persistence.ts'
 import { num, numOrNull, str, strOrNull, toBool, toInt, type Row } from './sqlite.ts'
 
 const toSubscription = (r: Row): Subscription => ({
@@ -36,7 +36,7 @@ export class SqliteSubscriptionRepo implements SubscriptionRepo {
   }
 
   upsert(sub: Omit<Subscription, 'followedAt'> & { followedAt?: number | null }): void {
-    // followed_at 用 COALESCE 保住旧值：改个昵称不该把「已关注」抹掉。
+    // followed_at 用 COALESCE 保住旧值：改个昵称不应把「已关注」清除
     this.db
       .prepare(
         `INSERT INTO subscriptions
@@ -95,7 +95,7 @@ export class SqliteFilterRuleRepo implements FilterRuleRepo {
       .map((r) => toRule(r as Row))
   }
 
-  /** 全局 + 该 uid 两个 scope 一起返回，谁覆盖谁由 domain/filter 决定，不在 SQL 里判。 */
+
   listEffective(uid: string): FilterRule[] {
     return this.db
       .prepare(`SELECT * FROM filter_rules WHERE scope IN ('global', ?) ORDER BY scope, id`)

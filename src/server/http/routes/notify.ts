@@ -5,7 +5,7 @@ import {
   type NotifyTestResponse,
 } from '#shared/contract/api.ts'
 import type { NotifyService } from '../../app/notify.ts'
-import type { NotifyChannel } from '../../ports/notifier.ts'
+import type { NotifyChannel } from '../../types/delivery.ts'
 import { errorBody } from '../errors.ts'
 import { parseBody } from '../parse.ts'
 

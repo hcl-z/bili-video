@@ -1,32 +1,29 @@
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
-// 具名导入：pino 的 .d.ts 里 default 导出解析成命名空间，不可调用；`{ pino }` 才是函数。
+// 具名导入：pino 的 .d.ts 里 default 导出解析成命名空间，不可调用；`{ pino }` 才是函数
 import { pino, type Logger as PinoLogger } from 'pino'
 
 import type { LogLine } from '#shared/contract/events.ts'
 import { toLogLine } from './log-fields.ts'
-import type { Logger, LogLevel } from './ports/logger.ts'
+import type { Logger, LogLevel } from './types/platform.ts'
 
 export interface LoggerOptions {
   level: LogLevel
-  /** 日志目录；null 表示只往 stdout 写（容器里就是这样）。 */
+
   dir: string | null
   retentionDays: number
-  /** 容器里输出结构化 JSON，本地输出人能读的一行一条。 */
+  /** 容器里输出结构化 JSON，本地输出人能读的一行单条 */
   json: boolean
-  /** 关掉 stdout 那一路。只给测试用 —— 否则日志会混进测试输出里。 */
+  /** 关掉 stdout 那一路。只给测试用 —— 否则日志会混进测试输出里 */
   stdout?: boolean
-  /** 每条日志同时喂给它，供 /api/logs/stream 用。 */
+  /** 每条日志同时喂给它，供 /api/logs/stream 用 */
   sink?: ((line: LogLine) => void) | undefined
 }
 
-/**
- * transport 目标表。单独导出是为了能直接断言「保留天数换算成保留份数」这类意图 ——
- * 这些参数错了不会报错，只会安静地把磁盘写满或把日志提前删掉。
- */
+/** transport 目标表。单独导出是为了能直接断言「保留天数换算成保留份数」这类意图 —— 这些参数错了不会报错，只会安静地把磁盘写满或把日志提前删掉 */
 export function buildTargets(opts: LoggerOptions): pino.TransportTargetOptions[] {
-  // json=true 走裸 stdout（容器里由 docker logs 收走）；否则用 pino-pretty 给人看。
-  // pino-pretty 只在 devDependencies 里 —— 容器是 --prod 安装 + json=true，走不到这条分支。
+  // json=true 走裸 stdout（容器里由 docker logs 收走）；否则用 pino-pretty 给查看
+  // pino-pretty 只在 devDependencies 里 —— 容器是 --prod 安装 + json=true，走不到应项分支
   const targets: pino.TransportTargetOptions[] =
     opts.stdout === false
       ? []
@@ -50,7 +47,7 @@ export function buildTargets(opts: LoggerOptions): pino.TransportTargetOptions[]
         frequency: 'daily',
         dateFormat: 'yyyy-MM-dd',
         mkdir: true,
-        // 保留份数 = 保留天数：一天一个文件，超出的最旧的自动删。
+
         limit: { count: opts.retentionDays, removeOtherLogFiles: true },
       },
     })
@@ -73,7 +70,7 @@ export function createLogger(opts: LoggerOptions): Logger {
 class PinoLoggerAdapter implements Logger {
   private readonly p: PinoLogger
   private readonly sink: ((line: LogLine) => void) | undefined
-  /** bindings 再存一份：pino 不把它们回吐出来，而 sink 要靠 `mod` 认出这行是谁打的。 */
+
   private readonly bindings: object
 
   constructor(p: PinoLogger, sink: ((line: LogLine) => void) | undefined, bindings: object = {}) {

@@ -7,7 +7,7 @@ export type ParseResult<T> =
   | { ok: true; value: T }
   | { ok: false; body: ReturnType<typeof errorBody> }
 
-/** zod 在 HTTP 边界跑完，穿过去就是确定类型（「Parse, don't validate」的三处边界之一）。 */
+/** zod 在 HTTP 边界完成，穿过去就是确定类型（「Parse, don't validate」的三处边界之一） */
 export async function parseBody<T>(
   req: Request,
   schema: { parse(v: unknown): T },
@@ -28,7 +28,7 @@ export async function parseBody<T>(
   }
 }
 
-/** 失败分类 → HTTP 状态。分类是业务概念，状态码只是它在 HTTP 上的投影。 */
+/** 失败分类 → HTTP 状态。分类是业务概念，状态码只是它在 HTTP 上的投影 */
 export function statusOf(f: Failure): 400 | 401 | 429 | 502 {
   switch (f.kind) {
     case 'fatal':

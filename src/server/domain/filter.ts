@@ -1,6 +1,6 @@
 import { RULE_KIND_LABEL, type FilterRule } from '#shared/contract/subscription.ts'
 
-/** 匹配范围：动态正文、视频标题、视频简介。总结正文不参与（不然为了过滤先花钱生成总结）。 */
+/** 匹配范围：动态正文、视频标题、视频简介。总结正文不参与（不然为了过滤先花钱生成总结） */
 export interface FilterTarget {
   title: string | null
   text: string | null
@@ -10,20 +10,20 @@ export interface FilterTarget {
 export type Verdict =
   | { kind: 'pass' }
   | { kind: 'blocked'; reason: string }
-  /** 免扰时段：不丢，只是先不推。 */
+
   | { kind: 'held'; reason: string }
 
 export interface QuietHours {
   enabled: boolean
-  /** HH:mm，start > end 表示跨午夜。 */
+
   start: string
   end: string
 }
 
-/** 正则匹配交给外面做，因为它需要超时中断。'timeout' 表示这条规则本次跑废了。 */
+/** 正则匹配交给外面做，因为它需要超时中断。'timeout' 表示应项规则本次超时了 */
 export type RegexMatcher = (pattern: string, text: string) => boolean | 'timeout'
 
-/** per-UP 有规则就整套换掉全局的（覆盖，不叠加）。 */
+
 export function resolveRules(uid: string, all: readonly FilterRule[]): FilterRule[] {
   const enabled = all.filter((r) => r.enabled)
   const mine = enabled.filter((r) => r.scope === uid)
@@ -34,14 +34,14 @@ export interface EvaluateInput {
   target: FilterTarget
   rules: readonly FilterRule[]
   match: RegexMatcher
-  /** 本地时间的分钟数（0–1439），用来判免扰。 */
+
   minuteOfDay: number
   quietHours: QuietHours
 }
 
 export interface Evaluation {
   verdict: Verdict
-  /** 命中明细。样本测试框直接显示它，超时的那几条也在里面。 */
+  /** 命中明细。样本测试框直接显示它，超时的那几条也在里面 */
   hits: RuleHit[]
 }
 
@@ -51,7 +51,7 @@ export function evaluate(input: EvaluateInput): Evaluation {
     .join('\n')
 
   const hits = matchAll(haystack, input.rules, input.match)
-  // 超时的不算命中：一条写坏的黑名单不该把所有内容都拦下。
+  // 超时的不算命中：单条写坏的黑名单不应把所有内容都拦下
   const live = hits.filter((h) => !h.timedOut)
 
   const denied = live.find((h) => h.rule.kind === 'keyword-deny' || h.rule.kind === 'regex-deny')
@@ -60,7 +60,7 @@ export function evaluate(input: EvaluateInput): Evaluation {
   }
 
   const allows = input.rules.filter((r) => r.kind === 'keyword-allow' || r.kind === 'regex-allow')
-  // 按 id 比，不按对象身份比 —— 调用方给的规则数组和命中项不必是同一批对象。
+
   const allowIds = new Set(allows.map((r) => r.id))
   if (allows.length > 0 && !live.some((h) => allowIds.has(h.rule.id))) {
     const reason = `白名单非空且一条都没命中（共 ${allows.length} 条）`

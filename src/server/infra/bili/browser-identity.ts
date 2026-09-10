@@ -1,20 +1,17 @@
-/**
- * 浏览器身份由 UA 和版本一致的 `sec-ch-ua` 提示头组成。
- * 每个 cookie 会话只生成并持久化一次；逐请求或重启更换 UA 是机器人特征。
- */
+/** 浏览器身份由 UA 和版本一致的 `sec-ch-ua` 提示头组成。 每个 cookie 会话只生成并持久化一次；逐请求或重启更换 UA 是机器人特征 */
 export interface BrowserIdentity {
   userAgent: string
-  /** 直接摊进 fetch 的 headers。 */
+
   headers: Record<string, string>
 }
 
-/** Chrome 136–141。太老会被当成过期客户端，太新则本机根本还没发布。 */
+
 export const CHROME_MAJORS: readonly number[] = [136, 137, 138, 139, 140, 141]
 
 interface Platform {
-  /** UA 括号里那段。 */
+
   token: string
-  /** `sec-ch-ua-platform` 的值，带引号。 */
+
   hint: string
 }
 

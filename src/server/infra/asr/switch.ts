@@ -1,7 +1,7 @@
 import type { AsrConfig } from '#shared/contract/config.ts'
-import type { Asr } from '../../ports/asr.ts'
-import type { CommandRunner } from '../../ports/command.ts'
-import type { Logger } from '../../ports/logger.ts'
+import type { Asr } from '../../types/ai.ts'
+import type { CommandRunner } from '../../types/platform.ts'
+import type { Logger } from '../../types/platform.ts'
 import { ChatAudioAsr } from './chat-audio.ts'
 import { MlxAudioAsr } from './mlx-audio.ts'
 import { OpenAiCompatAsr } from './openai-compat.ts'
@@ -14,10 +14,7 @@ export interface AsrSwitchDeps {
   apiKey: () => string | null
 }
 
-/**
- * provider 的切换点。编排层只认 `Asr`，改配置就换实现，不用重启也不用改 app。
- * 每次调用现读 provider，所以页面上切完下一条转写就走新的。
- */
+/** provider 的切换点。编排层只认 `Asr`，改配置就换实现，不用重启也不用改 app。 每次调用现读 provider，所以页面上切完下单条转写就走新的 */
 export function makeAsr(deps: AsrSwitchDeps): Asr {
   const local = new MlxAudioAsr({ commands: deps.commands, logger: deps.logger, config: deps.config })
   const cloud = new OpenAiCompatAsr({

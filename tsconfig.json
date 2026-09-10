@@ -1,13 +1,13 @@
 {
-  // 只做 solution 用：本身不编译任何文件，只把三个子项目串起来（pnpm typecheck 走这条）。
+
   "files": [],
   "references": [
     { "path": "./tsconfig.shared.json" },
     { "path": "./tsconfig.server.json" },
     { "path": "./tsconfig.web.json" }
   ],
-  // paths 在这里重复一份是给 shadcn CLI 看的 —— 它只认根 tsconfig，认不出别名就拒绝生成组件。
-  // 真正生效的是 tsconfig.web.json 里那份。
+
+  // 真正生效的是 tsconfig.web.json 里那份
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {

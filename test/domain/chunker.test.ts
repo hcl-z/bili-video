@@ -4,13 +4,10 @@ import { describe, it } from 'node:test'
 import type { Cue } from '#shared/contract/summary.ts'
 import { chunkCues } from '../../src/server/domain/chunker.ts'
 
-/**
- * 分段是纯函数，所以 token 计数也注入进来：每条固定 10，边界就能算得准，
- * 不然测的是 gpt-tokenizer 而不是分段逻辑。
- */
+/** 分段是纯函数，所以 token 计数也注入进来：每条固定 10，边界就能算得准， 不然测的是 gpt-tokenizer 而不是分段逻辑 */
 const TEN = (): number => 10
 
-/** 连续的字幕条（条间空 1 秒，够不上停顿），pauses 里的下标前面额外空 gapSec。 */
+
 function cues(n: number, pauses: { at: number; gapSec: number }[] = []): Cue[] {
   const out: Cue[] = []
   let t = 0

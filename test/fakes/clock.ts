@@ -1,11 +1,8 @@
 import { checkCronExpression } from '../../src/server/infra/clock/system-clock.ts'
-import type { Cancel, Clock } from '../../src/server/ports/clock.ts'
+import type { Cancel, Clock } from '../../src/server/types/platform.ts'
 
-/**
- * 可控时钟。cron 不做真解析：`schedule` 只把任务挂起来，靠 `tick()` 手动触发一轮 ——
- * 我们要测的是「一轮做了什么」和「撞上了要跳过」，不是 croner 的解析正确性。
- */
-/** 默认起点。抓取地板按启动时刻算，所以假动态的发布时间都得相对它算（见 support/time.ts）。 */
+/** 可控时钟。cron 不做真解析：`schedule` 只把任务挂起来，靠 `tick()` 手动触发一轮 —— 我们要测的是「一轮做了什么」和「遇到了要跳过」，不是 croner 的解析正确性 */
+
 export const CLOCK_START = Date.UTC(2026, 8, 7, 12, 0, 0)
 
 export class FakeClock implements Clock {
@@ -35,12 +32,12 @@ export class FakeClock implements Clock {
     }
   }
 
-  /** 排程不解析 cron，但校验必须是真的：非法表达式当场被拒是要测的行为之一。 */
+  /** 排程不解析 cron，但校验必须是真的：非法表达式当场被拒是要测的行为之一 */
   checkCron(cron: string): string | null {
     return checkCronExpression(cron)
   }
 
-  /** 把时间往前推，不触发任何任务。 */
+
   advance(ms: number): void {
     this.#now += ms
   }
@@ -49,7 +46,7 @@ export class FakeClock implements Clock {
     this.#now = at
   }
 
-  /** 触发所有已注册的 cron 任务一轮。 */
+  /** 触发所有已注册的 cron 任务一轮 */
   async tick(): Promise<void> {
     for (const { task } of [...this.scheduled]) await task()
   }

@@ -12,10 +12,7 @@ import type { SubscriptionService } from '../../app/subscriptions.ts'
 import { errorBody } from '../errors.ts'
 import { parseBody, statusOf } from '../parse.ts'
 
-/**
- * 订阅的增删改查。业务编排全在 app/subscriptions，这一层只做三件事：
- * 解请求、把 Failure 翻成 HTTP 状态、回 JSON。
- */
+/** 订阅的增删改查。业务编排全在 app/subscriptions，这一层只做三件事： 解请求、把 Failure 翻成 HTTP 状态、回 JSON */
 export function subscriptionRoutes(subs: SubscriptionService): Hono {
   const list = (): SubscriptionsResponse => ({ subs: subs.list() })
 
@@ -51,7 +48,7 @@ export function subscriptionRoutes(subs: SubscriptionService): Hono {
       return c.json(list())
     })
 
-    /** 关注重试。写接口撞风控是常态，页面得有个「再试一次」而不是只能重新加一遍。 */
+    /** 关注重试。写接口撞风控是常态，页面得有个「再试一次」而不是只能重新加一次 */
     .post('/:uid/follow', async (c) => {
       const uid = c.req.param('uid')
       const before = subs.get(uid)

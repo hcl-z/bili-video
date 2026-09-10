@@ -25,32 +25,32 @@ import {
   type ChunkNote,
   type VideoMeta,
 } from '../domain/summary-format.ts'
-import type { Asr } from '../ports/asr.ts'
-import type { AudioDownloader } from '../ports/audio.ts'
-import type { SubtitleFetcher } from '../ports/bili.ts'
-import type { Clock } from '../ports/clock.ts'
-import type { EventBus } from '../ports/event-bus.ts'
-import type { Llm, LlmCompletion } from '../ports/llm.ts'
-import type { Logger } from '../ports/logger.ts'
-import type { MarkdownWriter } from '../ports/markdown.ts'
+import type { Asr } from '../types/ai.ts'
+import type { AudioDownloader } from '../types/ai.ts'
+import type { SubtitleFetcher } from '../types/bili.ts'
+import type { Clock } from '../types/platform.ts'
+import type { EventBus } from '../types/platform.ts'
+import type { Llm, LlmCompletion } from '../types/ai.ts'
+import type { Logger } from '../types/platform.ts'
+import type { MarkdownWriter } from '../types/delivery.ts'
 import type {
   JobArtifactRepo,
   LlmCallRepo,
   SubscriptionRepo,
   SummaryRepo,
   UpdateRepo,
-} from '../ports/repo.ts'
+} from '../types/persistence.ts'
 import { Lane } from './lane.ts'
 import { errFields } from '../log-fields.ts'
 
-/** 转写结果。走到哪一级由 step 说，为什么走到这一级由 reasons 说。 */
+
 export interface Transcript {
   cues: Cue[]
   step: DegradeStep
   reasons: string[]
 }
 
-/** 落盘的转写产物。cues 存原始形状：分段要的是时间戳，纯文本回不来。 */
+/** 落盘的转写产物。cues 存原始形状：分段要的是时间戳，纯文本回不来 */
 const TranscriptArtifactSchema = z.object({
   cues: CueSchema.array(),
   step: z.enum(['subtitle', 'asr', 'meta', 'link']),
@@ -66,21 +66,21 @@ const NotesArtifactSchema = z
   })
   .array()
 
-/** 每一步汇报自己的状态。队列那边把它写进 job_steps 并推 SSE。 */
+/** 每一步汇报自己的状态。队列那边把它写进 job_steps 并推 SSE */
 export type StepHook = (step: PipelineStep, status: StepStatus, note?: string | null) => void
 
 export interface SummarizeDeps {
   subtitles: SubtitleFetcher | null
   audio: AudioDownloader | null
   asr: Asr | null
-  /** ★ 只从这里取 LLM：总开关关着时它返回 null（见 AiService.llm）。 */
+  /** ★ 只从这里取 LLM：总开关关着时它返回 null（见 AiService.llm） */
   llm: () => Llm | null
   chunkConfig: () => ChunkConfig
   asrConfig: () => AsrConfig
   updates: UpdateRepo
   subs: SubscriptionRepo
   summaries: SummaryRepo
-  /** 每一步的产物。有它「从第 N 步重跑」才不用重做前面 N-1 步。 */
+  /** 每一步的产物。有它「从第 N 步重跑」才不用重做前面 N-1 步 */
   artifacts: JobArtifactRepo
   llmCalls: LlmCallRepo
   markdown: MarkdownWriter
@@ -89,7 +89,7 @@ export interface SummarizeDeps {
   events: EventBus
 }
 
-/** 视频总结分为转写和总结两段；仅本机转写受 ASR 并发通道限制。 */
+/** 视频总结分为转写和总结两段；仅本机转写受 ASR 并发通道限制 */
 export class SummarizeVideo {
   private readonly deps: SummarizeDeps
   private readonly logger: Logger
@@ -101,7 +101,7 @@ export class SummarizeVideo {
     this.asrLane = new Lane(() => deps.asrConfig().concurrency)
   }
 
-  /** 获取带时间戳的文本并按降级链处理；从转写后步骤重跑时复用可用转写产物。 */
+  /** 获取带时间戳的文本并按降级链处理；从转写后步骤重跑时复用可用转写产物 */
   async transcribe(bvid: string, from: PipelineStep, hook: StepHook): Promise<Transcript> {
     if (!needsTranscript(from)) {
       const cached = this.cachedTranscript(bvid)

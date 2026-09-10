@@ -1,11 +1,6 @@
 import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from 'node:crypto'
 
-/**
- * AES-256-GCM + scrypt（16 字节随机 salt）。照搬参考实现的落盘方案。
- *
- * salt 每条密文一份而不是全局一份：泄露一条密文不会让别的密文的派生密钥也一起可用。
- * 代价是每次解密要跑一次 scrypt（~50ms），所以 SecretStore 会在内存里缓存明文。
- */
+/** AES-256-GCM + scrypt（16 字节随机 salt）。照搬参考实现的落盘方案。 salt 每条密文一份而不是全局一份：泄露单条密文不会让避免的密文的派生密钥也一起可用。 代价是每次解密要跑一次 scrypt（~50ms），所以 SecretStore 会在内存里缓存明文 */
 export interface SealedBox {
   v: 1
   salt: string
@@ -36,7 +31,7 @@ export function seal(plaintext: string, masterKey: string): SealedBox {
   }
 }
 
-/** master key 不对、密文被改过、tag 不匹配 —— 三种都抛，绝不返回半个明文。 */
+/** master key 不对、密文被改过、tag 不匹配 —— 三种都抛，绝不返回半个明文 */
 export function open(box: SealedBox, masterKey: string): string {
   if (box.v !== 1) throw new Error(`unsupported secret box version: ${String(box.v)}`)
   const decipher = createDecipheriv(

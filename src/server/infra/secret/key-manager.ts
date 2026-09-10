@@ -2,10 +2,7 @@ import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, unlinkSync,
 import { randomBytes } from 'node:crypto'
 import { dirname } from 'node:path'
 
-/**
- * master key 丢失会使已加密的 cookie 与 apiKey 不可恢复。
- * 生成使用临时文件加 rename；已有文件无效时直接抛错而不重新生成；首次生成以 `created: true` 供调用方检查旧密文。
- */
+/** master key 丢失会使已加密的 cookie 与 apiKey 不可恢复。 生成使用临时文件加 rename；已有文件无效时直接抛错而不重新生成；首次生成以 `created: true` 供调用方检查旧密文 */
 export interface MasterKey {
   key: string
   created: boolean

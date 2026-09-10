@@ -39,7 +39,7 @@ describe('AI 配置', () => {
   it('失败分三种：鉴权 / 模型不存在 / 其他', () => {
     const auth = classifyProbe(401, '{"error":{"message":"invalid api key"}}')
     assert.equal(auth.stage, 'auth')
-    // 上游原文 + 状态码都带上：429 和 5xx 只有靠状态码才分得清。
+    // 上游原文 + 状态码都带上：429 和 5xx 只有靠状态码才分得清
     assert.equal(auth.detail, 'HTTP 401：invalid api key')
     assert.equal(classifyProbe(429, 'slow down').detail, 'HTTP 429：slow down')
     assert.equal(classifyProbe(404, '{"error":{"message":"model not found"}}').stage, 'model')
@@ -82,7 +82,7 @@ describe('AI 配置', () => {
       assert.match(s.llmKey.masked ?? '', /\*/)
       assert.equal(JSON.stringify(s).includes(REAL_KEY), false, '响应里不该出现明文')
 
-      // 页面提交掩码（用户没动那个框）和提交空串是同一件事：都不修改。
+
       await patch(h, { llmApiKey: s.llmKey.masked, asrApiKey: '' })
       assert.equal(h.core.secrets.get(LLM_API_KEY), REAL_KEY)
 
@@ -162,7 +162,7 @@ describe('AI 配置', () => {
       },
     })
     try {
-      // 改完就测，没重启 —— 用时读配置这条在这里被顺带测到。
+
       await patch(h, {
         ai: { baseURL: 'https://llm.test/v1', model: 'm1' },
         asr: { provider: 'mlx-audio' },
@@ -176,7 +176,7 @@ describe('AI 配置', () => {
       assert.equal(fetch.countOf('llm.test'), 1)
       assert.equal(first.asr.ok, true, '本机 mlx_audio 可用')
 
-      // 远端 ASR 走 HTTP，探的是 /models。
+      // 远端 ASR 走 HTTP，探的是 /models
       await patch(h, { asr: { provider: 'openai-compat', baseURL: 'https://asr.test/v1' } })
       const second = (await (
         await h.server.app.request('/api/ai/test', { method: 'POST' })

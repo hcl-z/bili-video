@@ -6,7 +6,7 @@ import { after, describe, it } from 'node:test'
 
 import type { UpdateWithRaw } from '#shared/contract/update.ts'
 import { InMemoryEventBus } from '../src/server/infra/event-bus/in-memory.ts'
-import { openCore, type Core } from '../src/server/wiring.ts'
+import { openCore, type Core } from '../src/server/server.ts'
 import { FakeClock } from './fakes/clock.ts'
 import { CollectingLogger } from './fakes/logger.ts'
 

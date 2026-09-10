@@ -13,7 +13,7 @@ import { api } from '@/lib/api'
 import { keys } from '@/lib/query'
 import { cn } from '@/lib/utils'
 
-/** 左栏的类型筛选。选中项进 URL，刷新和分享都不丢。 */
+/** 左栏的类型筛选。选中项进 URL，刷新和分享都不丢 */
 type Kind = 'all' | 'video' | 'post'
 
 const KINDS: ReadonlyArray<[Kind, string]> = [
@@ -27,12 +27,7 @@ const readKind = (raw: string | null): Kind => (raw === 'video' || raw === 'post
 const matchesKind = (item: ReaderItem, kind: Kind): boolean =>
   kind === 'all' || (kind === 'video' ? item.type === 'AV' : item.type !== 'AV')
 
-/**
- * 阅读页：顶上是订阅的 UP 头像，选中谁就看谁。
- *
- * 左栏是**现拉的 B 站空间流**，不是本地库的投影 —— 定时抓取只要启动之后新发的，
- * 更早的投稿只能从这儿翻到，翻到哪条都能手动排解析。
- */
+/** 阅读页：顶上是订阅的 UP 头像，选中谁就看谁。 左栏是**现拉的 B 站空间流**，不是本地库的投影 —— 定时抓取只要启动之后新发的， 更早的投稿只能从此处翻到，翻到哪条都能手动排解析 */
 export function ReaderPage() {
   const params = useParams()
   const navigate = useNavigate()
@@ -44,7 +39,7 @@ export function ReaderPage() {
   const ups: UpsMap = {}
   for (const s of list) ups[s.uid] = { name: s.name, face: s.face }
 
-  // 没指定 UP 时落到第一个订阅上：这一页离开某个 UP 就没有内容可言。
+  // 没指定 UP 时落到第一个订阅上：应页面离开某个 UP 就没有内容可言
   const firstUid = list[0]?.uid ?? null
   useEffect(() => {
     if (uid === null && firstUid !== null) navigate(`/reader/${firstUid}`, { replace: true })

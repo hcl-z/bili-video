@@ -1,8 +1,8 @@
 import type { ProbeResult } from '#shared/contract/probe.ts'
 import type { AsrConfig } from '#shared/contract/config.ts'
 import { classifyProbe, networkProbe, notConfigured, probeOk } from '../../domain/ai-probe.ts'
-import type { Clock } from '../../ports/clock.ts'
-import type { CommandRunner } from '../../ports/command.ts'
+import type { Clock } from '../../types/platform.ts'
+import type { CommandRunner } from '../../types/platform.ts'
 import { joinUrl } from './openai-compat.ts'
 
 export interface AsrProbeDeps {
@@ -10,16 +10,13 @@ export interface AsrProbeDeps {
   clock: Clock
   config: () => AsrConfig
   apiKey: () => string | null
-  /** null = 本进程没接命令探测，mlx-audio 那条路只能报未配置。 */
+  /** null = 本进程没接命令探测，mlx-audio 应项路只能报未配置 */
   commands: CommandRunner | null
 }
 
 const TIMEOUT_MS = 15_000
 
-/**
- * ASR 的连通性测试。两种 provider 的「最小请求」根本不是一回事：
- * openai-compat 是一次 HTTP，mlx-audio 是看本地 Python 模块能不能启动。
- */
+/** ASR 的连通性测试。两种 provider 的「最小请求」根本不是一回事： openai-compat 是一次 HTTP，mlx-audio 是看本地 Python 模块能不能启动 */
 export function makeAsrProbe(deps: AsrProbeDeps): () => Promise<ProbeResult> {
   return async () => {
     const cfg = deps.config()

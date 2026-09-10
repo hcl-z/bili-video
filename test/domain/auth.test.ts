@@ -77,7 +77,7 @@ describe('domain/auth 续期决策', () => {
       serverSaysRefresh: true,
     })
     assert.equal(d.action, 'refresh')
-    // 服务端的判断优先：它知道 refresh_token 的真实状态，我们只有个到期时间。
+    // 服务端的判断优先：它知道 refresh_token 的真实状态，我们只有个到期时间
     assert.match(d.reason, /cookie\/info/)
   })
 

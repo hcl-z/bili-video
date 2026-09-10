@@ -8,14 +8,14 @@ import { AiConfigSchema, AsrConfigSchema, REMOTE_ASR_PROVIDERS } from '#shared/c
 import type { ProbeResult } from '#shared/contract/probe.ts'
 import { assertAsrProviderAvailable } from '../domain/asr-provider.ts'
 import { secretWrite } from '../domain/secret-write.ts'
-import type { ConfigStore } from '../ports/config-store.ts'
-import type { EventBus } from '../ports/event-bus.ts'
-import type { Llm } from '../ports/llm.ts'
-import type { Logger } from '../ports/logger.ts'
-import type { RuntimeInfo } from '../ports/runtime.ts'
-import type { SecretKey, SecretStore } from '../ports/secret-store.ts'
+import type { ConfigStore } from '../types/persistence.ts'
+import type { EventBus } from '../types/platform.ts'
+import type { Llm } from '../types/ai.ts'
+import type { Logger } from '../types/platform.ts'
+import type { RuntimeInfo } from '../types/platform.ts'
+import type { SecretKey, SecretStore } from '../types/persistence.ts'
 
-/** apiKey 的两个 secrets 表键名。写死在一处，免得读写两边各拼一遍。 */
+/** apiKey 的两个 secrets 表键名。写死在一处，避免读写两边各拼一次 */
 export const LLM_API_KEY: SecretKey = 'llm-api-key'
 export const ASR_API_KEY: SecretKey = 'asr-api-key'
 
@@ -38,12 +38,7 @@ export class AiService {
     this.logger = deps.logger.child({ mod: 'ai' })
   }
 
-  /**
-   * ★ 取 LLM 的唯一入口。总开关关着就是 null。
-   *
-   * 后续流程（字幕、总结、推送）只能从这里拿 LLM，于是「关掉开关就一次都不调」
-   * 由类型保证，而不是靠每个调用点自己记得先查一下开关。
-   */
+  /** ★ 取 LLM 的唯一入口。总开关关着就是 null。 后续流程（字幕、总结、推送）只能从这里拿 LLM，于是「关掉开关就一次都不调」 由类型保证，而不是靠每个调用点自己记得先查一下开关 */
   llm(): Llm | null {
     if (!this.deps.config.getSection('ai').enabled) return null
     return this.deps.llm
@@ -62,7 +57,7 @@ export class AiService {
     }
   }
 
-  /** 配置段与 apiKey 一起改。写库即热生效，不重启。 */
+  /** 配置段与 apiKey 一起改。写库即热生效，不重启 */
   patch(patch: PatchAiSettingsRequest): AiSettingsResponse {
     if (patch.ai !== undefined) {
       const merged = AiConfigSchema.parse({ ...this.deps.config.getSection('ai'), ...patch.ai })
@@ -81,7 +76,7 @@ export class AiService {
     return this.settings()
   }
 
-  /** 两个探测并发跑：一个卡到超时不该让另一个也干等着。两边都不抛，各自把失败当值返回。 */
+  /** 两个探测并发跑：一个卡到超时不应让另一个也干等着。两边都不抛，各自把失败当值返回 */
   async test(): Promise<AiTestResponse> {
     const [llm, asr] = await Promise.all([
       this.deps.llm?.ping() ?? notWired('LLM'),

@@ -9,11 +9,7 @@ import {
   classifyThrown,
 } from '../../src/server/domain/bili-error.ts'
 
-/**
- * 这张表就是「值最钱的部分」（spec 附录原话）。它错一格的后果不是报错，
- * 而是安静地做错事：把风控当终态 → 系统再也不轮询；把鉴权失效当瞬时 →
- * 拿着废 cookie 疯狂重试，把小号送进更深的风控。所以逐码钉死。
- */
+/** 这张表就是「值最钱的部分」（spec 附录原话）。它错一格的后果不是报错， 而是安静地做错事：把风控当终态 → 系统再也不轮询；把鉴权失效当瞬时 → 拿着废 cookie 疯狂重试，把账号送进更深的风控。所以逐码固定验证 */
 describe('domain/bili-error 码表', () => {
   const cases: Array<[code: number, kind: FailureKind, why: string]> = [
     [-101, 'auth-lost', '账号未登录：停下来等重新扫码，重试一万次也不会变好'],

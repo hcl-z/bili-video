@@ -1,4 +1,4 @@
-import type { Logger, LogLevel } from '../../src/server/ports/logger.ts'
+import type { Logger, LogLevel } from '../../src/server/types/platform.ts'
 
 export interface CapturedLog {
   level: LogLevel
@@ -6,9 +6,7 @@ export interface CapturedLog {
   msg: string | undefined
 }
 
-/**
- * 收集型 logger。真实现（pino + pino-roll）会起 worker 线程写文件，测试里用它进程才干净。
- */
+/** 收集型 logger。真实现（pino + pino-roll）会起 worker 线程写文件，测试里用它进程才干净 */
 export class CollectingLogger implements Logger {
   readonly lines: CapturedLog[]
   readonly #bindings: object
@@ -47,7 +45,7 @@ export class CollectingLogger implements Logger {
 
   async close(): Promise<void> {}
 
-  /** 断言用：某级别里有没有出现过包含这段文字的日志。 */
+
   has(level: LogLevel, needle: string): boolean {
     return this.lines.some(
       (l) => l.level === level && (l.msg ?? '').includes(needle),

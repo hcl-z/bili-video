@@ -9,7 +9,7 @@ import {
   parseRefreshResult,
 } from '../../src/server/infra/bili/refresh.ts'
 
-/** 本地密钥对：用它解密就能证明「加的是对的东西、用的是对的填充」。 */
+/** 本地密钥对：用它解密就能证明「加的是对的数据、用的是对的填充」 */
 const { publicKey, privateKey } = generateKeyPairSync('rsa', {
   modulusLength: 2048,
   publicKeyEncoding: { type: 'spki', format: 'pem' },
