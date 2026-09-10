@@ -1,0 +1,193 @@
+test/degrade-chain.test.ts
+  s_4fc9681100ccb8::t_371fffa3f8c474 22-43
+src/server/app/health.ts
+  s_302191d80b0d18::t_018ef4a64bf688 144-146
+  s_ca9ef2259d4622::t_6e3f83841244d0 154-161
+src/server/ports/runtime.ts
+  s_4fc9681100ccb8::t_3e0eee0737ee2a 1-3
+src/shared/contract/api.ts
+  s_4fc9681100ccb8::t_c9389feb2610f7 3-8,512-513
+  s_302191d80b0d18::t_a244710a195f49 544,550,567-569,571-573,601,609
+  s_f61d6401737f25::t_0c503e568664a3 303-306
+  s_302191d80b0d18::t_1b65905068ca60 570
+poc/mlx-ts/package.json
+  s_4fc9681100ccb8::t_2f7e9bf651be05 14-15
+  s_4fc9681100ccb8::t_c9299deff96312 2-6,9-11
+  s_4fc9681100ccb8::t_49abcc2baafe94 1,7,12-13,16-17
+  s_4fc9681100ccb8::t_9a60869c2d30e0 8
+src/server/infra/ai/asr-probe.ts
+  s_4fc9681100ccb8::t_494f6a25f59951 33-47
+  s_4fc9681100ccb8::t_fbfe02a05bf7a2 13,21,26
+src/server/ports/asr.ts
+  s_4fc9681100ccb8::t_b2cdb570948a5a 4
+src/server/http/routes/notify.ts
+  s_302191d80b0d18::t_cc5a7e54a17f33 13-15
+test/asr-mlx-audio.test.ts
+  s_4fc9681100ccb8::t_2d8a889c939995 17
+  s_4fc9681100ccb8::t_b1d14750b29f86 1-15,18-56
+  s_4fc9681100ccb8::t_da4135ab5cd2bd 16
+test/notify.test.ts
+  s_302191d80b0d18::t_2a59088b2c0fcd 49
+  s_302191d80b0d18::t_d7169d5105f28e 138,160
+  s_302191d80b0d18::t_f38d58daafc9dc 149,158-159,165
+  s_ca9ef2259d4622::t_f57059f2c58950 62-64,79-80
+src/server/app/summarize-video.ts
+  s_4fc9681100ccb8::t_3ed1c22b92d4b4 116-118,121-123
+src/server/build-server.ts
+  s_4fc9681100ccb8::t_a55bed27cb154d 90
+test/support/harness.ts
+  s_4fc9681100ccb8::t_7b6ee74df693cd 56-57,104
+  s_4fc9681100ccb8::t_8e03186baba19c 82
+test/ai.test.ts
+  s_4fc9681100ccb8::t_2519d238f8bdd1 157,168,177
+  s_4fc9681100ccb8::t_fd3f5c209ad942 158-161
+  s_4fc9681100ccb8::t_cff854e88716ed 115-142,144
+  s_4fc9681100ccb8::t_2b0df8c0bfd259 143
+src/server/main.ts
+  s_4fc9681100ccb8::t_391387b22d4d38 9
+  s_4fc9681100ccb8::t_3d45f1662509ca 27,45,68
+config.example.yaml
+  s_4fc9681100ccb8::t_1fc84793aab933 68
+  s_4fc9681100ccb8::t_c3e7082142b1f9 72-73
+  s_4fc9681100ccb8::t_62a96a07fbf589 69-71
+src/server/http/routes/ai.ts
+  s_4fc9681100ccb8::t_c52bb9414f85a2 5-6,19-26
+src/web/pages/ai.tsx
+  s_4fc9681100ccb8::t_099d7497cbb58f 226-230,241-243,249,295
+  s_4fc9681100ccb8::t_2f04426c83b7ad 75,99,270-282
+poc/mlx-ts/worker.mjs
+  s_4fc9681100ccb8::t_7fbb1870ea1ad5 1-29,52-112
+  s_4fc9681100ccb8::t_498c03f28dfc71 30-51
+poc/mlx-ts/README.md
+  s_4fc9681100ccb8::t_1606648098a048 1-19
+src/server/http/routes/config.ts
+  s_4fc9681100ccb8::t_90d75dbf081256 5,43-50,52-54
+src/server/app/notify.ts
+  s_302191d80b0d18::t_58e31ec144f5c7 16,41,47,56,62,77,86
+src/web/pages/targets.tsx
+  s_302191d80b0d18::t_4c154f0b06437e 51,69-80,117,129,153,194-208,210-231,368,372
+  s_302191d80b0d18::t_1f7917a724c0af 209
+src/server/app/ai.ts
+  s_4fc9681100ccb8::t_70bf369e329d4d 7,15,27,56-57,59
+  s_4fc9681100ccb8::t_945f40a21d4288 9,74
+  s_4fc9681100ccb8::t_16f24d32b5573a 58
+src/web/components/reader-detail.tsx
+  s_f61d6401737f25::t_93834693d1b5b2 196
+src/server/ports/notifier.ts
+  s_ca9ef2259d4622::t_0825ef2d374894 20-21
+  s_302191d80b0d18::t_074066d1238fbc 11
+src/server/infra/asr/mlx-audio.ts
+  s_4fc9681100ccb8::t_4c29e069b1af31 3,13,17,21-22,24-26,28,35,38,40-41,44-48,50-55,60,62,72-82
+test/fakes/asr.ts
+  s_4fc9681100ccb8::t_a0c574fa9ac6a4 29
+test/health.test.ts
+  s_302191d80b0d18::t_c63d7732238e30 24
+src/server/ports/index.ts
+  s_4fc9681100ccb8::t_e0ac546ad6d1ec 16,50,117
+  s_4fc9681100ccb8::t_81e13c83e9ad87 91
+src/server/domain/asr-provider.ts
+  s_4fc9681100ccb8::t_498038533b8b3f 10
+  s_4fc9681100ccb8::t_88107827da8bbe 1-9,11
+src/server/app/delivery.ts
+  s_ca9ef2259d4622::t_2574c79995f189 94,140,189-196
+  s_302191d80b0d18::t_0dd2e18097004e 159
+src/shared/contract/config.ts
+  s_4fc9681100ccb8::t_1528b7dd250b9e 108-109
+  s_4fc9681100ccb8::t_f490979d61ad31 88,104,106-107
+  s_4fc9681100ccb8::t_88cf32a8d57ae3 89-92
+  s_4fc9681100ccb8::t_cd932f4a864032 100-103
+  s_302191d80b0d18::t_b57aa11fb9b35e 132-134,136-138
+  s_302191d80b0d18::t_8ab72396a2b7b5 135
+src/server/http/routes/jobs.ts
+  s_f61d6401737f25::t_4b3ab0a8c9acc6 16-20
+src/server/config/load.ts
+  s_4fc9681100ccb8::t_ae9f508e85bb20 32,34-35
+  s_4fc9681100ccb8::t_7b54a429a2d2ee 36
+  s_302191d80b0d18::t_006aa7d0303073 43
+src/server/wiring.ts
+  s_4fc9681100ccb8::t_8ca481ca9e309b 155-164
+  s_4fc9681100ccb8::t_f7bf773d2ab593 13,63,94,117,165,167-170,306
+  s_302191d80b0d18::t_4f98172e2328cb 69,278
+  s_4fc9681100ccb8::t_fefbba88dd1ee0 166
+test/notify-adapters.test.ts
+  s_302191d80b0d18::t_97987020dada05 141-174,176-185
+  s_ca9ef2259d4622::t_a26e48951685ed 17-97,138-140
+  s_302191d80b0d18::t_89fc1b77273def 105,136
+  s_ca9ef2259d4622::t_20af18233a5d71 16
+  s_302191d80b0d18::t_07a04392403490 10,98-104,106-135,137
+  s_302191d80b0d18::t_4d67d12e6f078f 175
+  s_ca9ef2259d4622::t_e79b244a0e960c 207,220
+src/server/infra/runtime/detect.ts
+  s_4fc9681100ccb8::t_2c9212274e9a07 1-17
+poc/mlx-ts/runner.mjs
+  s_4fc9681100ccb8::t_5e4dd6ed933a93 1-11,14-68,74-122
+  s_4fc9681100ccb8::t_94c34417b2892e 13
+  s_4fc9681100ccb8::t_b7dc621f75945f 69-73
+  s_4fc9681100ccb8::t_5cca9e5a0a1483 12
+src/server/infra/asr/switch.ts
+  s_4fc9681100ccb8::t_78f6d23f027012 6,22,38
+test/jobs.test.ts
+  s_f61d6401737f25::t_c8e472652c8d30 88
+src/server/infra/asr/whisper-json.ts
+  s_4fc9681100ccb8::t_5ea44857a024ff 5
+test/asr-chat-audio.test.ts
+  s_4fc9681100ccb8::t_0578781fdd839d 19
+src/web/lib/api.ts
+  s_302191d80b0d18::t_6ca8258b66a3e6 204
+src/web/pages/jobs.tsx
+  s_f61d6401737f25::t_338a417e210202 2-4,90-106,113-123
+  s_f61d6401737f25::t_8ed454aa3f9264 34,143
+  s_f61d6401737f25::t_273fabdd48a260 78-81
+src/web/components/job-pipeline.tsx
+  s_f61d6401737f25::t_683239cc53ec8f 1,11,92-94,96,101,108-125
+src/server/infra/notify/push-all-in-one.ts
+  s_302191d80b0d18::t_f3b26c0633aeb7 11,73
+  s_ca9ef2259d4622::t_0f2921caed7c8e 169-177
+  s_ca9ef2259d4622::t_ae3c0665d4c520 46,123-124,349-361,363,366-376,378,380-381,383-413,422
+  s_302191d80b0d18::t_006a32f914bc39 1-2,78-89,91,319-322,325
+  s_302191d80b0d18::t_68ce3b42e35c62 117-122,125-136,138,329-341,431-443
+  s_ca9ef2259d4622::t_648a92d5e6b586 152-153,167-168,178-192,194,203-244,284-308,377,379,382
+  s_302191d80b0d18::t_625102c7419478 22,63-72,74-77,90,92-101,324,326,342-348
+src/server/ports/command.ts
+  s_4fc9681100ccb8::t_6721bee16278e6 2,8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.44-trip",
+  "base_commit_sha": "d673f0a20c7874083683c33b6ac11c328442259c",
+  "prompts": {},
+  "sessions": {
+    "s_302191d80b0d18": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a0894e-be18-738a-afe3-6791b30225a3",
+        "model": "gpt-5-6-sol"
+      },
+      "human_author": "hcl-z <1401859664@qq.com>"
+    },
+    "s_4fc9681100ccb8": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a08938-aee0-748a-9547-700146a0a429",
+        "model": "gpt-5-6-sol"
+      },
+      "human_author": "hcl-z <1401859664@qq.com>"
+    },
+    "s_ca9ef2259d4622": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a08638-ddb8-748a-9547-6fff8eb60da2",
+        "model": "gpt-5-6-sol"
+      },
+      "human_author": "hcl-z <1401859664@qq.com>"
+    },
+    "s_f61d6401737f25": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a0897d-4984-738a-afe3-679318c4cc70",
+        "model": "gpt-5-6-sol"
+      },
+      "human_author": "hcl-z <1401859664@qq.com>"
+    }
+  }
+}
