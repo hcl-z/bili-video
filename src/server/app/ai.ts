@@ -4,13 +4,15 @@ import type {
   PatchAiSettingsRequest,
   SecretState,
 } from '#shared/contract/api.ts'
-import { AiConfigSchema, AsrConfigSchema } from '#shared/contract/config.ts'
+import { AiConfigSchema, AsrConfigSchema, REMOTE_ASR_PROVIDERS } from '#shared/contract/config.ts'
 import type { ProbeResult } from '#shared/contract/probe.ts'
+import { assertAsrProviderAvailable } from '../domain/asr-provider.ts'
 import { secretWrite } from '../domain/secret-write.ts'
 import type { ConfigStore } from '../ports/config-store.ts'
 import type { EventBus } from '../ports/event-bus.ts'
 import type { Llm } from '../ports/llm.ts'
 import type { Logger } from '../ports/logger.ts'
+import type { RuntimeInfo } from '../ports/runtime.ts'
 import type { SecretKey, SecretStore } from '../ports/secret-store.ts'
 
 /** apiKey 的两个 secrets 表键名。写死在一处，免得读写两边各拼一遍。 */
@@ -22,6 +24,7 @@ export interface AiDeps {
   secrets: SecretStore
   events: EventBus
   logger: Logger
+  runtime: RuntimeInfo
   llm: Llm | null
   probeAsr: (() => Promise<ProbeResult>) | null
 }
@@ -50,6 +53,10 @@ export class AiService {
     return {
       ai: this.deps.config.getSection('ai'),
       asr: this.deps.config.getSection('asr'),
+      availableAsrProviders: this.deps.runtime.isDocker
+        ? [...REMOTE_ASR_PROVIDERS]
+        : ['mlx-audio', ...REMOTE_ASR_PROVIDERS],
+      isDocker: this.deps.runtime.isDocker,
       llmKey: this.describe(LLM_API_KEY),
       asrKey: this.describe(ASR_API_KEY),
     }
@@ -64,6 +71,7 @@ export class AiService {
     }
     if (patch.asr !== undefined) {
       const merged = AsrConfigSchema.parse({ ...this.deps.config.getSection('asr'), ...patch.asr })
+      assertAsrProviderAvailable(this.deps.runtime.isDocker, merged.provider)
       this.deps.config.setSection('asr', merged)
       this.deps.events.emit({ type: 'config.changed', section: 'asr' })
     }

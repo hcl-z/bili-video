@@ -1,5 +1,11 @@
 import { z } from 'zod'
-import { AiConfigSchema, AppConfigSchema, AsrConfigSchema, NotifyConfigSchema } from './config.ts'
+import {
+  AiConfigSchema,
+  AppConfigSchema,
+  AsrConfigSchema,
+  AsrProviderSchema,
+  NotifyConfigSchema,
+} from './config.ts'
 import {
   DeliveryKindSchema,
   DeliveryStatusSchema,
@@ -294,7 +300,10 @@ export type PollResult = z.infer<typeof PollResultSchema>
 
 export const JobsResponseSchema = z.object({
   jobs: z.array(SummaryJobSchema),
-  videos: z.record(z.string(), z.object({ title: z.string(), url: z.string() })),
+  videos: z.record(
+    z.string(),
+    z.object({ title: z.string(), url: z.string(), readerPath: z.string().nullable() }),
+  ),
 })
 export type JobsResponse = z.infer<typeof JobsResponseSchema>
 
@@ -500,6 +509,8 @@ export type SecretState = z.infer<typeof SecretStateSchema>
 export const AiSettingsResponseSchema = z.object({
   ai: AiConfigSchema,
   asr: AsrConfigSchema,
+  availableAsrProviders: z.array(AsrProviderSchema),
+  isDocker: z.boolean(),
   llmKey: SecretStateSchema,
   asrKey: SecretStateSchema,
 })
@@ -530,11 +541,13 @@ export type NotifyTargetState = z.infer<typeof NotifyTargetStateSchema>
 export const NotifySettingsResponseSchema = z.object({
   notify: NotifyConfigSchema,
   wxpusherToken: SecretStateSchema,
+  pushplusToken: SecretStateSchema,
   ntfyAuth: SecretStateSchema,
   feishuSecret: SecretStateSchema,
   webhookAuthorization: SecretStateSchema,
   targets: z.object({
     wxpusher: NotifyTargetStateSchema,
+    pushplus: NotifyTargetStateSchema,
     ntfy: NotifyTargetStateSchema,
     feishu: NotifyTargetStateSchema,
     webhook: NotifyTargetStateSchema,
@@ -549,6 +562,13 @@ export const PatchNotifySettingsRequestSchema = z.object({
         .object({
           enabled: z.boolean().optional(),
           uids: z.array(z.string().min(1)).optional(),
+        })
+        .optional(),
+      pushplus: z
+        .object({
+          enabled: z.boolean().optional(),
+          channel: z.enum(['wechat', 'app', 'webhook', 'cp', 'mail']).optional(),
+          topic: z.string().optional(),
         })
         .optional(),
       ntfy: z
@@ -578,6 +598,7 @@ export const PatchNotifySettingsRequestSchema = z.object({
     })
     .optional(),
   wxpusherToken: z.string().nullable().optional(),
+  pushplusToken: z.string().nullable().optional(),
   ntfyAuth: z.string().nullable().optional(),
   feishuSecret: z.string().nullable().optional(),
   webhookAuthorization: z.string().nullable().optional(),
@@ -585,7 +606,7 @@ export const PatchNotifySettingsRequestSchema = z.object({
 export type PatchNotifySettingsRequest = z.infer<typeof PatchNotifySettingsRequestSchema>
 
 export const NotifyTestResponseSchema = z.object({
-  channel: z.enum(['wxpusher', 'ntfy', 'feishu', 'webhook']),
+  channel: z.enum(['wxpusher', 'pushplus', 'ntfy', 'feishu', 'webhook']),
   result: z.object({
     ok: z.boolean(),
     externalId: z.string().nullable(),

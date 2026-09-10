@@ -10,7 +10,7 @@ export interface AsrProbeDeps {
   clock: Clock
   config: () => AsrConfig
   apiKey: () => string | null
-  /** null = 本进程没接命令探测，mlx-whisper 那条路只能报未配置。 */
+  /** null = 本进程没接命令探测，mlx-audio 那条路只能报未配置。 */
   commands: CommandRunner | null
 }
 
@@ -18,25 +18,33 @@ const TIMEOUT_MS = 15_000
 
 /**
  * ASR 的连通性测试。两种 provider 的「最小请求」根本不是一回事：
- * openai-compat 是一次 HTTP，mlx-whisper 是看本地 PATH 上有没有那个可执行文件。
+ * openai-compat 是一次 HTTP，mlx-audio 是看本地 Python 模块能不能启动。
  */
 export function makeAsrProbe(deps: AsrProbeDeps): () => Promise<ProbeResult> {
   return async () => {
     const cfg = deps.config()
-    return cfg.provider === 'mlx-whisper' ? await probeLocal(deps) : await probeHttp(deps, cfg)
+    return cfg.provider === 'mlx-audio' ? await probeLocal(deps) : await probeHttp(deps, cfg)
   }
 }
 
 async function probeLocal(deps: AsrProbeDeps): Promise<ProbeResult> {
   if (deps.commands === null) return notConfigured('本地命令探测（这个进程没接）')
   const started = deps.clock.now()
-  const res = await deps.commands.probe('mlx_whisper', ['--help'])
-  const ms = deps.clock.now() - started
-  if (res.found) return probeOk(ms)
-  // not-configured 而不是 network：没装东西不是网络问题，给的处置也不一样。
-  return {
-    ...notConfigured(`本机的 mlx_whisper（${res.detail}）。装它：uv tool install mlx-whisper`),
-    ms,
+  try {
+    const res = await deps.commands.run(
+      'python3',
+      ['-m', 'mlx_audio.stt.generate', '--help'],
+      { timeoutMs: TIMEOUT_MS },
+    )
+    const ms = deps.clock.now() - started
+    if (res.code === 0) return probeOk(ms)
+    const detail = (res.stderr || res.stdout).trim().split('\n').at(-1) ?? '启动失败'
+    return { ...notConfigured(`本机的 mlx_audio（${detail}）。装它：uv pip install mlx-audio`), ms }
+  } catch (err) {
+    return {
+      ...notConfigured(`本机的 mlx_audio（${err instanceof Error ? err.message : String(err)}）`),
+      ms: deps.clock.now() - started,
+    }
   }
 }
 

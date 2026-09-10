@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 
 import type { ConfigResponse } from '#shared/contract/api.ts'
 import { CONFIG_SECTIONS, type ConfigSection } from '#shared/contract/config.ts'
+import { assertAsrProviderAvailable, LocalAsrUnavailableError } from '../../domain/asr-provider.ts'
 import type { Ports } from '../../ports/index.ts'
 import { errorBody, zodIssues } from '../errors.ts'
 import { ZodError } from 'zod'
@@ -39,8 +40,18 @@ export function configRoutes(ports: Ports): Hono {
       }
 
       try {
-        ports.config.setSection(section, CONFIG_SECTIONS[section].parse(merged) as never)
+        const parsed = CONFIG_SECTIONS[section].parse(merged) as never
+        if (section === 'asr') {
+          assertAsrProviderAvailable(
+            ports.runtime.isDocker,
+            (parsed as { provider: 'mlx-audio' | 'openai-compat' | 'chat-audio' }).provider,
+          )
+        }
+        ports.config.setSection(section, parsed)
       } catch (err) {
+        if (err instanceof LocalAsrUnavailableError) {
+          return c.json(errorBody('asr-provider-unavailable', err.message), 400)
+        }
         if (err instanceof ZodError) {
           return c.json(errorBody('invalid-config', '配置校验失败', zodIssues(err)), 400)
         }

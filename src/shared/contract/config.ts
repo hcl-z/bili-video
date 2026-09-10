@@ -85,6 +85,11 @@ export const AiConfigSchema = z.object({
   timeoutMs: z.number().int().min(10_000).max(1_800_000).default(600_000),
 })
 
+export const AsrProviderSchema = z.enum(['mlx-audio', 'openai-compat', 'chat-audio'])
+export type AsrProvider = z.infer<typeof AsrProviderSchema>
+
+export const REMOTE_ASR_PROVIDERS = ['openai-compat', 'chat-audio'] as const satisfies readonly AsrProvider[]
+
 export const AsrConfigSchema = z.object({
   /**
    * 容器里拿不到 Metal，必须是云端那两种；启动校验会断言这条。
@@ -92,11 +97,16 @@ export const AsrConfigSchema = z.object({
    * openai-compat = Whisper 那套 /audio/transcriptions；
    * chat-audio = 把音频塞进 chat/completions 的 input_audio（MiMo、Qwen-Omni 这类）。
    */
-  provider: z.enum(['mlx-whisper', 'openai-compat', 'chat-audio']).default('mlx-whisper'),
-  /** 只有云端两种用得上；mlx-whisper 是本地进程，没有 baseURL。apiKey 同 LLM，加密存 secrets 表。 */
+  provider: z.preprocess(
+    (value) => (value === 'mlx-whisper' ? 'mlx-audio' : value),
+    AsrProviderSchema.default('mlx-audio'),
+  ),
+  /** 只有云端两种用得上；mlx-audio 是本地进程，没有 baseURL。apiKey 同 LLM，加密存 secrets 表。 */
   baseURL: z.string().default(''),
-  model: z.string().default('mlx-community/whisper-large-v3-turbo'),
-  language: z.string().default('zh'),
+  model: z.string().default('mlx-community/Qwen3-ASR-0.6B-4bit'),
+  language: z.string().default('Chinese'),
+  /** 关闭后不请求官方字幕，直接下载音频走 ASR。 */
+  useOfficialSubtitles: z.boolean().default(true),
   /** ASR 是分钟级重活，并发 1 —— 免得把 16GB 内存吃满。 */
   concurrency: z.literal(1).default(1),
   /** chat-audio 分段时长（秒）；分段是取得时间戳的唯一方式，段长决定精度，且需满足请求体上限。 */
@@ -117,6 +127,13 @@ export const NotifyConfigSchema = z.object({
         .array(z.string().min(1))
         .transform((values) => [...new Set(values)])
         .default([]),
+    })
+    .default({}),
+  pushplus: z
+    .object({
+      enabled: z.boolean().default(false),
+      channel: z.enum(['wechat', 'app', 'webhook', 'cp', 'mail']).default('wechat'),
+      topic: z.string().default(''),
     })
     .default({}),
   ntfy: z

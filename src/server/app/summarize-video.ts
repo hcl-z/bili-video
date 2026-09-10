@@ -113,11 +113,14 @@ export class SummarizeVideo {
     }
 
     let state = startDegrade()
-    const skipSubtitle = stepIndex(from) > stepIndex('subtitle')
+    const skipByStart = stepIndex(from) > stepIndex('subtitle')
+    const skipByConfig = !this.deps.asrConfig().useOfficialSubtitles
+    const skipSubtitle = skipByStart || skipByConfig
 
     if (skipSubtitle) {
-      hook('subtitle', 'skipped', '按你选的起点跳过，直接走语音转写')
-      state = degrade(state, '按你选的起点跳过字幕')
+      const reason = skipByConfig ? '官方字幕已关闭，直接走语音转写' : '按所选起点跳过，直接走语音转写'
+      hook('subtitle', 'skipped', reason)
+      state = degrade(state, reason)
     } else {
       hook('subtitle', 'running')
       const subtitle = await this.fetchSubtitle(bvid)

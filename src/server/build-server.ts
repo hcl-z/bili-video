@@ -87,6 +87,7 @@ export function buildServer(ports: Ports, opts: BuildOptions = {}): Server {
     secrets: ports.secrets,
     events: ports.events,
     logger: ports.logger,
+    runtime: ports.runtime,
     llm: ports.external.llm,
     probeAsr: ports.external.probeAsr,
   })

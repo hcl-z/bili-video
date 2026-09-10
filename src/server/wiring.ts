@@ -10,6 +10,7 @@ import {
   serializeIdentity,
   type BrowserIdentity,
 } from './infra/bili/browser-identity.ts'
+import { assertAsrProviderAvailable } from './domain/asr-provider.ts'
 import { makeAsrProbe } from './infra/ai/asr-probe.ts'
 import { makeAsr } from './infra/asr/switch.ts'
 import { YtDlpDownloader } from './infra/audio/yt-dlp.ts'
@@ -59,11 +60,13 @@ import type { ConfigStore } from './ports/config-store.ts'
 import type { CookieJar } from './ports/cookie-jar.ts'
 import type { EventBus } from './ports/event-bus.ts'
 import type { Logger } from './ports/logger.ts'
+import type { RuntimeInfo } from './ports/runtime.ts'
 import type { StateRepo } from './ports/state.ts'
 import type { Repos } from './ports/index.ts'
 import {
   FEISHU_APP_SECRET,
   NTFY_AUTH,
+  PUSHPLUS_TOKEN,
   WEBHOOK_AUTHORIZATION,
   WXPUSHER_APP_TOKEN,
 } from './app/notify.ts'
@@ -88,6 +91,7 @@ export interface CoreOptions {
   fetch?: typeof fetch
   /** 本地可执行文件探测。fetch 之外的第二个进程边界，测试同样要能换掉。 */
   commands?: CommandRunner
+  runtime?: RuntimeInfo
 }
 
 export interface Core {
@@ -110,6 +114,7 @@ export interface Core {
   llm: Llm
   probeAsr: () => Promise<ProbeResult>
   notifiers: ReturnType<typeof makePushNotifiers>
+  runtime: RuntimeInfo
   close(): void
 }
 
@@ -147,6 +152,22 @@ export function openCore(opts: CoreOptions): Core {
 
   const seeded = seedConfig(db, clock.now(), logger)
   const config = new SqliteConfigStore(db, now, seeded.from)
+  const legacyAsr = config.getSection('asr')
+  if (legacyAsr.model === 'mlx-community/whisper-large-v3-turbo') {
+    config.setSection('asr', {
+      ...legacyAsr,
+      provider: 'mlx-audio',
+      model: 'mlx-community/Qwen3-ASR-0.6B-4bit',
+      language: 'Chinese',
+    })
+    logger.info({}, '本地 ASR 已迁移到 mlx-audio Qwen3-ASR')
+  }
+  const runtime = opts.runtime ?? { isDocker: false }
+  if (runtime.isDocker && config.getSection('asr').provider === 'mlx-audio') {
+    config.setSection('asr', { ...config.getSection('asr'), provider: 'openai-compat' })
+    logger.warn({}, 'Docker 内不支持本地 ASR，已切换到 openai-compat')
+  }
+  assertAsrProviderAvailable(runtime.isDocker, config.getSection('asr').provider)
 
   // cookie 和 SESSDATA 一样敏感（SESSDATA 本身就是其中一条），走同一套 secret-box。
   const cipher: Cipher = {
@@ -254,6 +275,7 @@ export function openCore(opts: CoreOptions): Core {
   const notifiers = makePushNotifiers({
     config: () => config.getSection('notify'),
     wxpusherToken: () => secrets.get(WXPUSHER_APP_TOKEN),
+    pushplusToken: () => secrets.get(PUSHPLUS_TOKEN),
     ntfyAuth: () => secrets.get(NTFY_AUTH),
     feishuSecret: () => secrets.get(FEISHU_APP_SECRET),
     webhookAuthorization: () => secrets.get(WEBHOOK_AUTHORIZATION),
@@ -281,6 +303,7 @@ export function openCore(opts: CoreOptions): Core {
     llm,
     probeAsr,
     notifiers,
+    runtime,
     close() {
       db.close()
     },

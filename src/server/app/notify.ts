@@ -13,6 +13,7 @@ import type { Notifier, NotifyChannel } from '../ports/notifier.ts'
 import type { SecretKey, SecretStore } from '../ports/secret-store.ts'
 
 export const WXPUSHER_APP_TOKEN: SecretKey = 'wxpusher-app-token'
+export const PUSHPLUS_TOKEN: SecretKey = 'pushplus-token'
 export const NTFY_AUTH: SecretKey = 'ntfy-auth'
 export const FEISHU_APP_SECRET: SecretKey = 'feishu-app-secret'
 export const WEBHOOK_AUTHORIZATION: SecretKey = 'webhook-authorization'
@@ -37,11 +38,13 @@ export class NotifyService {
   settings(): NotifySettingsResponse {
     const notify = this.deps.config.getSection('notify')
     const wxpusherToken = this.describe(WXPUSHER_APP_TOKEN)
+    const pushplusToken = this.describe(PUSHPLUS_TOKEN)
     const ntfyAuth = this.describe(NTFY_AUTH)
     const feishuSecret = this.describe(FEISHU_APP_SECRET)
     const webhookAuthorization = this.describe(WEBHOOK_AUTHORIZATION)
     const configured = {
       wxpusher: wxpusherToken.configured && notify.wxpusher.uids.length > 0,
+      pushplus: pushplusToken.configured,
       ntfy: notify.ntfy.server !== '' && notify.ntfy.topic !== '',
       feishu:
         feishuSecret.configured && notify.feishu.appId !== '' && notify.feishu.receiveId !== '',
@@ -50,11 +53,13 @@ export class NotifyService {
     return {
       notify,
       wxpusherToken,
+      pushplusToken,
       ntfyAuth,
       feishuSecret,
       webhookAuthorization,
       targets: {
         wxpusher: state(notify.wxpusher.enabled, configured.wxpusher),
+        pushplus: state(notify.pushplus.enabled, configured.pushplus),
         ntfy: state(notify.ntfy.enabled, configured.ntfy),
         feishu: state(notify.feishu.enabled, configured.feishu),
         webhook: state(notify.webhook.enabled, configured.webhook),
@@ -69,6 +74,7 @@ export class NotifyService {
         ...current,
         ...patch.notify,
         wxpusher: { ...current.wxpusher, ...patch.notify.wxpusher },
+        pushplus: { ...current.pushplus, ...patch.notify.pushplus },
         ntfy: { ...current.ntfy, ...patch.notify.ntfy },
         feishu: { ...current.feishu, ...patch.notify.feishu },
         webhook: { ...current.webhook, ...patch.notify.webhook },
@@ -77,6 +83,7 @@ export class NotifyService {
       this.deps.events.emit({ type: 'config.changed', section: 'notify' })
     }
     this.applySecret(WXPUSHER_APP_TOKEN, patch.wxpusherToken)
+    this.applySecret(PUSHPLUS_TOKEN, patch.pushplusToken)
     this.applySecret(NTFY_AUTH, patch.ntfyAuth)
     this.applySecret(FEISHU_APP_SECRET, patch.feishuSecret)
     this.applySecret(WEBHOOK_AUTHORIZATION, patch.webhookAuthorization)

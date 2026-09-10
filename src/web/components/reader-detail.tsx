@@ -193,7 +193,7 @@ function ParseAction(props: {
     job === null ? null : (
       <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2">
         <JobPipeline job={job} />
-        <p className="text-muted-foreground text-xs">点某一步从那儿重跑，前面的结果直接复用</p>
+        <p className="text-muted-foreground text-xs">悬浮看详情，点刷新图标从该步重跑</p>
       </div>
     )
 

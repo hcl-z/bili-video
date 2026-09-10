@@ -8,7 +8,7 @@ export interface Notifier {
   test(): Promise<DeliveryResult>
 }
 
-export type NotifyChannel = 'wxpusher' | 'ntfy' | 'feishu' | 'webhook'
+export type NotifyChannel = 'wxpusher' | 'pushplus' | 'ntfy' | 'feishu' | 'webhook'
 
 export interface NotifyMessage {
   kind: DeliveryKind
@@ -17,6 +17,8 @@ export interface NotifyMessage {
   body: string
   /** 点击跳转地址，通常是 B 站链接。 */
   url: string | null
+  /** 视频封面或图文首图；适配器按渠道能力渲染为卡片图片或附件。 */
+  imageUrl: string | null
   /** 同一条更新的两段推送用同一个 group，客户端才会折叠成一组。 */
   group: string | null
 }

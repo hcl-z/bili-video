@@ -48,6 +48,7 @@ function TargetsForm({ settings }: { settings: NotifySettingsResponse }) {
     uids: settings.notify.wxpusher.uids.join('\n'),
     token: '',
   })
+  const [pushplus, setPushplus] = useState({ ...settings.notify.pushplus, token: '' })
   const [ntfy, setNtfy] = useState({ ...settings.notify.ntfy, auth: '' })
   const [feishu, setFeishu] = useState({ ...settings.notify.feishu, secret: '' })
   const [webhook, setWebhook] = useState({ ...settings.notify.webhook, authorization: '' })
@@ -63,6 +64,18 @@ function TargetsForm({ settings }: { settings: NotifySettingsResponse }) {
             },
           },
           ...(wxpusher.token.trim() === '' ? {} : { wxpusherToken: wxpusher.token.trim() }),
+        })
+      }
+      if (active === 'pushplus') {
+        return api.patchNotifySettings({
+          notify: {
+            pushplus: {
+              enabled: pushplus.enabled,
+              channel: pushplus.channel,
+              topic: pushplus.topic.trim(),
+            },
+          },
+          ...(pushplus.token.trim() === '' ? {} : { pushplusToken: pushplus.token.trim() }),
         })
       }
       if (active === 'ntfy') {
@@ -101,6 +114,7 @@ function TargetsForm({ settings }: { settings: NotifySettingsResponse }) {
       qc.setQueryData(keys.notify, data)
       void qc.invalidateQueries({ queryKey: keys.config })
       setWxpusher((current) => ({ ...current, token: '' }))
+      setPushplus((current) => ({ ...current, token: '' }))
       setNtfy((current) => ({ ...current, auth: '' }))
       setFeishu((current) => ({ ...current, secret: '' }))
       setWebhook((current) => ({ ...current, authorization: '' }))
@@ -112,6 +126,7 @@ function TargetsForm({ settings }: { settings: NotifySettingsResponse }) {
   const clear = useMutation({
     mutationFn: (channel: NotifyChannel) => {
       if (channel === 'wxpusher') return api.patchNotifySettings({ wxpusherToken: null })
+      if (channel === 'pushplus') return api.patchNotifySettings({ pushplusToken: null })
       if (channel === 'ntfy') return api.patchNotifySettings({ ntfyAuth: null })
       if (channel === 'feishu') return api.patchNotifySettings({ feishuSecret: null })
       return api.patchNotifySettings({ webhookAuthorization: null })
@@ -135,7 +150,7 @@ function TargetsForm({ settings }: { settings: NotifySettingsResponse }) {
   return (
     <div className="space-y-4">
       <Tabs value={active} onValueChange={(value) => setActive(value as NotifyChannel)}>
-        <TabsList className="grid h-auto w-full grid-cols-4">
+        <TabsList className="grid h-auto w-full grid-cols-5">
           {CHANNELS.map((channel) => (
             <TabsTrigger key={channel} value={channel}>
               <StateIcon ready={settings.targets[channel].ready} />
@@ -171,6 +186,44 @@ function TargetsForm({ settings }: { settings: NotifySettingsResponse }) {
               value={wxpusher.token}
               onChange={(token) => setWxpusher((current) => ({ ...current, token }))}
               onClear={() => clear.mutate('wxpusher')}
+              clearing={clear.isPending}
+            />
+          </TargetCard>
+        </TabsContent>
+
+        <TabsContent value="pushplus">
+          <TargetCard
+            title="PushPlus"
+            hint="通过微信公众号接收 Markdown 消息。"
+            enabled={pushplus.enabled}
+            onEnabled={(enabled) => setPushplus((current) => ({ ...current, enabled }))}
+            testing={test.isPending && test.variables === 'pushplus'}
+            onTest={() => test.mutate('pushplus')}
+          >
+            <div className="grid gap-3 md:grid-cols-2">
+              <Field id="pushplus-channel" label="推送渠道">
+                <Select value={pushplus.channel} onValueChange={(channel) => setPushplus((s) => ({ ...s, channel: channel as typeof s.channel }))}>
+                  <SelectTrigger id="pushplus-channel"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="wechat">微信公众号</SelectItem>
+                    <SelectItem value="app">PushPlus App</SelectItem>
+                    <SelectItem value="webhook">Webhook</SelectItem>
+                    <SelectItem value="cp">企业微信应用</SelectItem>
+                    <SelectItem value="mail">邮箱</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field id="pushplus-topic" label="群组编码（可选）">
+                <Input id="pushplus-topic" name="notify-pushplus-topic" autoComplete="off" value={pushplus.topic} onChange={(e) => setPushplus((s) => ({ ...s, topic: e.target.value }))} />
+              </Field>
+            </div>
+            <SecretField
+              id="pushplus-token"
+              label="Token"
+              state={settings.pushplusToken}
+              value={pushplus.token}
+              onChange={(token) => setPushplus((current) => ({ ...current, token }))}
+              onClear={() => clear.mutate('pushplus')}
               clearing={clear.isPending}
             />
           </TargetCard>
@@ -312,10 +365,11 @@ function StateIcon({ ready }: { ready: boolean }) {
   return ready ? <CheckCircle2 className="text-primary size-3.5" /> : <XCircle className="size-3.5" />
 }
 
-const CHANNELS = ['wxpusher', 'ntfy', 'feishu', 'webhook'] as const
+const CHANNELS = ['wxpusher', 'pushplus', 'ntfy', 'feishu', 'webhook'] as const
 
 function label(channel: NotifyChannel): string {
   if (channel === 'wxpusher') return 'WxPusher'
+  if (channel === 'pushplus') return 'PushPlus'
   if (channel === 'ntfy') return 'ntfy'
   if (channel === 'feishu') return '飞书'
   return 'Webhook'

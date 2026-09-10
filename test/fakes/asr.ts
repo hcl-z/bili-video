@@ -26,7 +26,7 @@ export class FakeAudioDownloader implements AudioDownloader {
 }
 
 export class FakeAsr implements Asr {
-  readonly provider = 'mlx-whisper' as const
+  readonly provider = 'mlx-audio' as const
   cues: Cue[] = [{ from: 0, to: 3, text: '转写出来的第一句' }]
   fails = false
   calls = 0

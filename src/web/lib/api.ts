@@ -201,6 +201,6 @@ export const api = {
       body: JSON.stringify(patch),
     }),
 
-  testNotify: (channel: 'wxpusher' | 'ntfy' | 'feishu' | 'webhook') =>
+  testNotify: (channel: 'wxpusher' | 'pushplus' | 'ntfy' | 'feishu' | 'webhook') =>
     request<NotifyTestResponse>(`/notify/${channel}/test`, { method: 'POST' }),
 }

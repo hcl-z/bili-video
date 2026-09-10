@@ -85,6 +85,7 @@ describe('总结队列', () => {
     const listed = (await (await h.server.app.request('/api/jobs')).json()) as JobsResponse
     assert.equal(listed.jobs.length, 1)
     assert.equal(listed.videos['BV1x']?.title, '视频标题')
+    assert.equal(listed.videos['BV1x']?.readerPath, '/reader/111/901')
 
     await h.close()
   })

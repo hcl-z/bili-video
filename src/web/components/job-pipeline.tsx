@@ -1,4 +1,4 @@
-import { Check, ChevronsRight, Loader2, Minus, RotateCcw, X } from 'lucide-react'
+import { Check, ChevronsRight, Loader2, Minus, RefreshCw, RotateCcw, X } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
@@ -8,10 +8,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { useRetryJob } from '@/lib/use-retry-job'
 import { cn } from '@/lib/utils'
 
-/**
- * 六步流水线。每一步一个圆点，点某一步就是「从这儿重跑」——
- * 它之前那几步的产物（字幕/转写、分段要点、总结草稿）照用，不重复跑。
- */
+/** 六步流水线。悬浮步骤可查看状态，并从提示里的刷新按钮选择重跑起点。 */
 export function JobPipeline(props: { job: SummaryJob }) {
   const { job } = props
   const retry = useRetryJob(job.id)
@@ -92,26 +89,40 @@ function Dot(props: {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <button
-          type="button"
-          disabled={!props.canRerun || props.pending}
-          onClick={props.onRerun}
-          aria-label={`${label}：${STEP_STATUS_LABEL[status]}${props.canRerun ? '，点击从这一步重跑' : ''}`}
+        <span
+          tabIndex={0}
+          aria-label={`${label}：${STEP_STATUS_LABEL[status]}`}
           className={cn(
-            'flex size-7 shrink-0 items-center justify-center rounded-full transition-transform',
+            'flex size-7 shrink-0 items-center justify-center rounded-full',
             TONES[status],
-            props.canRerun && 'hover:ring-brand-ink cursor-pointer hover:ring-2',
           )}
         >
           <Icon className={cn('size-3.5', status === 'running' && 'motion-safe:animate-spin')} />
-        </button>
+        </span>
       </TooltipTrigger>
       <TooltipContent>
         <p className="font-medium">
           {label} · {STEP_STATUS_LABEL[status]}
         </p>
         {props.record?.note != null && <p className="max-w-[280px]">{props.record.note}</p>}
-        {props.canRerun && <p className="text-muted-foreground">点击从这一步重跑</p>}
+        {props.canRerun && (
+          <div className="text-muted-foreground flex items-center gap-1">
+            <span>从这一步重跑</span>
+            <button
+              type="button"
+              onClick={props.onRerun}
+              disabled={props.pending}
+              aria-label={`从${label}重跑`}
+              className="text-background/70 hover:text-background disabled:text-background/30 rounded-sm p-0.5 transition-colors"
+            >
+              {props.pending ? (
+                <Loader2 className="size-3 motion-safe:animate-spin" />
+              ) : (
+                <RefreshCw className="size-3" />
+              )}
+            </button>
+          </div>
+        )}
       </TooltipContent>
     </Tooltip>
   )

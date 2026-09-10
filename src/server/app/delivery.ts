@@ -91,6 +91,7 @@ export class DeliveryService {
       title: `${this.upName(update.uid)} · ${update.title ?? bvid}`,
       body: summary.fullMd,
       url: update.url,
+      imageUrl: update.cover,
       group: update.dynId,
     })
   }
@@ -136,6 +137,7 @@ export class DeliveryService {
       title: `${this.upName(update.uid)} · ${update.title ?? update.bvid}`,
       body: summary.fullMd,
       url: update.url,
+      imageUrl: update.cover,
       group: update.dynId,
     }
   }
@@ -154,6 +156,7 @@ export class DeliveryService {
   private channelEnabled(channel: NotifyChannel): boolean {
     const config = this.deps.config.getSection('notify')
     if (channel === 'wxpusher') return config.wxpusher.enabled
+    if (channel === 'pushplus') return config.pushplus.enabled
     if (channel === 'ntfy') return config.ntfy.enabled
     if (channel === 'feishu') return config.feishu.enabled
     return config.webhook.enabled
@@ -183,7 +186,14 @@ export class DeliveryService {
 function discoverMessage(update: Update, upName: string): NotifyMessage {
   const title = `${upName} 发了《${update.title ?? typeLabel(update)}》`
   const body = [update.text, update.url].filter((part): part is string => part !== null && part !== '').join('\n\n')
-  return { kind: 'discover', title, body, url: update.url, group: update.dynId }
+  return {
+    kind: 'discover',
+    title,
+    body,
+    url: update.url,
+    imageUrl: update.cover,
+    group: update.dynId,
+  }
 }
 
 function typeLabel(update: Update): string {

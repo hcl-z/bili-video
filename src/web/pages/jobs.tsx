@@ -1,5 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
-import { CheckCircle2, Loader2, RotateCcw } from 'lucide-react'
+import { CheckCircle2, ExternalLink, Loader2, RotateCcw } from 'lucide-react'
+
+import { Link } from 'react-router-dom'
 
 import type { JobsResponse } from '#shared/contract/api.ts'
 import type { SummaryJob } from '#shared/contract/job.ts'
@@ -29,7 +31,7 @@ export function JobsPage() {
   return (
     <Page
       title="队列"
-      hint="六步流水线：每一步的状态一眼看到，点某一步就从那儿重跑，前面的结果不重复跑。"
+      hint="六步流水线：悬浮查看状态，在提示里点刷新图标可从该步重跑。"
     >
       {jobs.isPending ? (
         <Skeleton className="h-24 w-full" />
@@ -73,7 +75,10 @@ function Group(props: { title: string; jobs: SummaryJob[]; videos: JobsResponse[
   )
 }
 
-function JobRow(props: { job: SummaryJob; video: { title: string; url: string } | undefined }) {
+function JobRow(props: {
+  job: SummaryJob
+  video: JobsResponse['videos'][string] | undefined
+}) {
   const { job } = props
   const retry = useRetryJob(job.id)
 
@@ -82,20 +87,40 @@ function JobRow(props: { job: SummaryJob; video: { title: string; url: string } 
       <CardContent className="py-3">
         <div className="flex items-start gap-3">
           <div className="min-w-0 flex-1">
-            <a
-              href={props.video?.url ?? videoUrl(job.bvid)}
-              target="_blank"
-              rel="noreferrer"
-              className="line-clamp-1 text-sm font-medium hover:underline"
-            >
-              {props.video?.title ?? job.bvid}
-            </a>
+            {props.video?.readerPath === null || props.video === undefined ? (
+              <a
+                href={props.video?.url ?? videoUrl(job.bvid)}
+                target="_blank"
+                rel="noreferrer"
+                className="line-clamp-1 text-sm font-medium hover:underline"
+              >
+                {props.video?.title ?? job.bvid}
+              </a>
+            ) : (
+              <Link
+                to={props.video.readerPath}
+                className="line-clamp-1 text-sm font-medium hover:underline"
+              >
+                {props.video.title}
+              </Link>
+            )}
             <div className="text-muted-foreground mt-1.5 flex items-center gap-2 text-xs">
               <StageBadge job={job} />
               <span className="font-mono">{job.bvid}</span>
               <span>·</span>
               <span>{formatTime(job.updatedAt)}</span>
               {job.attempts > 1 && <span>· 第 {job.attempts} 次</span>}
+              {props.video !== undefined && (
+                <a
+                  href={props.video.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="在 B 站打开"
+                  className="hover:text-foreground ml-0.5"
+                >
+                  <ExternalLink className="size-3" />
+                </a>
+              )}
             </div>
           </div>
 
@@ -115,7 +140,7 @@ function JobRow(props: { job: SummaryJob; video: { title: string; url: string } 
 
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
           <JobPipeline job={job} />
-          <p className="text-muted-foreground text-xs">点某一步从那儿重跑，前面的结果直接复用</p>
+          <p className="text-muted-foreground text-xs">悬浮看详情，点刷新图标从该步重跑</p>
         </div>
 
         {job.error !== null && (

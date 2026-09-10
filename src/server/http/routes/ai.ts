@@ -2,6 +2,8 @@ import { Hono } from 'hono'
 
 import { PatchAiSettingsRequestSchema } from '#shared/contract/api.ts'
 import type { AiService } from '../../app/ai.ts'
+import { LocalAsrUnavailableError } from '../../domain/asr-provider.ts'
+import { errorBody } from '../errors.ts'
 import { parseBody } from '../parse.ts'
 
 /**
@@ -14,7 +16,14 @@ export function aiRoutes(ai: AiService): Hono {
     .patch('/', async (c) => {
       const parsed = await parseBody(c.req.raw, PatchAiSettingsRequestSchema)
       if (!parsed.ok) return c.json(parsed.body, 400)
-      return c.json(ai.patch(parsed.value))
+      try {
+        return c.json(ai.patch(parsed.value))
+      } catch (err) {
+        if (err instanceof LocalAsrUnavailableError) {
+          return c.json(errorBody('asr-provider-unavailable', err.message), 400)
+        }
+        throw err
+      }
     })
     .post('/test', async (c) => c.json(await ai.test()))
 }

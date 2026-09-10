@@ -72,6 +72,7 @@ function AiForm(props: { settings: AiSettingsResponse }) {
     baseURL: init.asr.baseURL,
     model: init.asr.model,
     language: init.asr.language,
+    useOfficialSubtitles: init.asr.useOfficialSubtitles,
     segmentSec: String(init.asr.segmentSec),
     apiKey: '',
   })
@@ -95,6 +96,7 @@ function AiForm(props: { settings: AiSettingsResponse }) {
           baseURL: asr.baseURL.trim(),
           model: asr.model.trim(),
           language: asr.language.trim(),
+          useOfficialSubtitles: asr.useOfficialSubtitles,
           segmentSec: numOr(asr.segmentSec, init.asr.segmentSec),
         },
         // 空串不传：后端把「没有这个字段」当作不修改，而不是清空。
@@ -221,7 +223,11 @@ function AiForm(props: { settings: AiSettingsResponse }) {
         <CardContent className="space-y-4 py-4">
           <SectionTitle
             title="ASR"
-            hint="本机 mlx-whisper 走命令行；远端两种：Whisper 那套转写接口，或把音频塞进 chat 的那类。"
+            hint={
+              init.isDocker
+                ? 'Docker 内只提供两个远程转写服务。'
+                : '本机 mlx-audio 使用 Qwen3-ASR；也可以切到两个远程转写服务。'
+            }
           />
           <Field id="asr-provider" label="provider">
             <Select
@@ -232,13 +238,15 @@ function AiForm(props: { settings: AiSettingsResponse }) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="mlx-whisper">mlx-whisper（本机）</SelectItem>
+                {init.availableAsrProviders.includes('mlx-audio') && (
+                  <SelectItem value="mlx-audio">mlx-audio（本机 Qwen3-ASR）</SelectItem>
+                )}
                 <SelectItem value="openai-compat">openai-compat（远端，/audio/transcriptions）</SelectItem>
                 <SelectItem value="chat-audio">chat-audio（远端，chat 里塞音频）</SelectItem>
               </SelectContent>
             </Select>
           </Field>
-          {asr.provider !== 'mlx-whisper' && (
+          {asr.provider !== 'mlx-audio' && (
             <>
               <Field id="asr-base" label="baseURL">
                 <Input
@@ -259,6 +267,19 @@ function AiForm(props: { settings: AiSettingsResponse }) {
               />
             </>
           )}
+          <div className="flex items-center justify-between gap-4 rounded-md border px-3 py-3">
+            <div>
+              <Label htmlFor="asr-subtitles">优先使用官方字幕</Label>
+              <p className="text-muted-foreground mt-1 text-sm">关闭后跳过字幕，直接下载音频并转写。</p>
+            </div>
+            <Switch
+              id="asr-subtitles"
+              checked={asr.useOfficialSubtitles}
+              onCheckedChange={(checked) =>
+                setAsr((s) => ({ ...s, useOfficialSubtitles: checked }))
+              }
+            />
+          </div>
           <Field id="asr-model" label="model">
             <Input
               id="asr-model"
@@ -271,7 +292,7 @@ function AiForm(props: { settings: AiSettingsResponse }) {
               id="asr-lang"
               value={asr.language}
               onChange={(e) => setAsr((s) => ({ ...s, language: e.target.value }))}
-              placeholder="zh"
+              placeholder="Chinese"
             />
           </Field>
           {asr.provider === 'chat-audio' && (

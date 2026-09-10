@@ -53,6 +53,8 @@ export interface HarnessOptions {
   cookies?: string[]
   /** restart 内部用：把临时目录的所有权交给新实例，免得跑完一屋子 tmp 目录没人收。 */
   ownsDataDir?: boolean
+  /** 把运行态固定下来，测试容器分支时不依赖宿主机是否真的在 Docker 中。 */
+  isDocker?: boolean
   /** 本地可执行文件的假件。不给就是真的去 PATH 上找，测试里别这么干。 */
   commands?: CommandRunner
   /**
@@ -77,6 +79,7 @@ export async function createHarness(opts: HarnessOptions = {}): Promise<Harness>
     clock,
     logger,
     events,
+    runtime: { isDocker: opts.isDocker ?? false },
     fetch: fetch.fetch,
     ...(opts.commands === undefined ? {} : { commands: opts.commands }),
   })
@@ -98,6 +101,7 @@ export async function createHarness(opts: HarnessOptions = {}): Promise<Harness>
     // 真 writer，写进临时 dataDir —— 「落盘了没有」才测得到。
     markdown: core.markdown,
     storage: core.storage,
+    runtime: { isDocker: opts.isDocker ?? false },
     external: {
       notifiers: [notifier],
       biliAuth: core.biliAuth,

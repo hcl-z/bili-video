@@ -3,7 +3,7 @@ import type { Asr } from '../../ports/asr.ts'
 import type { CommandRunner } from '../../ports/command.ts'
 import type { Logger } from '../../ports/logger.ts'
 import { ChatAudioAsr } from './chat-audio.ts'
-import { MlxWhisperAsr } from './mlx-whisper.ts'
+import { MlxAudioAsr } from './mlx-audio.ts'
 import { OpenAiCompatAsr } from './openai-compat.ts'
 
 export interface AsrSwitchDeps {
@@ -19,7 +19,7 @@ export interface AsrSwitchDeps {
  * 每次调用现读 provider，所以页面上切完下一条转写就走新的。
  */
 export function makeAsr(deps: AsrSwitchDeps): Asr {
-  const local = new MlxWhisperAsr({ commands: deps.commands, logger: deps.logger, config: deps.config })
+  const local = new MlxAudioAsr({ commands: deps.commands, logger: deps.logger, config: deps.config })
   const cloud = new OpenAiCompatAsr({
     fetch: deps.fetch,
     logger: deps.logger,
@@ -35,7 +35,7 @@ export function makeAsr(deps: AsrSwitchDeps): Asr {
   })
   const pick = (): Asr => {
     switch (deps.config().provider) {
-      case 'mlx-whisper':
+      case 'mlx-audio':
         return local
       case 'chat-audio':
         return chat

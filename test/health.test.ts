@@ -21,6 +21,7 @@ async function rig(fetch: FakeFetch): Promise<Harness> {
   })
   h.core.config.setSection('notify', {
     wxpusher: { enabled: false, uids: [] },
+    pushplus: { enabled: false, channel: 'wechat', topic: '' },
     ntfy: { enabled: true, server: 'https://ntfy.sh', topic: 'test_topic' },
     feishu: { enabled: false, appId: '', receiveIdType: 'open_id', receiveId: '' },
     webhook: { enabled: false, url: '' },

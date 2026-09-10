@@ -46,6 +46,7 @@ async function rig(): Promise<Harness> {
   })
   h.core.config.setSection('notify', {
     wxpusher: { enabled: false, uids: [] },
+    pushplus: { enabled: false, channel: 'wechat', topic: '' },
     ntfy: { enabled: true, server: 'https://ntfy.sh', topic: 'test_topic' },
     feishu: { enabled: false, appId: '', receiveIdType: 'open_id', receiveId: '' },
     webhook: { enabled: false, url: '' },
@@ -58,7 +59,9 @@ describe('推送渠道', () => {
   it('新更新立即推发现通知，总结完成再推完整正文，重复事件不重推', async () => {
     const h = await rig()
     try {
-      h.core.repos.updates.insertMany([update(h)])
+      h.core.repos.updates.insertMany([
+        update(h, { cover: 'https://i0.hdslb.com/bfs/archive/cover.jpg' }),
+      ])
       h.events.emit({ type: 'update.new', dynId: '901', uid: '111' })
       await h.server.services.delivery.drain()
 
@@ -73,6 +76,8 @@ describe('推送渠道', () => {
       assert.equal(h.notifier.sent[1]?.kind, 'summary')
       assert.equal(h.notifier.sent[0]?.group, '901')
       assert.equal(h.notifier.sent[1]?.group, '901')
+      assert.equal(h.notifier.sent[0]?.imageUrl, 'https://i0.hdslb.com/bfs/archive/cover.jpg')
+      assert.equal(h.notifier.sent[1]?.imageUrl, 'https://i0.hdslb.com/bfs/archive/cover.jpg')
       assert.match(h.notifier.sent[1]?.body ?? '', /完整正文/)
       assert.deepEqual(
         h.core.repos.deliveries.listForUpdate('901').map((delivery) => delivery.status),
@@ -130,6 +135,7 @@ describe('推送渠道', () => {
         body: JSON.stringify({
           notify: {
             wxpusher: { enabled: true, uids: ['UID_test'] },
+            pushplus: { enabled: true, channel: 'app', topic: '' },
             ntfy: { enabled: true, server: 'https://ntfy.sh', topic: 'private_topic' },
             feishu: {
               enabled: true,
@@ -140,6 +146,7 @@ describe('推送渠道', () => {
             webhook: { enabled: true, url: 'https://hooks.example.test/bili' },
           },
           wxpusherToken: 'AT_1234567890',
+          pushplusToken: 'pushplus-token',
           ntfyAuth: 'Bearer tk_secret',
           feishuSecret: 'feishu-secret',
           webhookAuthorization: 'Bearer hook-secret',
@@ -148,10 +155,14 @@ describe('推送渠道', () => {
       const settings = NotifySettingsResponseSchema.parse(await saved.json())
       assert.equal(settings.wxpusherToken.configured, true)
       assert.notEqual(settings.wxpusherToken.masked, 'AT_1234567890')
+      assert.equal(settings.pushplusToken.configured, true)
+      assert.notEqual(settings.pushplusToken.masked, 'pushplus-token')
+      assert.equal(settings.notify.pushplus.channel, 'app')
       assert.equal(settings.ntfyAuth.configured, true)
       assert.equal(settings.feishuSecret.configured, true)
       assert.equal(settings.webhookAuthorization.configured, true)
       assert.equal(settings.targets.wxpusher.ready, true)
+      assert.equal(settings.targets.pushplus.ready, true)
       assert.equal(settings.targets.ntfy.ready, true)
       assert.equal(settings.targets.feishu.ready, true)
       assert.equal(settings.targets.webhook.ready, true)

@@ -112,6 +112,41 @@ describe('AI 配置', () => {
     }
   })
 
+  it('Docker 只暴露远程 ASR，并拒绝写回本地 provider', async () => {
+    const h = await createHarness({ isDocker: true })
+    try {
+      const settings = await getSettings(h)
+      assert.equal(settings.isDocker, true)
+      assert.deepEqual(settings.availableAsrProviders, ['openai-compat', 'chat-audio'])
+      assert.equal(settings.asr.provider, 'openai-compat')
+
+      const res = await h.server.app.request('/api/ai', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ asr: { provider: 'mlx-audio' } }),
+      })
+      assert.equal(res.status, 400)
+      assert.equal(h.core.config.getSection('asr').provider, 'openai-compat')
+    } finally {
+      await h.close()
+    }
+  })
+
+  it('本机默认使用 mlx-audio Qwen3-ASR', async () => {
+    const h = await createHarness()
+    try {
+      const settings = await getSettings(h)
+      assert.equal(settings.isDocker, false)
+      assert.equal(settings.asr.provider, 'mlx-audio')
+      assert.equal(settings.asr.model, 'mlx-community/Qwen3-ASR-0.6B-4bit')
+      assert.equal(settings.asr.language, 'Chinese')
+      assert.equal(settings.asr.useOfficialSubtitles, true)
+      assert.deepEqual(settings.availableAsrProviders, ['mlx-audio', 'openai-compat', 'chat-audio'])
+    } finally {
+      await h.close()
+    }
+  })
+
   it('连通性测试：LLM 与 ASR 各发一次，分别报结果', async () => {
     const fetch = new FakeFetch()
       .on('/chat/completions', { status: 401, raw: { error: { message: 'invalid api key' } } })
@@ -119,15 +154,18 @@ describe('AI 配置', () => {
     const h = await createHarness({
       fetch,
       commands: {
-        probe: async () => ({ found: true, detail: 'mlx-whisper' }),
-        run: async () => ({ code: 0, stdout: '', stderr: '', timedOut: false }),
+        probe: async () => ({ found: true, detail: 'mlx-audio' }),
+        run: async (_bin, args) =>
+          args.includes('--help')
+            ? { code: 0, stdout: 'usage: mlx_audio', stderr: '', timedOut: false }
+            : { code: 0, stdout: '', stderr: '', timedOut: false },
       },
     })
     try {
       // 改完就测，没重启 —— 用时读配置这条在这里被顺带测到。
       await patch(h, {
         ai: { baseURL: 'https://llm.test/v1', model: 'm1' },
-        asr: { provider: 'mlx-whisper' },
+        asr: { provider: 'mlx-audio' },
       })
       const first = (await (
         await h.server.app.request('/api/ai/test', { method: 'POST' })
@@ -136,7 +174,7 @@ describe('AI 配置', () => {
       assert.equal(first.llm.stage, 'auth')
       assert.match(first.llm.detail ?? '', /invalid api key/)
       assert.equal(fetch.countOf('llm.test'), 1)
-      assert.equal(first.asr.ok, true, '本机 mlx_whisper 在 PATH 上')
+      assert.equal(first.asr.ok, true, '本机 mlx_audio 可用')
 
       // 远端 ASR 走 HTTP，探的是 /models。
       await patch(h, { asr: { provider: 'openai-compat', baseURL: 'https://asr.test/v1' } })

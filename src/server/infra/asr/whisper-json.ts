@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 import type { Cue } from '#shared/contract/summary.ts'
 
-/** whisper 的 verbose_json：本地 mlx_whisper 与云端 OpenAI 兼容端点是同一形状。 */
+/** whisper 兼容 JSON：本地 mlx_audio 与云端 OpenAI 兼容端点是同一形状。 */
 const WhisperJsonSchema = z.object({
   text: z.string().optional(),
   segments: z

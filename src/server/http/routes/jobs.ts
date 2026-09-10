@@ -13,7 +13,11 @@ export function jobRoutes(ports: Ports, queue: SummaryQueue): Hono {
       const jobs = ports.repos.jobs.list({ limit: 200 })
       const body: JobsResponse = { jobs, videos: {} }
       for (const job of jobs) {
-        body.videos[job.bvid] = videoRef(job.bvid, ports.repos.updates.get(job.updateId) ?? null)
+        const update = ports.repos.updates.get(job.updateId) ?? null
+        body.videos[job.bvid] = {
+          ...videoRef(job.bvid, update),
+          readerPath: update === null ? null : `/reader/${update.uid}/${update.dynId}`,
+        }
       }
       return c.json(body)
     })

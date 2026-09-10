@@ -19,6 +19,28 @@ async function run(fetch: FakeFetch, extra: Partial<HarnessOptions> = {}): Promi
 }
 
 describe('降级链', () => {
+  it('关闭官方字幕后即使有字幕也直接走 ASR', async () => {
+    const fetch = bili()
+    fetch.on('player/wbi/v2', player([ZH_TRACK]))
+    const audio = new FakeAudioDownloader()
+    const asr = new FakeAsr()
+    const { h } = await rig(fetch, { audio, asr })
+    h.core.config.setSection('asr', {
+      ...h.core.config.getSection('asr'),
+      useOfficialSubtitles: false,
+    })
+
+    await h.server.services.poll.pollOnce()
+    await h.server.services.queue.drain()
+
+    assert.equal(fetch.countOf('player/wbi/v2'), 0)
+    assert.equal(fetch.countOf('sub.test/zh.json'), 0)
+    assert.equal(asr.calls, 1)
+    assert.deepEqual(audio.downloaded, ['BV1x'])
+    assert.equal(h.core.repos.summaries.get('BV1x')?.transcriptSource, 'asr')
+    await h.close()
+  })
+
   it('字幕缺失 + 转写成功 → asr 级，音频跑完就删', async () => {
     const fetch = bili()
     fetch.on('player/wbi/v2', player([]))

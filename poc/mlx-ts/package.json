@@ -1,0 +1,17 @@
+{
+  "name": "bili-video-mlx-ts-poc",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.33.2",
+  "scripts": {
+    "generate": "node runner.mjs generate --runtime bun",
+    "probe": "node runner.mjs probe",
+    "test": "node runner.mjs probe --allow-unavailable",
+    "transcribe": "node runner.mjs transcribe --runtime bun"
+  },
+  "dependencies": {
+    "@nielspeter/mlx-ts": "0.4.1",
+    "@nielspeter/mlx-ts-darwin-arm64": "0.1.0"
+  }
+}

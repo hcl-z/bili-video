@@ -210,10 +210,9 @@ function Row(props: { line: LogLine; query: string; onMod: () => void }) {
   return (
     <li className="hover:bg-muted/50 flex gap-3 rounded px-1 py-[3px] font-mono text-xs leading-5">
       <span className="text-muted-foreground shrink-0 tabular-nums">{TIME.format(line.at)}</span>
-      {/* 定宽：级别名长短不一，不定宽的话后面的消息列会参差不齐。 */}
       <span
         className={cn(
-          'w-[3.25rem] shrink-0 rounded-sm px-1.5 text-center text-[10px] font-semibold uppercase leading-5 tracking-wide',
+          'w-[3.25rem] shrink-0 rounded-sm px-1.5 text-center text-[10px] font-semibold uppercase leading-5 tracking-wide h-fit',
           LEVEL_BADGE[line.level],
         )}
       >

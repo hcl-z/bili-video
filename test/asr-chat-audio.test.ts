@@ -16,6 +16,7 @@ const CFG = {
   baseURL: 'https://llm.test/v1',
   model: 'asr-1',
   language: 'zh',
+  useOfficialSubtitles: true,
   concurrency: 1 as const,
   segmentSec: 120,
 }

@@ -65,10 +65,12 @@ ai:
   llmConcurrency: 2
 
 asr:
-  # 容器里拿不到 Metal，必须改成 openai-compat，启动校验会断言这条。
-  provider: mlx-whisper
-  model: mlx-community/whisper-large-v3-turbo
-  language: zh
+  # Docker 内拿不到 Metal；启动时会自动切换到 openai-compat，页面只显示两个远程 provider。
+  provider: mlx-audio
+  model: mlx-community/Qwen3-ASR-0.6B-4bit
+  language: Chinese
+  # 关闭后不请求官方字幕，所有视频直接下载音频并运行 ASR。
+  useOfficialSubtitles: true
   concurrency: 1
 
 output:

@@ -141,7 +141,9 @@ export class HealthMonitor {
       const enabled =
       notifier.channel === 'wxpusher'
         ? notify.wxpusher.enabled
-        : notifier.channel === 'ntfy'
+        : notifier.channel === 'pushplus'
+          ? notify.pushplus.enabled
+          : notifier.channel === 'ntfy'
           ? notify.ntfy.enabled
           : notifier.channel === 'feishu'
             ? notify.feishu.enabled
@@ -149,7 +151,14 @@ export class HealthMonitor {
       if (!enabled) continue
       const key = { updateId, channel: notifier.channel, kind: 'alert' as const }
       if (!this.deps.deliveries.claim({ ...key, at: this.deps.clock.now() })) continue
-      const res = await notifier.send({ kind: 'alert', title, body, url: null, group: updateId })
+      const res = await notifier.send({
+        kind: 'alert',
+        title,
+        body,
+        url: null,
+        imageUrl: null,
+        group: updateId,
+      })
       this.deps.deliveries.settle(
         key,
         { status: res.ok ? 'sent' : 'failed', error: res.error },

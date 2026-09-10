@@ -6,6 +6,7 @@ import { buildServer } from './build-server.ts'
 import { SystemClock } from './infra/clock/system-clock.ts'
 import { InMemoryEventBus } from './infra/event-bus/in-memory.ts'
 import { createLogger } from './log.ts'
+import { detectRuntime } from './infra/runtime/detect.ts'
 import { errFields } from './log-fields.ts'
 import type { Ports } from './ports/index.ts'
 import { openCore, type Core } from './wiring.ts'
@@ -23,6 +24,7 @@ const webRoot = resolve(process.env['WEB_ROOT'] ?? './dist/web')
 
 const clock = new SystemClock()
 const events = new InMemoryEventBus()
+const runtime = detectRuntime()
 
 const logger = createLogger({
   level: (process.env['LOG_LEVEL'] as 'info') ?? 'info',
@@ -40,6 +42,7 @@ try {
     clock,
     logger,
     events,
+    runtime,
     masterKeyPath: process.env['MASTER_KEY_PATH'],
     masterKeyPassphrase: process.env['MASTER_KEY'],
   })
@@ -62,6 +65,7 @@ const ports: Ports = {
   cookies: core.cookies,
   markdown: core.markdown,
   storage: core.storage,
+  runtime,
   external: {
     notifiers: core.notifiers,
     biliAuth: core.biliAuth,

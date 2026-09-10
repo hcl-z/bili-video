@@ -10,7 +10,9 @@ import { errorBody } from '../errors.ts'
 import { parseBody } from '../parse.ts'
 
 const isChannel = (value: string): value is NotifyChannel =>
-  value === 'wxpusher' || value === 'ntfy' || value === 'feishu' || value === 'webhook'
+  value === 'wxpusher' ||
+  value === 'pushplus' ||
+  value === 'ntfy' || value === 'feishu' || value === 'webhook'
 
 export function notifyRoutes(notify: NotifyService): Hono {
   return new Hono()
