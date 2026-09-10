@@ -1,6 +1,8 @@
+import type { UpSearchItem } from '#shared/contract/api.ts'
 import type { Subscription } from '#shared/contract/subscription.ts'
 import { fail, ok, type Result } from '#shared/contract/failure.ts'
-import { parseUid } from '../domain/subscription.ts'
+import { fatalFailure } from '../domain/bili-error.ts'
+import { isSpaceLink, isWebLink, parseUid } from '../domain/subscription.ts'
 import type { BiliProfile, BiliRelationWriter } from '../types/bili.ts'
 import type { Clock } from '../types/platform.ts'
 import type { Logger } from '../types/platform.ts'
@@ -48,6 +50,35 @@ export class SubscriptionService {
 
   get(uid: string): Subscription | null {
     return this.deps.subs.get(uid)
+  }
+
+  async resolve(input: string): Promise<Result<UpSearchItem[]>> {
+    const query = input.trim()
+    if (query === '') return Promise.resolve(fail(fatalFailure('请输入 UP 主名称、UID 或空间页链接')))
+
+    const profile = this.deps.profile
+    if (profile === null) return Promise.resolve(fail(fatalFailure('UP 主查找功能未接入')))
+
+    const uid = parseUid(query)
+    if (uid !== null) {
+      const card = await profile.fetchCard(uid)
+      if (card.ok) {
+        return ok([
+          {
+            uid: card.value.uid,
+            name: card.value.name,
+            face: card.value.face,
+            signature: '',
+            fans: 0,
+          },
+        ])
+      }
+      if (isSpaceLink(query)) return card
+    } else if (isWebLink(query)) {
+      return Promise.resolve(fail(fatalFailure('这不是 UP 主空间页链接')))
+    }
+
+    return profile.search(query)
   }
 
   /** 粘一个 uid 或空间链接就完成订阅。 无法识别 uid 是用户输入问题（fatal，页面照原样显示）；查名片失败不拦路 */

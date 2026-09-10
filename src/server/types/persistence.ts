@@ -85,11 +85,20 @@ export interface AnchorRepo {
 
 export interface UpdateRepo {
 
-  insertMany(updates: UpdateWithRaw[]): { inserted: string[]; skipped: string[] }
+  insertMany(
+    updates: UpdateWithRaw[],
+    opts?: { inFeed?: boolean },
+  ): { inserted: string[]; skipped: string[] }
   get(dynId: string): Update | null
 
   getByBvid(bvid: string): Update | null
-  list(q: { uid?: string; includeFiltered?: boolean; limit: number; before?: number }): Update[]
+  list(q: {
+    uid?: string
+    includeFiltered?: boolean
+    feedOnly?: boolean
+    limit: number
+    before?: number
+  }): Update[]
 
   countSince(ts: number): number
   count(): number

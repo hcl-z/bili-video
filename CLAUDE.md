@@ -1,5 +1,3 @@
-# CLAUDE.md
-
 bili-video 的项目约束，优先于任何默认行为。
 
 ## 注释

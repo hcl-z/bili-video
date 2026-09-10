@@ -17,6 +17,7 @@ export function updateRoutes(deps: ServerDeps, poll: Poller): Hono {
       }
       const updates = deps.repos.updates.list({
         limit: q.data.limit,
+        feedOnly: true,
         includeFiltered: q.data.filtered === '1',
         ...(q.data.uid === undefined ? {} : { uid: q.data.uid }),
         ...(q.data.before === undefined ? {} : { before: q.data.before }),

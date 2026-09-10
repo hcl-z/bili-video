@@ -5,6 +5,15 @@ const SPACE_PATTERNS = [/space\.bilibili\.com\/(\d{1,12})/, /bilibili\.com\/spac
 
 const BARE_UID = /^(?:uid[:：]?)?\s*(\d{1,12})$/i
 
+export function isSpaceLink(input: string): boolean {
+  const text = input.trim()
+  return SPACE_PATTERNS.some((pattern) => pattern.test(text))
+}
+
+export function isWebLink(input: string): boolean {
+  return /^https?:\/\//i.test(input.trim())
+}
+
 /** 从「用户粘进来的任意一串数据」里认出 uid。 分享出来的文本往往是「【某某的个人空间】https://space.bilibili.com/123 ...」这种一整段， 所以先在全文里找空间链接，再退回「整段就是一个 uid」。无法识别来返回 null， 绝不猜 —— 猜错会去关注一个陌生人 */
 export function parseUid(input: string): string | null {
   const text = input.trim()

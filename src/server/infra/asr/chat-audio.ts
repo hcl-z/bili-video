@@ -74,7 +74,7 @@ export class ChatAudioAsr implements Asr {
         },
       ],
       // OpenAI SDK 的 extra_body 就是并进请求体根上的，所以这里直接放平级。
-      asr_options: { language: opts.language ?? cfg.language },
+      asr_options: { language: languageCode(opts.language ?? cfg.language) },
       stream: false,
     }
 
@@ -109,6 +109,19 @@ export class ChatAudioAsr implements Asr {
     }
     return pickText(raw)
   }
+}
+
+const LANGUAGE_CODES: Record<string, string> = {
+  chinese: 'zh',
+  english: 'en',
+  cantonese: 'yue',
+  japanese: 'ja',
+  korean: 'ko',
+}
+
+function languageCode(language: string): string {
+  const normalized = language.trim().toLowerCase()
+  return LANGUAGE_CODES[normalized] ?? normalized
 }
 
 /** 只要 choices[0].message.content。有些实现回数组形状，两种都收。 */

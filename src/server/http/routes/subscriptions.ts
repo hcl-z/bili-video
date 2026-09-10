@@ -1,12 +1,10 @@
 import { Hono } from 'hono'
 
-import type {
-  SubscriptionResult,
-  SubscriptionsResponse,
-} from '#shared/contract/api.ts'
+import type { SubscriptionResult, SubscriptionsResponse, UpSearchResponse } from '#shared/contract/api.ts'
 import {
   AddSubscriptionRequestSchema,
   PatchSubscriptionRequestSchema,
+  UpSearchQuerySchema,
 } from '#shared/contract/api.ts'
 import type { SubscriptionService } from '../../app/subscriptions.ts'
 import { errorBody } from '../errors.ts'
@@ -18,6 +16,19 @@ export function subscriptionRoutes(subs: SubscriptionService): Hono {
 
   return new Hono()
     .get('/', (c) => c.json(list()))
+
+    .get('/search', async (c) => {
+      const parsed = UpSearchQuerySchema.safeParse(c.req.query())
+      if (!parsed.success) return c.json(errorBody('invalid-request', '请输入 UP 主名称'), 400)
+
+      const result = await subs.resolve(parsed.data.q)
+      if (!result.ok) {
+        const f = result.failure
+        return c.json(errorBody(f.kind, f.message), statusOf(f))
+      }
+      const body: UpSearchResponse = { items: result.value }
+      return c.json(body)
+    })
 
     .post('/', async (c) => {
       const parsed = await parseBody(c.req.raw, AddSubscriptionRequestSchema)

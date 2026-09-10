@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Loader2, Plus, RefreshCw, Trash2 } from 'lucide-react'
+import { Loader2, RefreshCw, Search, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 import type { PatchSubscriptionRequest } from '#shared/contract/api.ts'
@@ -29,13 +29,13 @@ export function SubsPage() {
   const subs = useQuery({ queryKey: keys.subs, queryFn: api.subs })
   const [input, setInput] = useState('')
 
-  /** 后端每个写操作都回权威结果，所以这里一律失效重取，不在前端拼本地状态。 */
   const invalidate = () => void qc.invalidateQueries({ queryKey: keys.subs })
 
   const add = useMutation({
     mutationFn: (raw: string) => api.addSub(raw),
     onSuccess: (r) => {
       setInput('')
+      search.reset()
       invalidate()
       if (r.notice === null) toast.success(`已订阅并关注 ${r.sub.name}`)
       else toast.warning(`已订阅 ${r.sub.name}`, { description: r.notice })
@@ -43,28 +43,94 @@ export function SubsPage() {
     onError: (err: Error) => toast.error('添加失败', { description: err.message }),
   })
 
+  const search = useMutation({
+    mutationFn: (name: string) => api.searchUps(name),
+    onError: (err: Error) => toast.error('查找失败', { description: err.message }),
+  })
+
+  const subscribed = new Set(subs.data?.subs.map((sub) => sub.uid) ?? [])
+
   return (
-    <Page title="UP 主" hint="粘一个 uid 或空间页链接就完成订阅，系统会用登录的小号自动关注 TA。">
-      <form
-        className="flex gap-2"
-        onSubmit={(e) => {
-          e.preventDefault()
-          const raw = input.trim()
-          if (raw !== '') add.mutate(raw)
-        }}
-      >
-        <Input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="uid，或 https://space.bilibili.com/…"
-          aria-label="UP 主 uid 或空间页链接"
-          disabled={add.isPending}
-        />
-        <Button type="submit" disabled={add.isPending || input.trim() === ''}>
-          {add.isPending ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
-          添加
-        </Button>
-      </form>
+    <Page title="UP 主" hint="输入名称、UID 或空间页链接，确认账号后再订阅。">
+      <div className="relative">
+        <form
+          className="flex gap-2"
+          onSubmit={(event) => {
+            event.preventDefault()
+            const query = input.trim()
+            if (query !== '') search.mutate(query)
+          }}
+        >
+          <Input
+            value={input}
+            onChange={(event) => {
+              setInput(event.target.value)
+              search.reset()
+            }}
+            placeholder="名称、UID 或空间页链接"
+            aria-label="UP 主名称、UID 或空间页链接"
+            autoComplete="off"
+            disabled={search.isPending || add.isPending}
+          />
+          <Button type="submit" disabled={search.isPending || add.isPending || input.trim() === ''}>
+            {search.isPending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Search className="size-4" />
+            )}
+            查找
+          </Button>
+        </form>
+
+        {search.data !== undefined && (
+          <div className="bg-popover absolute z-20 mt-1 max-h-80 w-[calc(100%-5.5rem)] overflow-y-auto rounded-md border p-1 shadow-md">
+            {search.data.items.length === 0 ? (
+              <p className="text-muted-foreground px-3 py-4 text-center text-sm">没有找到匹配的 UP 主</p>
+            ) : (
+              search.data.items.map((item) => {
+                const isSubscribed = subscribed.has(item.uid)
+                return (
+                  <button
+                    key={item.uid}
+                    type="button"
+                    className="hover:bg-accent focus-visible:bg-accent flex w-full items-center gap-3 rounded-sm px-3 py-2 text-left outline-none disabled:opacity-50"
+                    disabled={isSubscribed || add.isPending}
+                    onClick={() => add.mutate(item.uid)}
+                  >
+                    {item.face === null ? (
+                      <div className="bg-muted text-muted-foreground flex size-9 shrink-0 items-center justify-center rounded-full text-sm">
+                        {item.name.slice(0, 1)}
+                      </div>
+                    ) : (
+                      <img
+                        src={item.face}
+                        alt=""
+                        referrerPolicy="no-referrer"
+                        className="size-9 shrink-0 rounded-full object-cover"
+                      />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-baseline gap-2">
+                        <span className="truncate text-sm font-medium">{item.name}</span>
+                        <span className="text-muted-foreground shrink-0 font-mono text-xs">
+                          UID {item.uid}
+                        </span>
+                      </div>
+                      <p className="text-muted-foreground truncate text-xs">
+                        {item.fans === 0 ? '' : `${item.fans.toLocaleString('zh-CN')} 粉丝`}
+                        {item.signature === '' ? '' : `${item.fans === 0 ? '' : ' · '}${item.signature}`}
+                      </p>
+                    </div>
+                    <span className="text-muted-foreground shrink-0 text-xs">
+                      {isSubscribed ? '已订阅' : '订阅'}
+                    </span>
+                  </button>
+                )
+              })
+            )}
+          </div>
+        )}
+      </div>
 
       <div className="mt-4 space-y-3">
         {subs.isPending ? (

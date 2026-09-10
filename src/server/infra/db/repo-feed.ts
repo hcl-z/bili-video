@@ -56,12 +56,30 @@ export class SqliteUpdateRepo implements UpdateRepo {
   }
 
 
-  insertMany(updates: UpdateWithRaw[]): { inserted: string[]; skipped: string[] } {
+  insertMany(
+    updates: UpdateWithRaw[],
+    opts: { inFeed?: boolean } = {},
+  ): { inserted: string[]; skipped: string[] } {
+    const inFeed = opts.inFeed !== false
     const stmt = this.db.prepare(
       `INSERT INTO updates
-         (dyn_id, uid, type, pub_ts, title, text, cover, bvid, url, raw_json, filtered, filter_reason, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-       ON CONFLICT(dyn_id) DO NOTHING`,
+         (dyn_id, uid, type, pub_ts, title, text, cover, bvid, url, raw_json, filtered, filter_reason, created_at, in_feed)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(dyn_id) DO UPDATE SET
+         uid = excluded.uid,
+         type = excluded.type,
+         pub_ts = excluded.pub_ts,
+         title = excluded.title,
+         text = excluded.text,
+         cover = excluded.cover,
+         bvid = excluded.bvid,
+         url = excluded.url,
+         raw_json = excluded.raw_json,
+         filtered = excluded.filtered,
+         filter_reason = excluded.filter_reason,
+         created_at = excluded.created_at,
+         in_feed = 1
+       WHERE excluded.in_feed = 1 AND updates.in_feed = 0`,
     )
     const inserted: string[] = []
     const skipped: string[] = []
@@ -82,6 +100,7 @@ export class SqliteUpdateRepo implements UpdateRepo {
           toInt(u.filtered),
           u.filterReason,
           u.createdAt,
+          toInt(inFeed),
         )
         if (info.changes > 0) inserted.push(u.dynId)
         else skipped.push(u.dynId)
@@ -107,7 +126,13 @@ export class SqliteUpdateRepo implements UpdateRepo {
     return r ? toUpdate(r as Row) : null
   }
 
-  list(q: { uid?: string; includeFiltered?: boolean; limit: number; before?: number }): Update[] {
+  list(q: {
+    uid?: string
+    includeFiltered?: boolean
+    feedOnly?: boolean
+    limit: number
+    before?: number
+  }): Update[] {
     const where: string[] = []
     const args: (string | number)[] = []
     if (q.uid !== undefined) {
@@ -115,6 +140,7 @@ export class SqliteUpdateRepo implements UpdateRepo {
       args.push(q.uid)
     }
     if (q.includeFiltered !== true) where.push('filtered = 0')
+    if (q.feedOnly === true) where.push('in_feed = 1')
     if (q.before !== undefined) {
       where.push('pub_ts < ?')
       args.push(q.before)

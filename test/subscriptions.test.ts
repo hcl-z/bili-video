@@ -24,8 +24,32 @@ const row = (uid: string, name: string) => ({
 
 function bili(followed: string[] = []): FakeFetch {
   return new FakeFetch()
+    .on('search/type', (req) => {
+      const keyword = req.query.get('keyword') ?? ''
+      return {
+        data: {
+          result: [
+            {
+              mid: 123,
+              uname: keyword,
+              upic: 'https://i0.hdslb.com/123.jpg',
+              usign: '签名',
+              fans: 456,
+            },
+            {
+              mid: 456,
+              uname: `${keyword}同名`,
+              upic: '',
+              usign: '',
+              fans: 12,
+            },
+          ],
+        },
+      }
+    })
     .on('web-interface/card', (req) => {
       const mid = req.query.get('mid') ?? ''
+      if (mid === '404404') return { code: -404, message: '啥都木有' }
       return { data: { card: { mid, name: `UP-${mid}`, face: `https://i0.hdslb.com/${mid}.jpg` } } }
     })
     .on('relation/relations', (req) => {
@@ -61,6 +85,89 @@ describe('domain/subscription uid 识别', () => {
 })
 
 describe('订阅与自动关注', () => {
+  it('按名称只返回带 UID 的候选，不直接创建订阅', async () => {
+    const h = await rig()
+    const res = await h.server.app.request('/api/subscriptions/search?q=%E5%B0%8F%E6%98%8E')
+
+    assert.equal(res.status, 200)
+    assert.deepEqual(await res.json(), {
+      items: [
+        {
+          uid: '123',
+          name: '小明',
+          face: 'https://i0.hdslb.com/123.jpg',
+          signature: '签名',
+          fans: 456,
+        },
+        { uid: '456', name: '小明同名', face: null, signature: '', fans: 12 },
+      ],
+    })
+    assert.equal(h.core.repos.subscriptions.list().length, 0)
+    assert.equal(h.fetch.countOf('web-interface/card'), 0)
+    assert.equal(h.fetch.countOf('relation/modify'), 0)
+
+    const searchRequest = h.fetch.requests.find((request) => request.url.includes('search/type'))
+    assert.equal(searchRequest?.query.get('search_type'), 'bili_user')
+    assert.equal(searchRequest?.query.get('keyword'), '小明')
+    await h.close()
+  })
+
+  it('名称即使含数字也走名称搜索，不会被当成 UID', async () => {
+    const h = await rig()
+    const res = await h.server.app.request('/api/subscriptions/search?q=UP123')
+
+    assert.equal(res.status, 200)
+    assert.equal(h.fetch.countOf('search/type'), 1)
+    assert.equal(h.fetch.countOf('web-interface/card'), 0)
+    assert.equal(h.core.repos.subscriptions.list().length, 0)
+    await h.close()
+  })
+
+  it('UID 查到时只返回唯一候选，不再按名称搜索', async () => {
+    const h = await rig()
+    const res = await h.server.app.request('/api/subscriptions/search?q=123')
+
+    assert.equal(res.status, 200)
+    assert.deepEqual(await res.json(), {
+      items: [
+        {
+          uid: '123',
+          name: 'UP-123',
+          face: 'https://i0.hdslb.com/123.jpg',
+          signature: '',
+          fans: 0,
+        },
+      ],
+    })
+    assert.equal(h.fetch.countOf('web-interface/card'), 1)
+    assert.equal(h.fetch.countOf('search/type'), 0)
+    await h.close()
+  })
+
+  it('纯数字 UID 查不到时把原输入当名称搜索', async () => {
+    const h = await rig()
+    const res = await h.server.app.request('/api/subscriptions/search?q=404404')
+
+    assert.equal(res.status, 200)
+    const body = (await res.json()) as { items: { name: string }[] }
+    assert.equal(body.items[0]?.name, '404404')
+    assert.equal(h.fetch.countOf('web-interface/card'), 1)
+    assert.equal(h.fetch.countOf('search/type'), 1)
+    await h.close()
+  })
+
+  it('空间链接查不到时直接报错，不把整条链接当名称搜索', async () => {
+    const h = await rig()
+    const res = await h.server.app.request(
+      '/api/subscriptions/search?q=https%3A%2F%2Fspace.bilibili.com%2F404404',
+    )
+
+    assert.equal(res.status, 400)
+    assert.equal(h.fetch.countOf('web-interface/card'), 1)
+    assert.equal(h.fetch.countOf('search/type'), 0)
+    await h.close()
+  })
+
   it('粘一个空间链接就完成订阅，并自动关注', async () => {
     const h = await rig()
     const res = await h.server.app.request('/api/subscriptions', {

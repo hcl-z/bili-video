@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import type { ReaderItemResponse, UpFeedResponse } from '#shared/contract/api.ts'
+import type { ReaderItemResponse, UpdatesResponse, UpFeedResponse } from '#shared/contract/api.ts'
 import type { SummaryJob } from '#shared/contract/job.ts'
 import type { FakeResponse } from './fakes/bili-fetch.ts'
 import { avItem, bili, llmOk, player, rig, ZH_TRACK } from './support/queue-rig.ts'
@@ -51,6 +51,8 @@ describe('UP 空间流与手动解析', () => {
 
 
     assert.equal(h.core.repos.updates.get('801')?.title, '启动之前的老投稿')
+    const updates = (await (await h.server.app.request('/api/updates')).json()) as UpdatesResponse
+    assert.deepEqual(updates.updates, [], '手动解析的视频不应进入动态流')
     assert.equal(h.core.repos.summaries.get('BV1hist')?.tldr, '这个视频讲清了一件事，并给出了结论。')
 
     const after = (await (await h.server.app.request('/api/ups/111/feed')).json()) as UpFeedResponse

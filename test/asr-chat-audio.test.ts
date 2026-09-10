@@ -86,6 +86,29 @@ describe('chat-audio 转写', () => {
     await rm(dir, { recursive: true, force: true })
   })
 
+  it('把本地 ASR 使用的语言名转换成接口接受的语言代码', async () => {
+    const fetch = new FakeFetch().on('/chat/completions', reply('转写内容'))
+    const asr = new ChatAudioAsr({
+      fetch: fetch.fetch,
+      commands: fakeFfmpeg(1),
+      logger: new CollectingLogger(),
+      config: () => ({ ...CFG, language: 'Chinese' }),
+      apiKey: () => null,
+    })
+
+    const dir = await mkdtemp(join(tmpdir(), 'asr-test-'))
+    const audio = join(dir, 'BV1lang.m4a')
+    await writeFile(audio, 'not really audio')
+
+    await asr.transcribe(audio)
+
+    const body = JSON.parse(fetch.requests[0]?.body ?? '{}') as {
+      asr_options: { language: string }
+    }
+    assert.equal(body.asr_options.language, 'zh')
+    await rm(dir, { recursive: true, force: true })
+  })
+
   it('对方回 4xx 时抛错，让降级链退到下一级', async () => {
     const fetch = new FakeFetch().on('/chat/completions', {
       status: 404,

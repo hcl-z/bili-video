@@ -191,6 +191,10 @@ const SUMMARY_ARTICLE = `
 ALTER TABLE summaries ADD COLUMN article TEXT NOT NULL DEFAULT '';
 `
 
+const MANUAL_UPDATE_ORIGIN = `
+ALTER TABLE updates ADD COLUMN in_feed INTEGER NOT NULL DEFAULT 1;
+`
+
 export const MIGRATIONS: Migration[] = [
   { version: 1, name: 'init', sql: INIT },
   { version: 2, name: 'runtime_state', sql: RUNTIME_STATE },
@@ -198,6 +202,7 @@ export const MIGRATIONS: Migration[] = [
   { version: 4, name: 'summary_detail', sql: SUMMARY_DETAIL },
   { version: 5, name: 'job_pipeline', sql: JOB_PIPELINE },
   { version: 6, name: 'summary_article', sql: SUMMARY_ARTICLE },
+  { version: 7, name: 'manual_update_origin', sql: MANUAL_UPDATE_ORIGIN },
 ]
 
 /** 幂等：已应用的版本跳过。每个版本一个事务，中途失败不会留半张表。 `list` 只为测试预留（往里塞一个会失败的迁移，验证回滚）；生产永远走默认的 MIGRATIONS */

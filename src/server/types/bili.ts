@@ -1,6 +1,7 @@
 import type { DynamicType } from '#shared/contract/update.ts'
 import type { Cue } from '#shared/contract/summary.ts'
 import type { Result } from '#shared/contract/failure.ts'
+import type { UpSearchItem } from '#shared/contract/api.ts'
 
 /** B 站 API 拆成四个窄接口。写接口的风控比读严得多，拆开才能给它单独限流和审计 —— 也让轮询应项路径**在类型上就拿不到写能力** */
 
@@ -52,6 +53,7 @@ export interface BiliRelationWriter {
 /** UP 主名片（昵称 + 头像）。spec 列了四个窄接口，这是第五个 —— 独立出来的理由： 它是个读操作，塞进 `BiliRelationWriter` 会让「订阅页查个昵称」顺带拿到写能力， 而塞进 `BiliReader` 又会让轮询应项路径多认识一个跟聚合流无关的接口 */
 export interface BiliProfile {
   fetchCard(uid: string): Promise<Result<UpCard>>
+  search(name: string): Promise<Result<UpSearchItem[]>>
 }
 
 export interface UpCard {

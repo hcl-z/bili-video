@@ -28,6 +28,7 @@ import type {
   TestRulesResponse,
   UpdatesResponse,
   UpFeedResponse,
+  UpSearchResponse,
 } from '#shared/contract/api.ts'
 import type { PipelineStep, SummaryJob } from '#shared/contract/job.ts'
 import type { RuleKind } from '#shared/contract/subscription.ts'
@@ -103,6 +104,9 @@ export const api = {
   storage: () => request<StorageResponse>('/system/storage'),
 
   subs: () => request<SubscriptionsResponse>('/subscriptions'),
+
+  searchUps: (name: string) =>
+    request<UpSearchResponse>(`/subscriptions/search?q=${encodeURIComponent(name)}`),
 
   // input 是用户粘进来的原文（uid / 链接 / 一整段分享文本），uid 的识别在后端。
   addSub: (input: string) =>

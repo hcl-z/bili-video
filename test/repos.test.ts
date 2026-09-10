@@ -127,6 +127,26 @@ describe('updates', () => {
     c.close()
   })
 
+  it('手动解析元数据不进动态流，轮询发现后再提升为动态', () => {
+    const c = freshCore()
+    const hidden = c.repos.updates.insertMany([update('a')], { inFeed: false })
+
+    assert.deepEqual(hidden, { inserted: ['a'], skipped: [] })
+    assert.equal(c.repos.updates.get('a')?.title, '标题')
+    assert.deepEqual(c.repos.updates.list({ limit: 10, feedOnly: true }), [])
+
+    const discovered = c.repos.updates.insertMany([
+      update('a', { filtered: true, filterReason: 'keyword-deny:广告' }),
+    ])
+    assert.deepEqual(discovered, { inserted: ['a'], skipped: [] })
+    assert.deepEqual(c.repos.updates.list({ limit: 10, feedOnly: true }), [])
+    assert.equal(
+      c.repos.updates.list({ limit: 10, feedOnly: true, includeFiltered: true })[0]?.filterReason,
+      'keyword-deny:广告',
+    )
+    c.close()
+  })
+
   it('被过滤的动态默认不出现在列表里，但仍然入库', () => {
     const c = freshCore()
     c.repos.updates.insertMany([

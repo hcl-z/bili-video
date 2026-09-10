@@ -66,23 +66,26 @@ export class UpFeedService {
     }
 
     const at = this.deps.clock.now()
-    this.deps.updates.insertMany([
-      {
-        dynId: dyn.dynId,
-        uid: dyn.uid,
-        type: dyn.type,
-        pubTs: dyn.pubTs,
-        title: dyn.title,
-        text: dyn.text ?? dyn.desc,
-        cover: dyn.cover,
-        bvid: dyn.bvid,
-        url: dyn.url,
-        raw: dyn.raw,
-        filtered: false,
-        filterReason: null,
-        createdAt: at,
-      },
-    ])
+    this.deps.updates.insertMany(
+      [
+        {
+          dynId: dyn.dynId,
+          uid: dyn.uid,
+          type: dyn.type,
+          pubTs: dyn.pubTs,
+          title: dyn.title,
+          text: dyn.text ?? dyn.desc,
+          cover: dyn.cover,
+          bvid: dyn.bvid,
+          url: dyn.url,
+          raw: dyn.raw,
+          filtered: false,
+          filterReason: null,
+          createdAt: at,
+        },
+      ],
+      { inFeed: false },
+    )
     this.logger.info({ uid, bvid: dyn.bvid, dynId: dyn.dynId }, '手动解析已入队')
 
     // 已经有任务的走重跑，避免同一个视频攒出两条任务，也避免「重新解析」点了没反应

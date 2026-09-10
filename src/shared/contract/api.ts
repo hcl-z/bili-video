@@ -220,6 +220,25 @@ export const OverviewResponseSchema = z.object({
 })
 export type OverviewResponse = z.infer<typeof OverviewResponseSchema>
 
+export const UpSearchItemSchema = z.object({
+  uid: z.string(),
+  name: z.string(),
+  face: z.string().nullable(),
+  signature: z.string(),
+  fans: z.number().int().min(0),
+})
+export type UpSearchItem = z.infer<typeof UpSearchItemSchema>
+
+export const UpSearchQuerySchema = z.object({
+  q: z.string().trim().min(1).max(50),
+})
+export type UpSearchQuery = z.infer<typeof UpSearchQuerySchema>
+
+export const UpSearchResponseSchema = z.object({
+  items: z.array(UpSearchItemSchema),
+})
+export type UpSearchResponse = z.infer<typeof UpSearchResponseSchema>
+
 export const SubscriptionsResponseSchema = z.object({
   subs: z.array(SubscriptionSchema),
 })
