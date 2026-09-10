@@ -1,0 +1,78 @@
+src/server/infra/bili/profile.ts
+  s_e2401df7e2ef7f::t_32689bbfbf8349 58
+  s_e2401df7e2ef7f::t_31e1d7ca2164c4 4,11-12,22-35,59-79
+src/shared/contract/api.ts
+  s_e2401df7e2ef7f::t_600c6dec39d72e 223-241
+src/server/http/routes/subscriptions.ts
+  s_e2401df7e2ef7f::t_4c7f05211259af 24
+  s_e2401df7e2ef7f::t_3f0d562cb6e0e2 3,7,20-23,25-31
+src/server/infra/db/repo-feed.ts
+  s_3cfb5e3fecdce5::t_1082b7280fd97a 68-81
+  s_3cfb5e3fecdce5::t_fe6c5b3c5e7e8f 59-63,66-67,82,103,129-135,143
+src/server/types/bili.ts
+  s_e2401df7e2ef7f::t_673847e3d1bc77 4,56
+src/web/lib/api.ts
+  s_e2401df7e2ef7f::t_9e4b69c5809f6d 31,108-109
+src/web/pages/subs.tsx
+  s_e2401df7e2ef7f::t_03ad1dedc87f18 46-52,69,84,100,102-108,110-113,115-119,122-123
+  s_e2401df7e2ef7f::t_179c7cc7d4d70b 3,38,54-68,70-83,85-99,101,109,114,120-121,124-133
+test/subscriptions.test.ts
+  s_e2401df7e2ef7f::t_2d5fcfc7d42d2d 27-49,88-122,168-170
+  s_e2401df7e2ef7f::t_5dff6516ade568 52,123-167
+src/server/http/routes/updates.ts
+  s_3cfb5e3fecdce5::t_bbac9fcae3be23 20
+src/server/infra/asr/chat-audio.ts
+  s_856504ba1e87cf::t_c86a5f728c70d9 77,114-124
+src/server/infra/db/migrations.ts
+  s_3cfb5e3fecdce5::t_1e33c3bf243e8a 194-197,205
+test/up-feed.test.ts
+  s_3cfb5e3fecdce5::t_9dfca5707d98e4 4,54-55
+src/server/app/up-feed.ts
+  s_3cfb5e3fecdce5::t_6a62956a8e3bcd 69-88
+src/server/domain/subscription.ts
+  s_e2401df7e2ef7f::t_700c58c0377c93 8-16
+src/server/app/subscriptions.ts
+  s_e2401df7e2ef7f::t_33a4cc14c69e96 4
+  s_e2401df7e2ef7f::t_5644c88488cb88 5,77-78
+  s_e2401df7e2ef7f::t_ad65356bab4fba 1,79
+  s_e2401df7e2ef7f::t_32c5855f846e31 55-76,80-81
+test/asr-chat-audio.test.ts
+  s_856504ba1e87cf::t_ca20f40d343ae0 89-111
+src/server/types/persistence.ts
+  s_3cfb5e3fecdce5::t_fe776ed0269acd 88-91,95-101
+test/repos.test.ts
+  s_3cfb5e3fecdce5::t_e3e7d77e581b2c 138-140,142-146
+  s_3cfb5e3fecdce5::t_5dd98940a10877 130-137,141,147-149
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.44-trip",
+  "base_commit_sha": "752673d0b197a9dfd28942a883485715afcc0840",
+  "prompts": {},
+  "sessions": {
+    "s_3cfb5e3fecdce5": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a08a91-caec-748a-9547-700fb61081d0",
+        "model": "gpt-5-6-sol"
+      },
+      "human_author": "hcl-z <1401859664@qq.com>"
+    },
+    "s_856504ba1e87cf": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a08ab6-8efb-738a-afe3-679e3b215821",
+        "model": "gpt-5-6-sol"
+      },
+      "human_author": "hcl-z <1401859664@qq.com>"
+    },
+    "s_e2401df7e2ef7f": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a08a98-4ed1-748a-9547-7010d576abae",
+        "model": "gpt-5-6-sol"
+      },
+      "human_author": "hcl-z <1401859664@qq.com>"
+    }
+  }
+}
