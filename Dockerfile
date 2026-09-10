@@ -17,7 +17,8 @@ RUN pnpm prune --prod
 
 FROM node:24.18.0-bookworm-slim AS runtime
 
-ARG YT_DLP_VERSION=2026.8.19
+ARG YT_DLP_VERSION=2026.08.19
+ARG YT_DLP_SHA256=1fa6733c37ea6fb51c99ad8fe785e7b7e5f3246c9b980230329d4fb72ed8d4d6
 
 ENV NODE_ENV=production \
     DATA_DIR=/app/data \
@@ -30,14 +31,17 @@ ENV NODE_ENV=production \
 WORKDIR /app
 
 RUN apt-get update \
-    && apt-get install --no-install-recommends -y ca-certificates ffmpeg python3 \
+    && apt-get install --no-install-recommends -y ca-certificates curl ffmpeg python3 \
+    && curl --fail --location --retry 3 \
+      "https://github.com/yt-dlp/yt-dlp/releases/download/${YT_DLP_VERSION}/yt-dlp" \
+      --output /usr/local/bin/yt-dlp \
+    && echo "${YT_DLP_SHA256}  /usr/local/bin/yt-dlp" | sha256sum --check --strict \
+    && chmod 0755 /usr/local/bin/yt-dlp \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --system --gid 10001 app \
     && useradd --system --uid 10001 --gid app --home-dir /app app \
     && mkdir -p /app/data \
     && chown app:app /app/data
-
-ADD --chmod=755 https://github.com/yt-dlp/yt-dlp/releases/download/${YT_DLP_VERSION}/yt-dlp /usr/local/bin/yt-dlp
 
 COPY --from=build --chown=app:app /app/package.json ./package.json
 COPY --from=build --chown=app:app /app/node_modules ./node_modules
