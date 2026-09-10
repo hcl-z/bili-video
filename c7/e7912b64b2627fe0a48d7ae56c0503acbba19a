@@ -1,0 +1,19 @@
+Dockerfile
+  s_0f5e29501ef591::t_33221879f983d6 20-21,34-39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.44-trip",
+  "base_commit_sha": "c7e7912b64b2627fe0a48d7ae56c0503acbba19a",
+  "prompts": {},
+  "sessions": {
+    "s_0f5e29501ef591": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a08a16-4b21-748a-9547-700c2e3ed40f",
+        "model": "gpt-5-6-sol"
+      },
+      "human_author": "hcl-z <1401859664@qq.com>"
+    }
+  }
+}
