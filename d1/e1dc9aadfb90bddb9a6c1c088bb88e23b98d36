@@ -1,0 +1,607 @@
+package.json
+  s_7dd28a78a85ed4::t_528ccbf2728f50 7
+  s_59c510b8200296::t_ddf91b21ccd440 39
+src/server/infra/bili/browser-identity.ts
+  s_7dd28a78a85ed4::t_cf1da887482d47 4,12,14
+  s_a9c80b5955b5e5::t_a451472490dd47 1,8
+src/server/app/rules.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 22,36,92
+  s_7dd28a78a85ed4::t_cf1da887482d47 29,79
+  s_59c510b8200296::t_aa2db99a64658f 12-15
+test/domain/anchor.test.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 15
+test/asr-chat-audio.test.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 12,24
+  s_59c510b8200296::t_aa2db99a64658f 8
+src/server/app/notify.ts
+  s_59c510b8200296::t_aa2db99a64658f 9-13
+src/shared/contract/probe.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 3,5,7,9,11
+  s_7dd28a78a85ed4::t_cf1da887482d47 13,22,24
+src/server/infra/secret/store.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 7,73
+  s_59c510b8200296::t_aa2db99a64658f 3
+src/server/http/routes/config.ts
+  s_59c510b8200296::t_23298f6eb7460d 3-4
+  s_59c510b8200296::t_1c998253573bdc 6,13-15,31,34,43,47,58
+  s_a9c80b5955b5e5::t_a451472490dd47 12
+test/bili/login.test.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 1,43,48,108,208
+  s_7dd28a78a85ed4::t_cf1da887482d47 50
+src/server/domain/chunker.ts
+  s_59c510b8200296::t_da08ed1b214ed9 1-2,62-63
+  s_a9c80b5955b5e5::t_a451472490dd47 8,19,21,23,26,44,77,91
+  s_7dd28a78a85ed4::t_cf1da887482d47 49
+src/shared/contract/subscription.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 11,16
+  s_7dd28a78a85ed4::t_cf1da887482d47 7
+src/shared/contract/failure.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 3,23
+  s_7dd28a78a85ed4::t_cf1da887482d47 15,18
+src/server/app/auth-lifecycle.ts
+  s_7dd28a78a85ed4::t_cf1da887482d47 47,49
+  s_59c510b8200296::t_aa2db99a64658f 9,11-15
+  s_a9c80b5955b5e5::t_a451472490dd47 17,21,23,33,35,37,55,74,83,109,114,118,126,152,154,174
+src/server/infra/bili/qr-svg.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 3
+  s_7dd28a78a85ed4::t_cf1da887482d47 5,10
+src/server/infra/command/tail.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 1
+src/shared/contract/summary.ts
+  s_7dd28a78a85ed4::t_cf1da887482d47 34
+  s_a9c80b5955b5e5::t_a451472490dd47 3,11,15,36,38,42
+tsconfig.server.json
+  s_7dd28a78a85ed4::t_cf1da887482d47 2-3
+README.md
+  s_0f5e29501ef591::t_e0e196cb174c04 1,3,5,7,9,11-18,20-25,27-29,31,34-38,41,43,45-48,51,53,55-57,59,62-63,66,68,70,72,74-84,86,88,90,92-94,96,98,100-107,109,111,113,115,117,119-128,130,132,134,136-137,139,141,143-146,148,150-155,157,159-169,171
+test/config.test.ts
+  s_59c510b8200296::t_e349d6593afec8 13
+  s_a9c80b5955b5e5::t_a451472490dd47 67
+  s_59c510b8200296::t_1c998253573bdc 70
+  s_7dd28a78a85ed4::t_cf1da887482d47 16,39,97
+  s_59c510b8200296::t_871cc72a297329 15,17-18
+src/server/domain/secret-write.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 1,13
+src/server/infra/db/repo-state.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 6
+  s_59c510b8200296::t_aa2db99a64658f 3
+src/server/infra/db/repo-subscriptions.ts
+  s_7dd28a78a85ed4::t_cf1da887482d47 98
+  s_59c510b8200296::t_aa2db99a64658f 4
+  s_a9c80b5955b5e5::t_a451472490dd47 39
+test/audio-reuse.test.ts
+  s_59c510b8200296::t_aa2db99a64658f 8
+  s_7dd28a78a85ed4::t_cf1da887482d47 41
+  s_a9c80b5955b5e5::t_a451472490dd47 63,68
+src/web/lib/use-parse-item.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 9
+src/web/pages/ai.tsx
+  s_7dd28a78a85ed4::t_cf1da887482d47 101,108
+  s_a9c80b5955b5e5::t_a451472490dd47 53,334
+tsconfig.json
+  s_a9c80b5955b5e5::t_a451472490dd47 10
+  s_7dd28a78a85ed4::t_cf1da887482d47 2,9
+src/server/infra/asr/mlx-audio.ts
+  s_59c510b8200296::t_aa2db99a64658f 7-9
+src/server/http/sse.ts
+  s_59c510b8200296::t_1c998253573bdc 5,22,25,33
+  s_a9c80b5955b5e5::t_a451472490dd47 10,21
+  s_7dd28a78a85ed4::t_cf1da887482d47 26
+test/bili/browser-identity.test.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 11
+src/shared/contract/api.ts
+  s_7dd28a78a85ed4::t_cf1da887482d47 43,65,71,95,98,140,158,160,272,274,277,297,299,333,344,360,406,457,465,581
+  s_a9c80b5955b5e5::t_a451472490dd47 25,30,37,39,41,46,63,67,69,73,78,113,118,124,132,134,146,168,174,180,195,208,228,234,241,249,291,313,325,336,342,350,362,368,376,382,427,443,462,481
+test/health.test.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 9-10,206
+  s_7dd28a78a85ed4::t_cf1da887482d47 50,58,65,72,77,191,201,204
+src/server/infra/bili/profile.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 8
+  s_7dd28a78a85ed4::t_cf1da887482d47 37
+  s_59c510b8200296::t_aa2db99a64658f 5
+src/server/infra/db/repo-write-audit.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 17
+  s_59c510b8200296::t_aa2db99a64658f 3
+test/support/time.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 3
+test/summaries.test.ts
+  s_7dd28a78a85ed4::t_cf1da887482d47 112,127,130,139,175
+  s_a9c80b5955b5e5::t_a451472490dd47 207
+src/server/http/routes/overview.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 16,26,49,59,64,75-76
+  s_59c510b8200296::t_3267476e0ce74a 27,30,32-35,37-38,40-43,50
+src/server/infra/bili/qr-terminal.ts
+  s_7dd28a78a85ed4::t_cf1da887482d47 6
+  s_a9c80b5955b5e5::t_a451472490dd47 3
+src/server/infra/bili/reader.ts
+  s_59c510b8200296::t_f434a402795639 6-7
+test/support/harness.ts
+  s_59c510b8200296::t_e7ff0334b81dab 5-6
+  s_a9c80b5955b5e5::t_a451472490dd47 17,26,28,44,48,50,52,90,98,109,115,133
+  s_7dd28a78a85ed4::t_cf1da887482d47 31,37,40,42,46,134
+  s_59c510b8200296::t_aa2db99a64658f 8-10
+  s_59c510b8200296::t_1c998253573bdc 11,21,80,113,122
+test/repos.test.ts
+  s_59c510b8200296::t_fafb6839723b16 9
+src/server/http/reader-item.ts
+  s_59c510b8200296::t_1c998253573bdc 4,7-8
+  s_a9c80b5955b5e5::t_a451472490dd47 6
+src/server/infra/db/sqlite.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 5,9,17,21
+src/server/infra/ai/openai-compat.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 15,66
+  s_59c510b8200296::t_aa2db99a64658f 6-8
+src/web/components/reader-row.tsx
+  s_a9c80b5955b5e5::t_a451472490dd47 19,44
+src/web/pages/jobs.tsx
+  s_a9c80b5955b5e5::t_a451472490dd47 127
+src/server/domain/ai-probe.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 3,6
+src/server/infra/asr/whisper-json.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 5,23
+src/server/infra/bili/ticket.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 9,21,23,27
+src/web/lib/use-log-stream.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 5,7,10
+  s_7dd28a78a85ed4::t_cf1da887482d47 13
+test/bili/http-client.test.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 1,55,69,169,202
+src/server/http/app.ts
+  s_7dd28a78a85ed4::t_cf1da887482d47 35,49,89
+  s_59c510b8200296::t_1c998253573bdc 16,54,57,60,63,72,79,81,83-85,88,90
+  s_a9c80b5955b5e5::t_a451472490dd47 37,39,53,91
+src/web/lib/reader-cache.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 6
+src/server/infra/fs/markdown-writer.ts
+  s_7dd28a78a85ed4::t_cf1da887482d47 7,9,23
+  s_59c510b8200296::t_aa2db99a64658f 4
+  s_a9c80b5955b5e5::t_a451472490dd47 25
+src/server/domain/degrade.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 3,23
+  s_7dd28a78a85ed4::t_cf1da887482d47 17
+src/server/infra/audio/yt-dlp.ts
+  s_59c510b8200296::t_cdbdf45b79e5dd 4,6-7
+src/shared/contract/job.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 6,28,33
+  s_7dd28a78a85ed4::t_cf1da887482d47 56,70,72
+src/web/components/reader-detail.tsx
+  s_a9c80b5955b5e5::t_a451472490dd47 20,23,74
+  s_7dd28a78a85ed4::t_cf1da887482d47 33,58,68
+src/server/http/routes/summaries.ts
+  s_59c510b8200296::t_1c998253573bdc 13,24-25,53,121
+  s_a9c80b5955b5e5::t_a451472490dd47 17,20,56,125
+  s_7dd28a78a85ed4::t_cf1da887482d47 46,51,92,96
+src/shared/contract/events.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 4,29
+  s_7dd28a78a85ed4::t_cf1da887482d47 11,20,35,40,44,47,49
+vite.config.ts
+  s_7dd28a78a85ed4::t_cf1da887482d47 22,26
+  s_a9c80b5955b5e5::t_a451472490dd47 8,17,23,30
+src/web/pages/system.tsx
+  s_59c510b8200296::t_81c63c2cbfb5a2 173,180,276-277,282
+  s_59c510b8200296::t_ca52d838717560 7-8,171
+  s_59c510b8200296::t_bb675dda878c87 40
+  s_a9c80b5955b5e5::t_a451472490dd47 47
+src/web/lib/api.ts
+  s_7dd28a78a85ed4::t_cf1da887482d47 152
+  s_a9c80b5955b5e5::t_a451472490dd47 35,180
+  s_59c510b8200296::t_522f15cbbfb5e6 77,82
+.github/workflows/container.yml
+  s_0f5e29501ef591::t_4ec4a85dc02122 1-61
+src/server/app/up-feed.ts
+  s_59c510b8200296::t_aa2db99a64658f 6-9
+  s_a9c80b5955b5e5::t_a451472490dd47 12,14,16,58,88,97
+  s_7dd28a78a85ed4::t_cf1da887482d47 123
+src/server/app/summarize-video.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 46,53,69,76,83,92,104
+  s_59c510b8200296::t_aa2db99a64658f 28-35,42
+src/server/infra/clock/system-clock.ts
+  s_7dd28a78a85ed4::t_cf1da887482d47 8
+  s_a9c80b5955b5e5::t_a451472490dd47 5,16,29,42
+  s_59c510b8200296::t_aa2db99a64658f 3
+src/server/infra/fs/disk-usage.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 10,25
+  s_59c510b8200296::t_aa2db99a64658f 4
+test/asr-mlx-audio.test.ts
+  s_59c510b8200296::t_aa2db99a64658f 9
+src/server/http/routes/system.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 19,46,62
+  s_59c510b8200296::t_7218018fa2d4b4 27-28,30,34,37-40,48,64,76,79-80,86,88
+src/server/http/routes/health.ts
+  s_59c510b8200296::t_1c998253573bdc 4,6,8,11
+src/server/http/routes/ups.ts
+  s_59c510b8200296::t_1c998253573bdc 6,11,27
+  s_a9c80b5955b5e5::t_a451472490dd47 10
+src/server/types/platform.ts
+  s_59c510b8200296::t_aa2db99a64658f 1-2,4,6-7,9,11-15,17-19,21-24,40,42,44,46-54,56-64
+  s_7dd28a78a85ed4::t_cf1da887482d47 5,20,35,37,43,55
+  s_a9c80b5955b5e5::t_a451472490dd47 3,8,10,16,25,41,45
+test/fakes/asr.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 5
+  s_59c510b8200296::t_aa2db99a64658f 2-3
+src/server/domain/bili-error.ts
+  s_7dd28a78a85ed4::t_cf1da887482d47 7,22-27
+  s_a9c80b5955b5e5::t_a451472490dd47 3,5,11,16,42
+src/web/pages/logs.tsx
+  s_7dd28a78a85ed4::t_cf1da887482d47 143
+  s_a9c80b5955b5e5::t_a451472490dd47 14,23,33,49,51,63,78,138
+src/server/types/qrcode-terminal.d.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 1,13
+  s_7dd28a78a85ed4::t_cf1da887482d47 16
+src/server/infra/bili/subtitle.ts
+  s_59c510b8200296::t_a85e19f94e3067 6-7
+test/fakes/clock.ts
+  s_7dd28a78a85ed4::t_cf1da887482d47 40
+  s_59c510b8200296::t_aa2db99a64658f 2
+  s_a9c80b5955b5e5::t_a451472490dd47 4,35,49
+src/server/infra/secret/secret-box.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 3,34
+src/server/infra/event-bus/in-memory.ts
+  s_59c510b8200296::t_aa2db99a64658f 2-3
+  s_a9c80b5955b5e5::t_a451472490dd47 5,9
+src/server/http/routes/logs.ts
+  s_7dd28a78a85ed4::t_cf1da887482d47 45
+  s_a9c80b5955b5e5::t_a451472490dd47 13,36
+  s_59c510b8200296::t_aa2db99a64658f 5-6
+src/server/domain/anchor.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 1
+test/ai.test.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 42,179
+  s_7dd28a78a85ed4::t_cf1da887482d47 85,165
+test/bili/cookie-jar.test.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 17,47,68
+test/bili/refresh.test.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 12
+src/web/lib/format.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 8
+test/domain/filter.test.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 63,65
+tsconfig.web.json
+  s_7dd28a78a85ed4::t_cf1da887482d47 2-3
+src/server/infra/bili/login.ts
+  s_7dd28a78a85ed4::t_cf1da887482d47 84
+  s_a9c80b5955b5e5::t_a451472490dd47 12,21,33,49,95,99,118,138
+  s_59c510b8200296::t_aa2db99a64658f 6-9
+src/server/app/backup.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 9,13,31,67
+  s_7dd28a78a85ed4::t_cf1da887482d47 25
+  s_59c510b8200296::t_aa2db99a64658f 5-7
+test/regex.test.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 8
+src/server/app/poller.ts
+  s_59c510b8200296::t_aa2db99a64658f 6-12
+  s_a9c80b5955b5e5::t_a451472490dd47 15,17,31,40,66,93,101
+  s_7dd28a78a85ed4::t_cf1da887482d47 33,46,103
+src/server/infra/db/repo-summary.ts
+  s_59c510b8200296::t_aa2db99a64658f 20
+  s_a9c80b5955b5e5::t_a451472490dd47 37
+test/secret.test.ts
+  s_7dd28a78a85ed4::t_cf1da887482d47 91
+  s_59c510b8200296::t_e7ff0334b81dab 9
+src/server/http/routes/subscriptions.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 15,51
+src/server/infra/notify/push-all-in-one.ts
+  s_59c510b8200296::t_aa2db99a64658f 5-6
+src/server/http/auth-fallback.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 7
+  s_59c510b8200296::t_1c998253573bdc 3,8-9,12-13
+src/server/http/routes/notify.ts
+  s_59c510b8200296::t_aa2db99a64658f 8
+src/server/infra/db/repo-delivery.ts
+  s_59c510b8200296::t_aa2db99a64658f 5-6
+  s_a9c80b5955b5e5::t_a451472490dd47 27
+test/system-page.test.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 14,64
+  s_7dd28a78a85ed4::t_cf1da887482d47 26,39,47
+src/server/infra/asr/switch.ts
+  s_59c510b8200296::t_aa2db99a64658f 2-4
+  s_a9c80b5955b5e5::t_a451472490dd47 17
+src/server/infra/asr/chat-audio.ts
+  s_59c510b8200296::t_aa2db99a64658f 5-7
+  s_a9c80b5955b5e5::t_a451472490dd47 22,44
+Dockerfile
+  s_0f5e29501ef591::t_76afacc77754ed 2-17,19-55
+  s_0f5e29501ef591::t_67a781be303c1d 1,18
+src/web/lib/theme.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 3,50
+  s_7dd28a78a85ed4::t_cf1da887482d47 36
+src/server/infra/db/repo-feed.ts
+  s_59c510b8200296::t_aa2db99a64658f 4
+  s_a9c80b5955b5e5::t_a451472490dd47 24
+  s_7dd28a78a85ed4::t_cf1da887482d47 58
+LICENSE
+  s_7dd28a78a85ed4::t_3f2723f3777bc7 1-21
+src/web/components/page.tsx
+  s_a9c80b5955b5e5::t_a451472490dd47 6
+test/domain/chunker.test.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 7,10
+src/web/lib/utils.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 4
+test/degrade-chain.test.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 9-10,54
+  s_7dd28a78a85ed4::t_cf1da887482d47 60,78
+test/jobs.test.ts
+  s_7dd28a78a85ed4::t_cf1da887482d47 30,59
+  s_a9c80b5955b5e5::t_a451472490dd47 9,37,49,65
+src/web/pages/reader.tsx
+  s_a9c80b5955b5e5::t_a451472490dd47 16,30,42
+src/server/log-fields.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 6-7
+  s_59c510b8200296::t_aa2db99a64658f 2
+test/support/queue-rig.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 6,18,33,51,67
+src/server/http/errors.ts
+  s_7dd28a78a85ed4::t_cf1da887482d47 26
+  s_59c510b8200296::t_aa2db99a64658f 6
+  s_a9c80b5955b5e5::t_a451472490dd47 8,21
+src/server/server.ts
+  s_59c510b8200296::t_e2bd43d1faae6f 352,429,432,451
+  s_59c510b8200296::t_99257e14c9aab9 417-423
+  s_59c510b8200296::t_e7ff0334b81dab 7,78-94,99-100,176-177,349,459-460,462,464,466-469,471-488,491-493,499,502-503,508-510,518-519,522,527,539-540,545-546,552,558-561,571-572,578-581,588-595,601,604-607,615-616,624-625,629-651,653-654,656-663,665-674,676,678-688,690-693,695-711,713-718,720-721,732-733,736-738,746-750,752-754
+  s_7dd28a78a85ed4::t_cf1da887482d47 111,146,161,211,664
+  s_59c510b8200296::t_95bbcf7e77519c 1-3,5,95-98
+  s_59c510b8200296::t_5ec4d60d2aca09 350-351,353-354,356-414,416,424-428,430-431,433-439,441-450,452-458
+  s_59c510b8200296::t_aa2db99a64658f 50-51,58-70
+  s_0f5e29501ef591::t_77ea613509c36f 45-48,415,489,652,722-731
+  s_a9c80b5955b5e5::t_a451472490dd47 103,113,115,195,220,249,271,336,355,440,461,463,465,470,490,494,526,557,626,675,689,694,712,744,751
+src/server/types/delivery.ts
+  s_7dd28a78a85ed4::t_cf1da887482d47 16,18,20,22,28
+  s_59c510b8200296::t_aa2db99a64658f 32,34-37,39-43,45-50
+  s_a9c80b5955b5e5::t_a451472490dd47 3,7,33,38,44
+src/server/domain/auth.ts
+  s_7dd28a78a85ed4::t_cf1da887482d47 51
+  s_a9c80b5955b5e5::t_a451472490dd47 4,6,25,38,44,47,53,55,60,62,66,77,87
+.dockerignore
+  s_0f5e29501ef591::t_73602a1f2e6e7c 1-18
+src/web/components/summary-reader.tsx
+  s_a9c80b5955b5e5::t_a451472490dd47 33,65,73
+  s_59c510b8200296::t_52810b9a45f9b4 1,16,362-371
+  s_59c510b8200296::t_6d6abb6200620b 22
+src/server/infra/regex/timed-regex.ts
+  s_59c510b8200296::t_aa2db99a64658f 4
+  s_a9c80b5955b5e5::t_a451472490dd47 7,21,30
+.gitignore
+  s_a9c80b5955b5e5::t_a451472490dd47 5-6,21
+  s_7dd28a78a85ed4::t_2a50ff40e59051 25
+test/bili/wbi.test.ts
+  s_7dd28a78a85ed4::t_cf1da887482d47 12,59
+  s_a9c80b5955b5e5::t_a451472490dd47 6,8
+test/domain/bili-error.test.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 12
+src/server/infra/bili/wbi.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 3,8,15,18
+src/server/types/ai.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 6,12,26,28,30
+  s_59c510b8200296::t_aa2db99a64658f 1,4,7-11,13-14,16-25
+  s_7dd28a78a85ed4::t_cf1da887482d47 15,48
+test/pipeline.test.ts
+  s_7dd28a78a85ed4::t_cf1da887482d47 26
+  s_a9c80b5955b5e5::t_a451472490dd47 8,33
+src/server/infra/secret/key-manager.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 5
+src/server/domain/subscription.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 1-2,5,8,24,30
+src/shared/contract/update.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 3,18,25
+  s_7dd28a78a85ed4::t_cf1da887482d47 11
+src/web/components/job-pipeline.tsx
+  s_a9c80b5955b5e5::t_a451472490dd47 11,39
+  s_7dd28a78a85ed4::t_cf1da887482d47 16
+src/server/infra/bili/http-client.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 19,23,39,41,43,47,50,79,93
+  s_59c510b8200296::t_aa2db99a64658f 10-12
+  s_7dd28a78a85ed4::t_cf1da887482d47 71
+test/fakes/notifier.ts
+  s_59c510b8200296::t_aa2db99a64658f 6
+  s_a9c80b5955b5e5::t_a451472490dd47 12
+src/web/components/markdown.tsx
+  s_a9c80b5955b5e5::t_a451472490dd47 3
+src/server/infra/db/migrations.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 3,136,145,160,166,189,203
+src/server/domain/health.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 3,15,18,27
+src/web/components/ui/sonner.tsx
+  s_a9c80b5955b5e5::t_a451472490dd47 12
+src/server/infra/command/exec.ts
+  s_7dd28a78a85ed4::t_cf1da887482d47 43
+  s_59c510b8200296::t_aa2db99a64658f 3
+  s_a9c80b5955b5e5::t_a451472490dd47 7,9,15,18
+src/server/infra/bili/relations.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 16,20,23,27,31,44,56,66,68-69,78,87,104,114
+  s_59c510b8200296::t_aa2db99a64658f 6-9,11
+  s_7dd28a78a85ed4::t_cf1da887482d47 29,48,67,70-71,93
+src/server/types/index.ts
+  s_59c510b8200296::t_1c998253573bdc 41,54,67
+  s_59c510b8200296::t_aa2db99a64658f 2-4,7,13-14,19-20,22,24-26
+test/fakes/bili-fetch.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 1,20,29,36,41,68
+  s_7dd28a78a85ed4::t_cf1da887482d47 8,16
+src/web/lib/use-retry-job.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 9
+src/web/lib/use-sse.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 8,13,21,44
+src/web/pages/updates.tsx
+  s_a9c80b5955b5e5::t_a451472490dd47 34
+src/server/domain/summary-format.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 11,22,29,39,45,61
+  s_7dd28a78a85ed4::t_cf1da887482d47 18,53
+src/server/app/delivery.ts
+  s_59c510b8200296::t_aa2db99a64658f 3-7,14
+src/server/http/routes/ai.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 9
+src/shared/contract/config.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 3,6,8,27,32,38,46,49,56,58,61,72,78,88,93,97,99,101,106,114,195
+  s_7dd28a78a85ed4::t_cf1da887482d47 14,20,70,157,159
+src/web/components/rule-tester.tsx
+  s_a9c80b5955b5e5::t_a451472490dd47 29
+src/web/router.tsx
+  s_a9c80b5955b5e5::t_a451472490dd47 18,53-54,67
+  s_f7c50d5cea93ef::t_831aa233fe5a19 45-52,55-66,70-97
+src/server/domain/filter.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 3,23,26,44,54
+  s_7dd28a78a85ed4::t_cf1da887482d47 13,18,37,63
+src/server/domain/pipeline.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 4,6,32,42
+.env.example
+  s_a9c80b5955b5e5::t_a451472490dd47 1-2,7-9
+src/server/infra/bili/cookie-jar.ts
+  s_7dd28a78a85ed4::t_cf1da887482d47 27
+  s_59c510b8200296::t_aa2db99a64658f 3
+  s_a9c80b5955b5e5::t_a451472490dd47 6,15,19,50
+src/web/components/secret-field.tsx
+  s_a9c80b5955b5e5::t_a451472490dd47 7
+src/server/app/health.ts
+  s_59c510b8200296::t_aa2db99a64658f 5-10
+  s_a9c80b5955b5e5::t_a451472490dd47 12,16,28,68,70,116,127
+  s_7dd28a78a85ed4::t_cf1da887482d47 32
+src/server/log.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 3,15,17,19,23,25-26
+  s_7dd28a78a85ed4::t_cf1da887482d47 12,50,73
+  s_59c510b8200296::t_aa2db99a64658f 8
+src/server/app/ai.ts
+  s_59c510b8200296::t_aa2db99a64658f 11-16
+  s_a9c80b5955b5e5::t_a451472490dd47 18,41,60,79
+src/server/main.ts
+  s_59c510b8200296::t_66ba32c76203c3 1,3
+src/server/app/lane.ts
+  s_7dd28a78a85ed4::t_cf1da887482d47 3
+  s_a9c80b5955b5e5::t_a451472490dd47 1
+src/web/styles/globals.css
+  s_a9c80b5955b5e5::t_a451472490dd47 6
+  s_7dd28a78a85ed4::t_cf1da887482d47 9-13,16,18,35,54,60
+test/log.test.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 22
+src/server/infra/runtime/detect.ts
+  s_59c510b8200296::t_aa2db99a64658f 4
+src/server/http/routes/jobs.ts
+  s_59c510b8200296::t_1c998253573bdc 7,10,13,16,43
+src/server/types/persistence.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 11,15,20,22,24,27,37,43,59,78,103,115,118,128,152,160,176,196
+  s_7dd28a78a85ed4::t_cf1da887482d47 29,45,53,71,82,87,90,93,99,107,110,112,143,145,180
+  s_59c510b8200296::t_aa2db99a64658f 2-3,6,8-10,12-14,16-19,21,23,25-26,28,30-36,38-42,44,46-52,54-57,199
+test/fakes/state.ts
+  s_59c510b8200296::t_aa2db99a64658f 1
+  s_a9c80b5955b5e5::t_a451472490dd47 3
+src/server/types/bili.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 5-6,20,26,36,46,52,64,67,87,92,99,101,104,106,110
+  s_59c510b8200296::t_aa2db99a64658f 98,100,102-103,105,107-109,111-113
+  s_7dd28a78a85ed4::t_cf1da887482d47 10,12,22,39,95
+src/server/app/subscriptions.ts
+  s_59c510b8200296::t_aa2db99a64658f 4-6,8
+  s_7dd28a78a85ed4::t_cf1da887482d47 68
+  s_a9c80b5955b5e5::t_a451472490dd47 14,16,18,22,29,32,53,83,100,104,116
+src/server/infra/asr/audio-split.ts
+  s_7dd28a78a85ed4::t_cf1da887482d47 34
+  s_a9c80b5955b5e5::t_a451472490dd47 8,38
+  s_59c510b8200296::t_aa2db99a64658f 5
+test/fakes/cookie-jar.ts
+  s_59c510b8200296::t_aa2db99a64658f 2
+  s_a9c80b5955b5e5::t_a451472490dd47 4
+src/web/lib/query.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 5,12,25,35
+src/server/http/parse.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 10,31
+test/bili/subtitle.test.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 1,54
+src/web/pages/rules.tsx
+  s_7dd28a78a85ed4::t_cf1da887482d47 42
+test/domain/auth.test.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 80
+test/up-feed.test.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 11-12,60,102
+  s_7dd28a78a85ed4::t_cf1da887482d47 29,39,44,52,74,80
+src/server/config/store.ts
+  s_7dd28a78a85ed4::t_cf1da887482d47 19,108
+  s_59c510b8200296::t_f6cf7d85780855 5,14-18,20-84,93
+  s_59c510b8200296::t_aa2db99a64658f 10-12
+  s_a9c80b5955b5e5::t_a451472490dd47 86,132
+src/server/http/routes/rules.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 46
+test/fakes/logger.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 9
+  s_59c510b8200296::t_aa2db99a64658f 1
+  s_7dd28a78a85ed4::t_cf1da887482d47 48
+test/migrations.test.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 10
+  s_7dd28a78a85ed4::t_cf1da887482d47 71
+src/server/app/queue-runner.ts
+  s_7dd28a78a85ed4::t_cf1da887482d47 19,45,66,134,139,168
+  s_a9c80b5955b5e5::t_a451472490dd47 27,49,78,100,112,131,147-148,162
+  s_59c510b8200296::t_aa2db99a64658f 6-11
+src/web/components/app-shell.tsx
+  s_a9c80b5955b5e5::t_a451472490dd47 17,20,77
+  s_f7c50d5cea93ef::t_ba761b1c65ed01 1,8,79-89
+test/smoke.test.ts
+  s_7dd28a78a85ed4::t_cf1da887482d47 63
+  s_0f5e29501ef591::t_751e1fd8167517 5,24-45
+compose.yaml
+  s_0f5e29501ef591::t_a877546fed1bbe 1-11
+  s_0f5e29501ef591::t_8960b9d7172d2e 12-15
+src/server/infra/ai/asr-probe.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 13,19
+  s_59c510b8200296::t_aa2db99a64658f 4-5
+src/server/infra/bili/refresh.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 7,9
+tsconfig.shared.json
+  s_7dd28a78a85ed4::t_cf1da887482d47 2-3
+src/server/http/routes/updates.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 10,36
+  s_59c510b8200296::t_1c998253573bdc 6,11,18,25,38,40
+test/system.test.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 8,12,17
+  s_59c510b8200296::t_1c998253573bdc 88,151
+src/server/domain/llm-error.ts
+  s_a9c80b5955b5e5::t_a451472490dd47 4,11
+src/server/infra/asr/openai-compat.ts
+  s_7dd28a78a85ed4::t_cf1da887482d47 47
+  s_59c510b8200296::t_aa2db99a64658f 6-7
+  s_a9c80b5955b5e5::t_a451472490dd47 22,36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.44-trip",
+  "base_commit_sha": "d1e1dc9aadfb90bddb9a6c1c088bb88e23b98d36",
+  "prompts": {},
+  "sessions": {
+    "s_0f5e29501ef591": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a08a16-4b21-748a-9547-700c2e3ed40f",
+        "model": "gpt-5-6-sol"
+      },
+      "human_author": "hcl-z <1401859664@qq.com>"
+    },
+    "s_59c510b8200296": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a089d9-6589-748a-9547-7006eb82f067",
+        "model": "gpt-5-6-sol"
+      },
+      "human_author": "hcl-z <1401859664@qq.com>"
+    },
+    "s_7dd28a78a85ed4": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a08a07-c4be-738a-afe3-67969ef30903",
+        "model": "gpt-5-6-sol"
+      },
+      "human_author": "hcl-z <1401859664@qq.com>"
+    },
+    "s_a9c80b5955b5e5": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a089f9-8435-738a-afe3-679486553b52",
+        "model": "gpt-5-6-luna"
+      },
+      "human_author": "hcl-z <1401859664@qq.com>"
+    },
+    "s_f7c50d5cea93ef": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a08a0b-7544-748a-9547-7008412bd050",
+        "model": "gpt-5-6-sol"
+      },
+      "human_author": "hcl-z <1401859664@qq.com>"
+    }
+  }
+}
