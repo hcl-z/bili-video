@@ -1,0 +1,120 @@
+src/shared/contract/update.ts
+  s_a01096e58886bb::t_fdda749feed1a1 4
+src/shared/contract/config.ts
+  s_a01096e58886bb::t_3e31a0e28f3bf0 2,108-112,222,241,249
+  s_a01096e58886bb::t_d477a49f79adf4 26-62,65,239
+  s_a01096e58886bb::t_578de8edf43205 240
+test/up-feed.test.ts
+  s_a01096e58886bb::t_f38a31ba7793ab 5,95-114
+src/shared/contract/subscription.ts
+  s_a01096e58886bb::t_040ff11e9848c5 2,10-12
+  s_a01096e58886bb::t_4b29224444a651 13-15
+src/web/pages/subs.tsx
+  s_a01096e58886bb::t_a03208f70046e8 3,8,11
+  s_a01096e58886bb::t_6d954fc9a9681d 212-220
+src/server/domain/summary-format.ts
+  s_a01096e58886bb::t_05977c5302202d 1-2,123-151,189-192
+src/server/types/persistence.ts
+  s_a01096e58886bb::t_47741361e77ad3 64,67
+  s_a01096e58886bb::t_a79be15815aabc 65-66
+src/server/http/app.ts
+  s_a01096e58886bb::t_7cd1825559e7ad 24,81
+src/server/app/summarize-video.ts
+  s_a01096e58886bb::t_e18aced4bdb240 3,15-16,20,80,202,243-248,456-461
+src/web/pages/updates.tsx
+  s_a01096e58886bb::t_907545735475d3 27
+test/subscriptions.test.ts
+  s_a01096e58886bb::t_6630ec41c0022c 15,216,219-228,233,239-240
+  s_a01096e58886bb::t_448791ec846489 245-266
+src/web/pages/prompts.tsx
+  s_a01096e58886bb::t_9a5db0d3c10a65 1-192
+src/server/app/delivery.ts
+  s_a01096e58886bb::t_79ee54f38587c0 204
+  s_a01096e58886bb::t_449bef13523351 149
+src/server/app/subscriptions.ts
+  s_a01096e58886bb::t_e635fae0c939bd 1,28-29,108-109,132-133
+  s_a01096e58886bb::t_5216163dbe0a7d 30-31,110-111,134-135
+src/server/types/bili.ts
+  s_a01096e58886bb::t_561abdba3ad308 2,35
+src/web/lib/use-sse.ts
+  s_a01096e58886bb::t_628ea5bf845ab2 15
+src/web/components/ui/dialog.tsx
+  s_a01096e58886bb::t_c2dbad5eb0fd84 1-72
+test/poll.test.ts
+  s_a01096e58886bb::t_c798560861ba4f 342-365
+  s_a01096e58886bb::t_e8177314a917da 128,137,145-146,149,152,165-166,168,177
+  s_a01096e58886bb::t_0e18959b42b2ea 80
+  s_a01096e58886bb::t_762514eced3f7d 41-46,65-72,74-79,81,92,307-341
+src/server/infra/db/migrations.ts
+  s_a01096e58886bb::t_fa75cae35f2ae9 198-207,236
+  s_a01096e58886bb::t_69916b722784f3 208-227,237
+src/server/domain/filter.ts
+  s_a01096e58886bb::t_0f24a7bb0daeb4 27-31,33,35
+src/server/server.ts
+  s_a01096e58886bb::t_18a8b49d22a740 530
+  s_a01096e58886bb::t_37a54f5035ebd1 505
+src/server/app/rules.ts
+  s_a01096e58886bb::t_9e4fecbbcd9ecf 15,19,82-86,102-106
+src/server/http/routes/prompts.ts
+  s_a01096e58886bb::t_37f6e8c46dc4a2 1-30
+src/web/lib/query.ts
+  s_a01096e58886bb::t_1b1f6faacf8278 33
+src/web/components/up-config-dialog.tsx
+  s_a01096e58886bb::t_1dc084520b5284 224-225,245-265,293-303
+  s_a01096e58886bb::t_fdedcf68404fc8 1-2,15-17,25-28,30-37,39-40,42-44,48,52,59,67-69,85,97,103-106,203-223,226-227,234-236,241-244,266-267,273-280,282,284-285,287-289,291-292,304-331,355,373-378,380,385,422-423,451-459
+  s_a01096e58886bb::t_d8f082178c420b 3-14,18-24,29,38,41,45-47,49-51,53-58,60-66,70-84,86-96,98-102,107-202,228-233,237-240,268-272,281,283,286,290,332-354,356-372,379,381-384,386-421,424-450
+src/server/app/poller.ts
+  s_a01096e58886bb::t_0c4de178abc262 4,191
+  s_a01096e58886bb::t_14714ebaeb8c50 158-159,188,204-209
+  s_a01096e58886bb::t_1db872e0fe8517 1,210
+src/web/lib/api.ts
+  s_a01096e58886bb::t_017b617a2ba858 15,18,108-114
+src/shared/contract/prompt.ts
+  s_a01096e58886bb::t_90ee1de41b7e75 1-53
+test/config.test.ts
+  s_a01096e58886bb::t_c8d970eccd5178 5,69-105
+  s_a01096e58886bb::t_62d420cc4104ad 20,57-66
+src/shared/contract/api.ts
+  s_a01096e58886bb::t_2ec5d2a064a95a 271-272
+  s_a01096e58886bb::t_02da64f3df1713 12,269-270
+  s_a01096e58886bb::t_ce12e6580f9dc0 3-6,489-509
+test/domain/filter.test.ts
+  s_a01096e58886bb::t_3c80363dc83b85 119-126
+src/web/components/reader-row.tsx
+  s_a01096e58886bb::t_992169cc15f7fa 17
+src/server/config/store.ts
+  s_a01096e58886bb::t_bc23a94e6eb323 43
+  s_a01096e58886bb::t_5c564c5ac1e90f 29-42
+src/server/infra/bili/reader.ts
+  s_a01096e58886bb::t_e5a7f63fca145f 5
+  s_a01096e58886bb::t_a4738df8988f3d 66-71,166-194,196-216
+  s_a01096e58886bb::t_e618b9b2899e71 322,338-339
+  s_a01096e58886bb::t_44c4b2a130c8a5 83,195
+  s_a01096e58886bb::t_d8f46443e4dee6 18,25,76-82,84-88,91-95,97-102,104-111,325,336
+src/web/router.tsx
+  s_a01096e58886bb::t_115334dba61dd1 12,35,88-90
+src/web/pages/rules.tsx
+  s_a01096e58886bb::t_1fcc4b0dd20a56 110
+  s_a01096e58886bb::t_a371ead985d721 38,101-102
+  s_a01096e58886bb::t_7025312cdc9da8 6-8,33,55-56,116-149
+src/server/infra/db/repo-subscriptions.ts
+  s_a01096e58886bb::t_4cb96a466d81ef 15-16,61-62
+  s_a01096e58886bb::t_e8995b197c253e 45,48,72-73
+  s_a01096e58886bb::t_e00eb280a754d0 3,13-14,20-23,46-47,53-54,59-60,70-71
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.44-trip",
+  "base_commit_sha": "ad491809fa11c289fb5fca9fd01ff9976c33a9cb",
+  "prompts": {},
+  "sessions": {
+    "s_a01096e58886bb": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a08b79-2790-76e9-9f0f-c59dc7126d40",
+        "model": "gpt-5-6-sol"
+      },
+      "human_author": "hcl-z <1401859664@qq.com>"
+    }
+  }
+}
