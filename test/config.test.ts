@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import { CONFIG_SECTION_NAMES } from '#shared/contract/config.ts'
+import { DEFAULT_PROMPT_TEMPLATE } from '#shared/contract/prompt.ts'
 import { createHarness } from './support/harness.ts'
 
 describe('配置', () => {
@@ -16,6 +17,7 @@ describe('配置', () => {
 
       assert.equal((body['server'] as { host: string }).host, '127.0.0.1')
       assert.equal((body['poll'] as { cron: string }).cron, '30 */2 * * * *')
+      assert.equal((body['filter'] as { kinds: { live: boolean } }).kinds.live, false)
     } finally {
       await h.close()
     }
@@ -49,6 +51,58 @@ describe('配置', () => {
       assert.equal(second.core.config.getSection('ai').model, 'saved')
     } finally {
       await second.close()
+    }
+  })
+
+  it('老库的过滤配置缺类别开关时自动补默认值', async () => {
+    const first = await createHarness()
+    first.core.db
+      .prepare("UPDATE app_config SET value_json = ? WHERE key = 'filter'")
+      .run(JSON.stringify({ quietHours: { enabled: false, start: '23:30', end: '07:30' }, regexTimeoutMs: 100 }))
+
+    const second = await first.restart()
+    try {
+      assert.equal(second.core.config.getSection('filter').kinds.video, true)
+      assert.equal(second.core.config.getSection('filter').kinds.live, false)
+    } finally {
+      await second.close()
+    }
+  })
+
+  it('全局 Prompt 可切换自定义和内置默认，并校验 text 占位符', async () => {
+    const h = await createHarness()
+    try {
+      const initial = (await (await h.server.app.request('/api/prompts')).json()) as {
+        source: string
+        effectiveTemplate: string
+      }
+      assert.equal(initial.source, 'default')
+      assert.equal(initial.effectiveTemplate, DEFAULT_PROMPT_TEMPLATE)
+
+      const invalid = await h.server.app.request('/api/prompts', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ template: '没有视频内容占位符' }),
+      })
+      assert.equal(invalid.status, 400)
+
+      const custom = '标题：{{title}}\n\n{{text}}'
+      const saved = await h.server.app.request('/api/prompts', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ template: custom }),
+      })
+      assert.equal(saved.status, 200)
+      assert.equal(h.core.config.getSection('prompt').template, custom)
+
+      await h.server.app.request('/api/prompts', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ template: null }),
+      })
+      assert.equal(h.core.config.getSection('prompt').template, null)
+    } finally {
+      await h.close()
     }
   })
 

@@ -61,7 +61,10 @@ export interface SecretDescription {
 export interface SubscriptionRepo {
   list(): Subscription[]
   get(uid: string): Subscription | null
-  upsert(sub: Omit<Subscription, 'followedAt'> & { followedAt?: number | null }): void
+  upsert(
+    sub: Omit<Subscription, 'followedAt' | 'pushKindMode' | 'pushKinds' | 'filterMode' | 'promptTemplate'> &
+      Partial<Pick<Subscription, 'followedAt' | 'pushKindMode' | 'pushKinds' | 'filterMode' | 'promptTemplate'>>,
+  ): void
   remove(uid: string): void
   markFollowed(uid: string, at: number): void
 }

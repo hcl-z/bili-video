@@ -1,5 +1,7 @@
+import { DYNAMIC_KIND_LABEL } from '#shared/contract/config.ts'
 import type { Failure } from '#shared/contract/failure.ts'
 import type { PollResult, PollSnapshot } from '#shared/contract/api.ts'
+import type { Subscription } from '#shared/contract/subscription.ts'
 import type { UpdateWithRaw } from '#shared/contract/update.ts'
 import { nextAnchors, type AnchorItem } from '../domain/anchor.ts'
 import { errFields, failureFields, tookMs } from '../log-fields.ts'
@@ -153,7 +155,8 @@ export class Poller {
       }
     }
 
-    const known = new Set(this.deps.subs.list().map((s) => s.uid))
+    const subscriptions = new Map(this.deps.subs.list().map((s) => [s.uid, s]))
+    const known = new Set(subscriptions.keys())
     const anchors = this.deps.anchors.getAll()
     const fresh: ParsedDynamic[] = []
     let offset: string | null = null
@@ -182,10 +185,10 @@ export class Poller {
       if (!res.value.hasMore || offset === null || usable.length === 0) break
     }
 
-    return this.persist(fresh)
+    return this.persist(fresh, subscriptions)
   }
 
-  private persist(items: readonly ParsedDynamic[]): PollResult {
+  private persist(items: readonly ParsedDynamic[], subscriptions: Map<string, Subscription>): PollResult {
     const at = this.deps.clock.now()
     const rows: UpdateWithRaw[] = []
     const marks: AnchorItem[] = []
@@ -198,7 +201,13 @@ export class Poller {
           text: item.text,
           desc: item.desc,
         })
-        const v = ev.verdict
+        const subscription = subscriptions.get(item.uid)
+        const kindConfig =
+          subscription?.pushKindMode === 'custom' && subscription.pushKinds !== null
+            ? subscription.pushKinds
+            : this.deps.config.getSection('filter').kinds
+        const disabledKind = item.kinds.find((kind) => !kindConfig[kind])
+        const v = disabledKind === undefined ? ev.verdict : { kind: 'blocked' as const, reason: `${DYNAMIC_KIND_LABEL[disabledKind]}推送已关闭` }
         if (v.kind === 'blocked') blocked += 1
         rows.push({
           dynId: item.dynId,

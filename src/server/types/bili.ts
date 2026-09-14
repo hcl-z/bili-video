@@ -1,4 +1,5 @@
 import type { DynamicType } from '#shared/contract/update.ts'
+import type { DynamicKind } from '#shared/contract/config.ts'
 import type { Cue } from '#shared/contract/summary.ts'
 import type { Result } from '#shared/contract/failure.ts'
 import type { UpSearchItem } from '#shared/contract/api.ts'
@@ -31,6 +32,7 @@ export interface ParsedDynamic {
   uname: string
   face: string | null
   type: DynamicType
+  kinds: DynamicKind[]
   pubTs: number
   title: string | null
   text: string | null

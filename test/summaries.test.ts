@@ -82,8 +82,6 @@ describe('总结分栏阅读', () => {
       uid: '111',
       name: 'UP-111',
       face: 'https://f/111.jpg',
-      enableDynamic: true,
-      enableVideo: true,
       enableAi: true,
     })
     h.core.repos.rules.add({ scope: 'global', kind: 'keyword-deny', pattern: '广告', enabled: true })
@@ -177,8 +175,6 @@ describe('总结分栏阅读', () => {
       uid: '111',
       name: 'UP-111',
       face: null,
-      enableDynamic: true,
-      enableVideo: true,
       enableAi: false,
     })
     h.core.config.setSection('bili', {

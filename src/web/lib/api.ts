@@ -12,8 +12,10 @@ import type {
   OverviewResponse,
   PatchAiSettingsRequest,
   PatchNotifySettingsRequest,
+  PatchPromptSettingsRequest,
   PatchSubscriptionRequest,
   PollResult,
+  PromptSettingsResponse,
   QrResponse,
   ReaderItemResponse,
   RefreshResponse,
@@ -102,6 +104,14 @@ export const api = {
   refreshCookie: () => request<RefreshResponse>('/system/refresh', { method: 'POST' }),
 
   storage: () => request<StorageResponse>('/system/storage'),
+
+  promptSettings: () => request<PromptSettingsResponse>('/prompts'),
+
+  patchPromptSettings: (patch: PatchPromptSettingsRequest) =>
+    request<PromptSettingsResponse>('/prompts', {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
+    }),
 
   subs: () => request<SubscriptionsResponse>('/subscriptions'),
 

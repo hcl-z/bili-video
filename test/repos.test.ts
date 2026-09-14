@@ -57,8 +57,6 @@ describe('subscriptions', () => {
       uid: '100',
       name: '甲',
       face: null,
-      enableDynamic: true,
-      enableVideo: true,
       enableAi: true,
     })
     c.repos.subscriptions.markFollowed('100', 5_000)
@@ -68,14 +66,11 @@ describe('subscriptions', () => {
       uid: '100',
       name: '甲改名了',
       face: 'https://x/a.jpg',
-      enableDynamic: false,
-      enableVideo: true,
       enableAi: true,
     })
 
     const sub = c.repos.subscriptions.get('100')
     assert.equal(sub?.name, '甲改名了')
-    assert.equal(sub?.enableDynamic, false)
     assert.equal(sub?.followedAt, 5_000, 'followedAt 必须保留')
     c.close()
   })

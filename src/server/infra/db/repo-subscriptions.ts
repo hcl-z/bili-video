@@ -1,5 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite'
 
+import type { DynamicKindConfig } from '#shared/contract/config.ts'
 import type { FilterRule, RuleKind, Subscription } from '#shared/contract/subscription.ts'
 import type { FilterRuleRepo, SubscriptionRepo } from '../../types/persistence.ts'
 import { num, numOrNull, str, strOrNull, toBool, toInt, type Row } from './sqlite.ts'
@@ -8,11 +9,17 @@ const toSubscription = (r: Row): Subscription => ({
   uid: str(r['uid']),
   name: str(r['name']),
   face: strOrNull(r['face']),
-  enableDynamic: toBool(r['enable_dynamic']),
-  enableVideo: toBool(r['enable_video']),
   enableAi: toBool(r['enable_ai']),
+  pushKindMode: str(r['push_kind_mode']) as Subscription['pushKindMode'],
+  pushKinds: parseKinds(strOrNull(r['push_kinds_json'])),
+  filterMode: str(r['filter_mode']) as Subscription['filterMode'],
+  promptTemplate: strOrNull(r['prompt_template']),
   followedAt: numOrNull(r['followed_at']),
 })
+
+function parseKinds(raw: string | null): DynamicKindConfig | null {
+  return raw === null ? null : (JSON.parse(raw) as DynamicKindConfig)
+}
 
 export class SqliteSubscriptionRepo implements SubscriptionRepo {
   private readonly db: DatabaseSync
@@ -35,28 +42,35 @@ export class SqliteSubscriptionRepo implements SubscriptionRepo {
     return r ? toSubscription(r as Row) : null
   }
 
-  upsert(sub: Omit<Subscription, 'followedAt'> & { followedAt?: number | null }): void {
+  upsert(
+    sub: Omit<Subscription, 'followedAt' | 'pushKindMode' | 'pushKinds' | 'filterMode' | 'promptTemplate'> &
+      Partial<Pick<Subscription, 'followedAt' | 'pushKindMode' | 'pushKinds' | 'filterMode' | 'promptTemplate'>>,
+  ): void {
     // followed_at 用 COALESCE 保住旧值：改个昵称不应把「已关注」清除
     this.db
       .prepare(
         `INSERT INTO subscriptions
-           (uid, name, face, enable_dynamic, enable_video, enable_ai, followed_at, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+           (uid, name, face, enable_dynamic, enable_video, enable_ai, push_kind_mode, push_kinds_json, filter_mode, prompt_template, followed_at, created_at)
+         VALUES (?, ?, ?, 1, 1, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(uid) DO UPDATE SET
            name = excluded.name,
            face = excluded.face,
-           enable_dynamic = excluded.enable_dynamic,
-           enable_video = excluded.enable_video,
            enable_ai = excluded.enable_ai,
+           push_kind_mode = excluded.push_kind_mode,
+           push_kinds_json = excluded.push_kinds_json,
+           filter_mode = excluded.filter_mode,
+           prompt_template = excluded.prompt_template,
            followed_at = COALESCE(excluded.followed_at, subscriptions.followed_at)`,
       )
       .run(
         sub.uid,
         sub.name,
         sub.face,
-        toInt(sub.enableDynamic),
-        toInt(sub.enableVideo),
         toInt(sub.enableAi),
+        sub.pushKindMode ?? 'inherit',
+        sub.pushKinds === null || sub.pushKinds === undefined ? null : JSON.stringify(sub.pushKinds),
+        sub.filterMode ?? 'inherit',
+        sub.promptTemplate ?? null,
         sub.followedAt ?? null,
         this.now(),
       )

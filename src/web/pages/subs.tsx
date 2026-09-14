@@ -1,19 +1,17 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Loader2, RefreshCw, Search, Trash2 } from 'lucide-react'
+import { Loader2, RefreshCw, Search, Settings2, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 
-import type { PatchSubscriptionRequest } from '#shared/contract/api.ts'
 import type { Subscription } from '#shared/contract/subscription.ts'
 import { Page } from '@/components/page'
+import { UpConfigDialog } from '@/components/up-config-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogTrigger } from '@/components/ui/dialog'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Switch } from '@/components/ui/switch'
 import { api } from '@/lib/api'
 import { keys } from '@/lib/query'
 
@@ -155,12 +153,6 @@ function SubCard(props: { sub: Subscription; onChanged: () => void }) {
   const { sub } = props
   const [confirming, setConfirming] = useState(false)
 
-  const patch = useMutation({
-    mutationFn: (p: PatchSubscriptionRequest) => api.patchSub(sub.uid, p),
-    onSuccess: props.onChanged,
-    onError: (err: Error) => toast.error('改开关失败', { description: err.message }),
-  })
-
   const remove = useMutation({
     mutationFn: () => api.removeSub(sub.uid),
     onSuccess: () => {
@@ -217,6 +209,15 @@ function SubCard(props: { sub: Subscription; onChanged: () => void }) {
             <p className="text-muted-foreground font-mono text-xs">uid {sub.uid}</p>
           </div>
 
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Settings2 />配置
+              </Button>
+            </DialogTrigger>
+            <UpConfigDialog sub={sub} onChanged={props.onChanged} />
+          </Dialog>
+
           {sub.followedAt === null && (
             <Button
               variant="outline"
@@ -259,55 +260,7 @@ function SubCard(props: { sub: Subscription; onChanged: () => void }) {
             </Button>
           )}
         </div>
-
-        <Separator className="my-3.5" />
-
-        <div className="flex flex-wrap gap-x-6 gap-y-3">
-          <Toggle
-            id={`dyn-${sub.uid}`}
-            label="动态"
-            checked={sub.enableDynamic}
-            pending={patch.isPending}
-            onChange={(enableDynamic) => patch.mutate({ enableDynamic })}
-          />
-          <Toggle
-            id={`vid-${sub.uid}`}
-            label="视频"
-            checked={sub.enableVideo}
-            pending={patch.isPending}
-            onChange={(enableVideo) => patch.mutate({ enableVideo })}
-          />
-          <Toggle
-            id={`ai-${sub.uid}`}
-            label="AI 总结"
-            checked={sub.enableAi}
-            pending={patch.isPending}
-            onChange={(enableAi) => patch.mutate({ enableAi })}
-          />
-        </div>
       </CardContent>
     </Card>
-  )
-}
-
-function Toggle(props: {
-  id: string
-  label: string
-  checked: boolean
-  pending: boolean
-  onChange: (v: boolean) => void
-}) {
-  return (
-    <div className="flex items-center gap-2">
-      <Switch
-        id={props.id}
-        checked={props.checked}
-        disabled={props.pending}
-        onCheckedChange={props.onChange}
-      />
-      <Label htmlFor={props.id} className="text-sm font-normal">
-        {props.label}
-      </Label>
-    </div>
   )
 }

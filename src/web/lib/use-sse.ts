@@ -12,7 +12,7 @@ const AFFECTS: Record<AppEventType, readonly (readonly string[])[]> = {
   'poll.finished': [keys.updates, keys.summaries, keys.system, keys.overview],
   // 登录态变了也要重取二维码：转到 waiting-scan 的那一刻码才存在
   'auth.changed': [keys.system, keys.overview, keys.qr],
-  'config.changed': [keys.config, keys.ai, keys.overview],
+  'config.changed': [keys.config, keys.ai, keys.prompts, keys.overview],
   'job.changed': [keys.jobs, keys.summaries, keys.overview],
   'summary.done': [keys.jobs, keys.summaries, keys.overview],
   'health.checked': [keys.overview],

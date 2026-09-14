@@ -9,6 +9,7 @@ import {
   ScrollText,
   Settings,
   Sparkles,
+  WandSparkles,
   Users,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
@@ -31,6 +32,7 @@ export const NAV: NavItem[] = [
   { to: '/subs', label: 'UP 主', icon: Users, group: '订阅' },
   { to: '/rules', label: '过滤规则', icon: Filter, group: '订阅' },
   { to: '/targets', label: '推送渠道', icon: Bell, group: '订阅' },
+  { to: '/prompts', label: 'Prompt 管理', icon: WandSparkles, group: '系统' },
   { to: '/ai', label: 'AI 与 ASR', icon: Sparkles, group: '系统' },
   { to: '/logs', label: '日志', icon: ScrollText, group: '系统' },
   { to: '/system', label: '系统', icon: Settings, group: '系统' },
@@ -82,6 +84,10 @@ export const router = createBrowserRouter([
       {
         path: 'targets',
         lazy: async () => ({ Component: (await import('@/pages/targets')).TargetsPage }),
+      },
+      {
+        path: 'prompts',
+        lazy: async () => ({ Component: (await import('@/pages/prompts')).PromptsPage }),
       },
       {
         path: 'ai',

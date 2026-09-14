@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import type { ReaderItemResponse, UpdatesResponse, UpFeedResponse } from '#shared/contract/api.ts'
+import { DEFAULT_PROMPT_TEMPLATE } from '#shared/contract/prompt.ts'
 import type { SummaryJob } from '#shared/contract/job.ts'
 import type { FakeResponse } from './fakes/bili-fetch.ts'
 import { avItem, bili, llmOk, player, rig, ZH_TRACK } from './support/queue-rig.ts'
@@ -87,6 +88,30 @@ describe('UP 空间流与手动解析', () => {
     assert.equal(queued.status, 200)
     await h.server.services.queue.drain()
     assert.equal(h.core.repos.summaries.get('BV1hist')?.tldr, '这个视频讲清了一件事，并给出了结论。')
+
+    await h.close()
+  })
+
+  it('UP 自定义 Prompt 优先于全局 Prompt，并替换视频内容变量', async () => {
+    const fetch = bili([llmOk], undefined, [HISTORY])
+    fetch.on('player/wbi/v2', player([ZH_TRACK]))
+    const { h } = await rig(fetch)
+    h.core.config.setSection('prompt', { template: `全局模板\n${DEFAULT_PROMPT_TEMPLATE}` })
+    h.core.repos.subscriptions.upsert({
+      ...h.core.repos.subscriptions.get('111')!,
+      promptTemplate: 'UP模板 {{title}} / {{up_name}} / {{bvid}}\n{{text}}',
+    })
+
+    await h.server.services.poll.pollOnce()
+    await h.server.services.queue.drain()
+
+    const request = fetch.requests.find((item) => item.url.includes('/chat/completions'))
+    const body = JSON.parse(request?.body ?? '{}') as { messages?: Array<{ role: string; content: string }> }
+    const user = body.messages?.find((message) => message.role === 'user')?.content ?? ''
+    assert.match(user, /UP模板 启动之前的老投稿 \/ UP-111 \/ BV1hist/)
+    assert.match(user, /进入正题/)
+    assert.doesNotMatch(user, /\{\{text\}\}/)
+    assert.doesNotMatch(user, /全局模板/)
 
     await h.close()
   })

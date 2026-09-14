@@ -146,7 +146,7 @@ export class DeliveryService {
     if (update.filtered) return false
     const subscription = this.deps.subscriptions.get(update.uid)
     if (subscription === null) return false
-    return update.type === 'AV' ? subscription.enableVideo : subscription.enableDynamic
+    return true
   }
 
   private enabledNotifiers(): Notifier[] {
@@ -201,5 +201,6 @@ function typeLabel(update: Update): string {
   if (update.type === 'WORD') return '新动态'
   if (update.type === 'FORWARD') return '新转发'
   if (update.type === 'ARTICLE') return '新专栏'
+  if (update.type === 'LIVE') return '新直播'
   return update.bvid ?? '新视频'
 }

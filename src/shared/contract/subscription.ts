@@ -1,13 +1,18 @@
 import { z } from 'zod'
+import { DynamicKindConfigSchema } from './config.ts'
 
 export const SubscriptionSchema = z.object({
   uid: z.string(),
   name: z.string(),
   face: z.string().nullable(),
 
-  enableDynamic: z.boolean(),
-  enableVideo: z.boolean(),
   enableAi: z.boolean(),
+  pushKindMode: z.enum(['inherit', 'custom']),
+  /** custom 时保存完整类别配置；inherit 时为 null */
+  pushKinds: DynamicKindConfigSchema.nullable(),
+  filterMode: z.enum(['inherit', 'custom']),
+  /** null 表示继承全局 Prompt */
+  promptTemplate: z.string().nullable(),
   /** 自动关注成功的时刻；null 表示还没关注上 */
   followedAt: z.number().nullable(),
 })

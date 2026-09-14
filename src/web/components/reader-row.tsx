@@ -14,6 +14,7 @@ export const TYPE_LABEL: Record<ReaderItem['type'], string> = {
   WORD: '文字',
   FORWARD: '转发',
   ARTICLE: '专栏',
+  LIVE: '直播',
 }
 
 /** 左栏一行：96px 封面 + 两行标题 + 解析状态。选中用强调色左边框。 命中过过滤规则的条目在此处不降饱和、不打删除线 —— 规则拦的是自动解析与推送， 不是应项视频本身 */

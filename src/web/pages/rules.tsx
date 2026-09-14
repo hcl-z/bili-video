@@ -3,6 +3,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Loader2, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 
+import type { AppConfig } from '#shared/contract/config.ts'
+import { DYNAMIC_KINDS, DYNAMIC_KIND_LABEL } from '#shared/contract/config.ts'
+import type { DynamicKind } from '#shared/contract/config.ts'
 import type { RulesResponse } from '#shared/contract/api.ts'
 import { RULE_KINDS, RULE_KIND_LABEL } from '#shared/contract/subscription.ts'
 import type { FilterRule, RuleKind } from '#shared/contract/subscription.ts'
@@ -27,13 +30,12 @@ import { keys } from '@/lib/query'
 export function RulesPage() {
   const qc = useQueryClient()
   const rules = useQuery({ queryKey: keys.rules, queryFn: api.rules })
-  const subs = useQuery({ queryKey: keys.subs, queryFn: api.subs })
-  const [scope, setScope] = useState('global')
+  const config = useQuery({ queryKey: keys.config, queryFn: api.config })
   const [kind, setKind] = useState<RuleKind>('keyword-deny')
   const [pattern, setPattern] = useState('')
 
   const add = useMutation({
-    mutationFn: () => api.addRule({ scope, kind, pattern: pattern.trim() }),
+    mutationFn: () => api.addRule({ scope: 'global', kind, pattern: pattern.trim() }),
     onSuccess: () => {
       setPattern('')
       void qc.invalidateQueries({ queryKey: keys.rules })
@@ -44,14 +46,14 @@ export function RulesPage() {
   })
 
   const all = rules.data?.rules ?? []
-  const uids = [...new Set(all.filter((r) => r.scope !== 'global').map((r) => r.scope))]
-  const nameOf = (uid: string) => subs.data?.subs.find((s) => s.uid === uid)?.name ?? `uid ${uid}`
 
   return (
     <Page
       title="过滤规则"
       hint="黑名单优先于白名单；白名单非空时，只有命中白名单的条目才通过。"
     >
+      {config.data !== undefined && <KindFilters config={config.data} />}
+
       <form
         className="flex flex-wrap gap-2"
         onSubmit={(e) => {
@@ -59,20 +61,6 @@ export function RulesPage() {
           if (pattern.trim() !== '') add.mutate()
         }}
       >
-        <Select value={scope} onValueChange={setScope}>
-          <SelectTrigger className="w-36" aria-label="作用范围">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="global">全局</SelectItem>
-            {(subs.data?.subs ?? []).map((s) => (
-              <SelectItem key={s.uid} value={s.uid}>
-                {s.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
         <Select value={kind} onValueChange={(v) => setKind(v as RuleKind)}>
           <SelectTrigger className="w-40" aria-label="规则类型">
             <SelectValue />
@@ -110,27 +98,55 @@ export function RulesPage() {
       ) : (
         <div className="mt-4 space-y-3">
           <Group
-            title="全局"
-            hint="对没有自己规则的 UP 生效"
+            title="全局规则"
+            hint="UP 主选择继承时使用这套规则"
             rules={all.filter((r) => r.scope === 'global')}
             timeouts={rules.data.timeouts}
           />
-          {uids.map((uid) => (
-            <Group
-              key={uid}
-              title={nameOf(uid)}
-              hint="这个 UP 用自己这一套，全局规则对 TA 不生效"
-              rules={all.filter((r) => r.scope === uid)}
-              timeouts={rules.data.timeouts}
-            />
-          ))}
         </div>
       )}
 
       <div className="mt-6">
-        <RuleTester subs={subs.data?.subs ?? []} />
+        <RuleTester subs={[]} />
       </div>
     </Page>
+  )
+}
+
+function KindFilters({ config }: { config: AppConfig }) {
+  const qc = useQueryClient()
+  const patch = useMutation({
+    mutationFn: (kind: DynamicKind) =>
+      api.patchConfig('filter', {
+        kinds: { ...config.filter.kinds, [kind]: !config.filter.kinds[kind] },
+      }),
+    onSuccess: (data) => qc.setQueryData(keys.config, data),
+    onError: (err: Error) => toast.error('保存失败', { description: err.message }),
+  })
+
+  return (
+    <Card className="mb-4">
+      <CardContent className="py-4">
+        <div className="mb-3">
+          <h2 className="text-sm font-medium">推送类别</h2>
+          <p className="text-muted-foreground mt-1 text-xs">关闭后仍保留在动态流，并标明未推送原因。</p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {DYNAMIC_KINDS.map((kind) => (
+            <label key={kind} className="flex items-center justify-between gap-3 rounded-md border px-3 py-2">
+              <span className="text-sm">{DYNAMIC_KIND_LABEL[kind]}</span>
+              <Switch
+                size="sm"
+                checked={config.filter.kinds[kind]}
+                disabled={patch.isPending}
+                onCheckedChange={() => patch.mutate(kind)}
+                aria-label={`${DYNAMIC_KIND_LABEL[kind]}推送`}
+              />
+            </label>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 

@@ -1,9 +1,15 @@
 import { z } from 'zod'
 import {
+  DEFAULT_PROMPT_TEMPLATE,
+  PROMPT_VARIABLES,
+  PromptTemplateSchema,
+} from './prompt.ts'
+import {
   AiConfigSchema,
   AppConfigSchema,
   AsrConfigSchema,
   AsrProviderSchema,
+  DynamicKindConfigSchema,
   NotifyConfigSchema,
 } from './config.ts'
 import {
@@ -259,9 +265,11 @@ export type SubscriptionResult = z.infer<typeof SubscriptionResultSchema>
 
 
 export const PatchSubscriptionRequestSchema = z.object({
-  enableDynamic: z.boolean().optional(),
-  enableVideo: z.boolean().optional(),
   enableAi: z.boolean().optional(),
+  pushKindMode: z.enum(['inherit', 'custom']).optional(),
+  pushKinds: DynamicKindConfigSchema.nullable().optional(),
+  filterMode: z.enum(['inherit', 'custom']).optional(),
+  promptTemplate: PromptTemplateSchema.nullable().optional(),
 })
 export type PatchSubscriptionRequest = z.infer<typeof PatchSubscriptionRequestSchema>
 
@@ -477,6 +485,28 @@ export const TestRulesResponseSchema = z.object({
   used: z.array(FilterRuleSchema),
 })
 export type TestRulesResponse = z.infer<typeof TestRulesResponseSchema>
+
+export const PromptSettingsResponseSchema = z.object({
+  defaultTemplate: z.string(),
+  customTemplate: z.string().nullable(),
+  effectiveTemplate: z.string(),
+  source: z.enum(['default', 'custom']),
+  variables: z.array(z.enum(PROMPT_VARIABLES)),
+})
+export type PromptSettingsResponse = z.infer<typeof PromptSettingsResponseSchema>
+
+export const PatchPromptSettingsRequestSchema = z.object({
+  template: PromptTemplateSchema.nullable(),
+})
+export type PatchPromptSettingsRequest = z.infer<typeof PatchPromptSettingsRequestSchema>
+
+export const DEFAULT_PROMPT_SETTINGS: PromptSettingsResponse = {
+  defaultTemplate: DEFAULT_PROMPT_TEMPLATE,
+  customTemplate: null,
+  effectiveTemplate: DEFAULT_PROMPT_TEMPLATE,
+  source: 'default',
+  variables: [...PROMPT_VARIABLES],
+}
 
 /** apiKey 在响应里的唯一形态。明文永远不出服务端 */
 export const SecretStateSchema = z.object({

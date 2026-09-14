@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import type { AsrConfig, ChunkConfig } from '#shared/contract/config.ts'
+import type { AsrConfig, ChunkConfig, PromptConfig } from '#shared/contract/config.ts'
 import { fail, ok, type Failure, type Result } from '#shared/contract/failure.ts'
 import type { PipelineStep, StepStatus, SummaryJob } from '#shared/contract/job.ts'
 import type { Cue, Summary } from '#shared/contract/summary.ts'
@@ -12,14 +12,15 @@ import { degrade, levelFor, sourceFor, startDegrade, type DegradeStep } from '..
 import { needsTranscript, stepIndex, type ArtifactKind } from '../domain/pipeline.ts'
 import {
   chunkPrompt,
+  effectivePromptTemplate,
+  finalPrompt,
   leadLine,
   linkTimestamps,
   metaPrompt,
+  notesText,
   parseArticle,
-  reducePrompt,
   renderMarkdown,
   summaryFileName,
-  summaryPrompt,
   transcriptText,
   videoRef,
   type ChunkNote,
@@ -76,6 +77,7 @@ export interface SummarizeDeps {
   /** ★ 只从这里取 LLM：总开关关着时它返回 null（见 AiService.llm） */
   llm: () => Llm | null
   chunkConfig: () => ChunkConfig
+  promptConfig: () => PromptConfig
   asrConfig: () => AsrConfig
   updates: UpdateRepo
   subs: SubscriptionRepo
@@ -197,7 +199,7 @@ export class SummarizeVideo {
     if (chunks.length <= 1) {
       hook('chunk', 'skipped', '全文不长，一次总结完')
       hook('reduce', 'running')
-      const prompt = summaryPrompt(meta, transcriptText(cues))
+      const prompt = finalPrompt(this.promptTemplate(job), meta, transcriptText(cues))
       const reply = await this.call(llm, job.bvid, 'reduce', prompt)
       if (!reply.ok) return this.reduceFailed(hook, reply.failure)
       const article = parseArticle(reply.value)
@@ -238,7 +240,12 @@ export class SummarizeVideo {
     }
 
     hook('reduce', 'running')
-    const reply = await this.call(llm, job.bvid, 'reduce', reducePrompt(meta, notes))
+    const reply = await this.call(
+      llm,
+      job.bvid,
+      'reduce',
+      finalPrompt(this.promptTemplate(job), meta, notesText(notes)),
+    )
     if (!reply.ok) return this.reduceFailed(hook, reply.failure)
     const article = parseArticle(reply.value)
     if (!article.ok) return this.reduceFailed(hook, article.failure)
@@ -446,6 +453,12 @@ export class SummarizeVideo {
   }
 
   /** 标题这些东西来自动态那条记录；记录不见了就退回 bvid，不让整条任务失败。 */
+  private promptTemplate(job: SummaryJob): string {
+    const uid = this.deps.updates.get(job.updateId)?.uid
+    const upTemplate = uid === undefined ? null : this.deps.subs.get(uid)?.promptTemplate
+    return effectivePromptTemplate(this.deps.promptConfig(), upTemplate).template
+  }
+
   private meta(job: SummaryJob): VideoMeta {
     const update: Update | null = this.deps.updates.get(job.updateId) ?? null
     const uid = update?.uid ?? null

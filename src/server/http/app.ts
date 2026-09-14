@@ -21,6 +21,7 @@ import { healthRoutes } from './routes/health.ts'
 import { jobRoutes } from './routes/jobs.ts'
 import { logRoutes, type LogBuffer } from './routes/logs.ts'
 import { notifyRoutes } from './routes/notify.ts'
+import { promptRoutes } from './routes/prompts.ts'
 import { overviewRoutes } from './routes/overview.ts'
 import { ruleRoutes } from './routes/rules.ts'
 import { subscriptionRoutes } from './routes/subscriptions.ts'
@@ -77,6 +78,7 @@ export function createHttpApp(deps: ServerDeps, opts: HttpOptions): Hono {
     }),
   )
   api.route('/config', configRoutes(deps))
+  api.route('/prompts', promptRoutes(deps))
   api.route('/subscriptions', subscriptionRoutes(opts.subs))
   api.route('/updates', updateRoutes(deps, opts.poll))
   api.route('/rules', ruleRoutes(opts.rules))

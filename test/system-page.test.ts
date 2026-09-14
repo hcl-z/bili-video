@@ -121,8 +121,6 @@ describe('系统页', () => {
         uid: '111',
         name: 'UP-111',
         face: null,
-        enableDynamic: true,
-        enableVideo: true,
         enableAi: true,
       })
       h.core.repos.rules.add({

@@ -24,6 +24,7 @@ const TYPE_LABEL: Record<Update['type'], string> = {
   WORD: '文字',
   FORWARD: '转发',
   ARTICLE: '专栏',
+  LIVE: '直播',
 }
 
 export function UpdatesPage() {

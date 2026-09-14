@@ -2,6 +2,7 @@ import { z } from 'zod'
 
 import { fail, ok, type Result } from '#shared/contract/failure.ts'
 import type { DynamicType } from '#shared/contract/update.ts'
+import type { DynamicKind } from '#shared/contract/config.ts'
 import { shapeFailure } from '../../domain/bili-error.ts'
 import type { BiliReader, FeedPage, ParsedDynamic } from '../../types/bili.ts'
 import type { Logger } from '../../types/platform.ts'
@@ -14,13 +15,14 @@ const SPACE_URL = 'https://api.bilibili.com/x/polymer/web-dynamic/v1/feed/space'
 const FEATURES =
   'itemOpusStyle,listOnlyfans,opusBigCover,onlyfansVote,decorationCard,onlyfansAssetsV2,ugcDelete'
 
-/** 只认这五类，别的（直播、番剧推送等）直接跳过。 */
+/** 可展示和过滤的基础类型；抽奖、充电专属在此基础上追加类别标记。 */
 const TYPES: Record<string, DynamicType> = {
   DYNAMIC_TYPE_AV: 'AV',
   DYNAMIC_TYPE_DRAW: 'DRAW',
   DYNAMIC_TYPE_WORD: 'WORD',
   DYNAMIC_TYPE_FORWARD: 'FORWARD',
   DYNAMIC_TYPE_ARTICLE: 'ARTICLE',
+  DYNAMIC_TYPE_LIVE_RCMD: 'LIVE',
 }
 
 const AuthorSchema = z.object({
@@ -61,16 +63,52 @@ const MajorSchema = z
     opus: z
       .object({
         title: z.string().nullish(),
-        summary: z.object({ text: z.string().default('') }).nullish(),
+        summary: z
+          .object({
+            text: z.string().default(''),
+            rich_text_nodes: z.array(z.object({ type: z.string().default('') })).default([]),
+          })
+          .nullish(),
         pics: z.array(z.object({ url: z.string().default('') })).default([]),
         jump_url: z.string().default(''),
       })
       .nullish(),
+    live_rcmd: z
+      .object({
+        content: z.string().default(''),
+      })
+      .nullish(),
+    blocked: z
+      .object({
+        blocked_type: z.number().int().default(0),
+        title: z.string().default(''),
+        hint_message: z.string().default(''),
+      })
+      .nullish(),
+    upower_common: z.unknown().nullish(),
   })
 
+const RichTextSchema = z.object({
+  text: z.string().default(''),
+  type: z.string().default(''),
+})
+
 const DynModuleSchema = z.object({
-  desc: z.object({ text: z.string().default('') }).nullish(),
+  desc: z
+    .object({
+      text: z.string().default(''),
+      rich_text_nodes: z.array(RichTextSchema).default([]),
+    })
+    .nullish(),
   major: MajorSchema.nullish(),
+  additional: z
+    .object({
+      type: z.string().default(''),
+      reserve: z.unknown().nullish(),
+      upower_lottery: z.unknown().nullish(),
+    })
+    .passthrough()
+    .nullish(),
 })
 
 const ItemSchema = z.object({
@@ -122,6 +160,60 @@ function contentOf(dyn: z.infer<typeof DynModuleSchema> | null | undefined) {
       ...(major.article?.covers ?? []),
     ].filter((u) => u !== ''),
     bvid: nz(major.archive?.bvid),
+  }
+}
+
+const BASE_KIND: Record<DynamicType, DynamicKind> = {
+  AV: 'video',
+  DRAW: 'draw',
+  WORD: 'word',
+  FORWARD: 'forward',
+  ARTICLE: 'article',
+  LIVE: 'live',
+}
+
+function classifyKinds(
+  type: DynamicType,
+  self: z.infer<typeof DynModuleSchema>,
+  orig: z.infer<typeof DynModuleSchema> | null | undefined,
+): DynamicKind[] {
+  const kinds: DynamicKind[] = [BASE_KIND[type]]
+  const layers = [self, orig].filter((layer): layer is z.infer<typeof DynModuleSchema> => layer != null)
+  const lottery = layers.some((layer) => {
+    const additional = layer.additional
+    return (
+      layer.desc?.rich_text_nodes.some((node) => node.type === 'RICH_TEXT_NODE_TYPE_LOTTERY') === true ||
+      layer.major?.opus?.summary?.rich_text_nodes.some(
+        (node) => node.type === 'RICH_TEXT_NODE_TYPE_LOTTERY',
+      ) === true ||
+      additional?.upower_lottery != null ||
+      /LOTTERY/.test(additional?.type ?? '')
+    )
+  })
+  const charge = layers.some(
+    (layer) =>
+      layer.major?.blocked?.blocked_type === 3 ||
+      layer.major?.upower_common != null ||
+      layer.additional?.upower_lottery != null ||
+      /UPOWER/.test(layer.additional?.type ?? ''),
+  )
+  if (lottery) kinds.push('lottery')
+  if (charge) kinds.push('charge')
+  return kinds
+}
+
+function liveContent(dyn: z.infer<typeof DynModuleSchema>): { title: string | null; text: string | null } {
+  const content = dyn.major?.live_rcmd?.content
+  if (content == null || content === '') return { title: null, text: null }
+  try {
+    const parsed = JSON.parse(content) as { live_play_info?: { title?: unknown; parent_area_name?: unknown } }
+    const info = parsed.live_play_info
+    return {
+      title: typeof info?.title === 'string' ? nz(info.title) : null,
+      text: typeof info?.parent_area_name === 'string' ? nz(info.parent_area_name) : null,
+    }
+  } catch {
+    return { title: null, text: null }
   }
 }
 
@@ -227,8 +319,10 @@ export class BiliReaderClient implements BiliReader {
 
     const author = item.modules.module_author
     const self = contentOf(item.modules.module_dynamic)
+    const live = liveContent(item.modules.module_dynamic)
     // 转发的正文只是转发语，内容在 orig 里。取过来，更新流才有封面标题，过滤规则才看得见被转的视频标题。
     const from = type === 'FORWARD' ? contentOf(item.orig?.modules?.module_dynamic) : null
+    const kinds = classifyKinds(type, item.modules.module_dynamic, item.orig?.modules?.module_dynamic)
 
     // 有意不继承 orig 的 bvid：转发别人的视频不该触发我们的字幕总结链路。
     const bvid = self.bvid
@@ -239,9 +333,10 @@ export class BiliReaderClient implements BiliReader {
       uname: author.name,
       face: nz(author.face),
       type,
+      kinds,
       pubTs: author.pub_ts,
-      title: self.title ?? from?.title ?? null,
-      text: self.text,
+      title: self.title ?? from?.title ?? live.title,
+      text: self.text ?? live.text,
       // 视频简介 / 专栏摘要。过滤规则的匹配范围里有它，所以要一路带下去。
       desc: self.desc ?? from?.desc ?? from?.text ?? null,
       cover: self.cover ?? from?.cover ?? null,

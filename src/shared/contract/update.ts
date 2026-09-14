@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 
-export const DynamicTypeSchema = z.enum(['AV', 'DRAW', 'WORD', 'FORWARD', 'ARTICLE'])
+export const DynamicTypeSchema = z.enum(['AV', 'DRAW', 'WORD', 'FORWARD', 'ARTICLE', 'LIVE'])
 export type DynamicType = z.infer<typeof DynamicTypeSchema>
 
 export const UpdateSchema = z.object({

@@ -26,7 +26,21 @@ export const INITIAL_CONFIG: AppConfig = AppConfigSchema.parse({
     correspondPublicKeyPem: '',
     write: { autoFollow: true, minIntervalMs: 3_000, maxPerHour: 20 },
   },
-  filter: { quietHours: { enabled: false, start: '23:30', end: '07:30' }, regexTimeoutMs: 100 },
+  filter: {
+    quietHours: { enabled: false, start: '23:30', end: '07:30' },
+    kinds: {
+      video: true,
+      draw: true,
+      word: true,
+      forward: true,
+      article: true,
+      live: false,
+      lottery: true,
+      charge: true,
+    },
+    regexTimeoutMs: 100,
+  },
+  prompt: { template: null },
   ai: {
     enabled: true,
     baseURL: '',

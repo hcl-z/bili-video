@@ -27,8 +27,6 @@ async function rig(fetch: FakeFetch): Promise<Harness> {
     uid: '111',
     name: 'UP-111',
     face: null,
-    enableDynamic: true,
-    enableVideo: true,
     enableAi: true,
   })
   return h

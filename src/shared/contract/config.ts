@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { PromptTemplateSchema } from './prompt.ts'
 
 /** 配置以数据库为唯一真相；首次启动由内置默认值初始化 */
 
@@ -22,8 +23,46 @@ export const QuietHoursSchema = z.object({
   end: z.string().regex(/^\d{2}:\d{2}$/).default('07:30'),
 })
 
+export const DYNAMIC_KINDS = [
+  'video',
+  'draw',
+  'word',
+  'forward',
+  'article',
+  'live',
+  'lottery',
+  'charge',
+] as const
+
+export const DynamicKindSchema = z.enum(DYNAMIC_KINDS)
+export type DynamicKind = z.infer<typeof DynamicKindSchema>
+
+export const DYNAMIC_KIND_LABEL: Record<DynamicKind, string> = {
+  video: '视频',
+  draw: '图文',
+  word: '文字',
+  forward: '转发',
+  article: '专栏',
+  live: '直播',
+  lottery: '抽奖',
+  charge: '充电专属',
+}
+
+export const DynamicKindConfigSchema = z.object({
+  video: z.boolean().default(true),
+  draw: z.boolean().default(true),
+  word: z.boolean().default(true),
+  forward: z.boolean().default(true),
+  article: z.boolean().default(true),
+  /** 直播原本不进入动态流，默认关闭以保持升级前行为 */
+  live: z.boolean().default(false),
+  lottery: z.boolean().default(true),
+  charge: z.boolean().default(true),
+})
+
 export const FilterConfigSchema = z.object({
   quietHours: QuietHoursSchema.default({}),
+  kinds: DynamicKindConfigSchema.default({}),
   /** 用户手写正则的执行超时，防 ReDoS 把轮询阻塞 */
   regexTimeoutMs: z.number().int().min(1).max(5000).default(100),
 })
@@ -64,6 +103,11 @@ export const BiliConfigSchema = z.object({
       maxPerHour: z.number().int().min(1).max(200).default(20),
     })
     .default({}),
+})
+
+export const PromptConfigSchema = z.object({
+  /** null 表示使用应用内置默认模板 */
+  template: PromptTemplateSchema.nullable().default(null),
 })
 
 export const AiConfigSchema = z.object({
@@ -175,6 +219,7 @@ export const AppConfigSchema = z.object({
   poll: PollConfigSchema.default({}),
   bili: BiliConfigSchema.default({}),
   filter: FilterConfigSchema.default({}),
+  prompt: PromptConfigSchema.default({}),
   ai: AiConfigSchema.default({}),
   asr: AsrConfigSchema.default({}),
   output: OutputConfigSchema.default({}),
@@ -191,6 +236,9 @@ export type AsrConfig = z.infer<typeof AsrConfigSchema>
 export type ChunkConfig = z.infer<typeof ChunkConfigSchema>
 export type OutputConfig = z.infer<typeof OutputConfigSchema>
 export type NotifyConfig = z.infer<typeof NotifyConfigSchema>
+export type FilterConfig = z.infer<typeof FilterConfigSchema>
+export type DynamicKindConfig = z.infer<typeof DynamicKindConfigSchema>
+export type PromptConfig = z.infer<typeof PromptConfigSchema>
 
 
 export const CONFIG_SECTIONS = {
@@ -198,6 +246,7 @@ export const CONFIG_SECTIONS = {
   poll: PollConfigSchema,
   bili: BiliConfigSchema,
   filter: FilterConfigSchema,
+  prompt: PromptConfigSchema,
   ai: AiConfigSchema,
   asr: AsrConfigSchema,
   output: OutputConfigSchema,

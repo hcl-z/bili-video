@@ -116,6 +116,14 @@ describe('免扰时段', () => {
 })
 
 describe('resolveRules', () => {
+  it('显式选择继承或独立规则，不再依赖有没有 UP 规则推断', () => {
+    const global = rule('keyword-deny', '全局')
+    const mine = rule('keyword-deny', '单独', '123')
+    assert.deepEqual(resolveRules('123', [global, mine], 'inherit'), [global])
+    assert.deepEqual(resolveRules('123', [global, mine], 'custom'), [mine])
+    assert.deepEqual(resolveRules('123', [global], 'custom'), [])
+  })
+
   it('per-UP 有规则就整套换掉全局的，不叠加', () => {
     const g = rule('keyword-deny', '恰饭')
     const mine = rule('keyword-deny', '带货', '123')

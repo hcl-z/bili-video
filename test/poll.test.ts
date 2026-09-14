@@ -38,6 +38,12 @@ function major(type: string, text: string): unknown {
         type: 'MAJOR_TYPE_ARTICLE',
         article: { title: '专栏标题', desc: '专栏摘要', covers: ['https://c/art.jpg'] },
       }
+    case 'DYNAMIC_TYPE_LIVE_RCMD':
+      return {
+        ...NULL_MAJOR,
+        type: 'MAJOR_TYPE_LIVE_RCMD',
+        live_rcmd: { content: JSON.stringify({ live_play_info: { title: '直播标题', parent_area_name: '科技' } }) },
+      }
     default:
       return null
   }
@@ -56,9 +62,23 @@ function orig(kind: 'av' | 'tombstone'): unknown {
   }
 }
 
-function dyn(id: string, uid: string, type: string, pubTs: number, text = `正文-${id}`): unknown {
+function dyn(
+  id: string,
+  uid: string,
+  type: string,
+  pubTs: number,
+  text = `正文-${id}`,
+  options: { lottery?: boolean; charge?: boolean } = {},
+): unknown {
   // 图文的正文不在 desc 里，真接口就是这样。
-  const desc = type === 'DYNAMIC_TYPE_DRAW' || type === 'DYNAMIC_TYPE_ARTICLE' ? null : { text }
+  const desc = type === 'DYNAMIC_TYPE_DRAW' || type === 'DYNAMIC_TYPE_ARTICLE' ? null : {
+    text,
+    rich_text_nodes: options.lottery ? [{ text: '互动抽奖', type: 'RICH_TEXT_NODE_TYPE_LOTTERY' }] : [],
+  }
+  const itemMajor = major(type, text) as Record<string, unknown> | null
+  if (options.charge && itemMajor !== null) {
+    itemMajor['blocked'] = { blocked_type: 3, title: '充电专属动态', hint_message: '加入充电即可解锁' }
+  }
   return {
     id_str: id,
     type,
@@ -69,7 +89,7 @@ function dyn(id: string, uid: string, type: string, pubTs: number, text = `正�
         face: `https://f/${uid}.jpg`,
         pub_ts: String(pubTs),
       },
-      module_dynamic: { desc, major: major(type, text) },
+      module_dynamic: { desc, major: itemMajor },
     },
   }
 }
@@ -98,8 +118,6 @@ async function rig(fetch: FakeFetch, subs: string[]): Promise<Harness> {
       uid,
       name: `UP-${uid}`,
       face: null,
-      enableDynamic: true,
-      enableVideo: true,
       enableAi: true,
     })
   }
@@ -107,7 +125,7 @@ async function rig(fetch: FakeFetch, subs: string[]): Promise<Harness> {
 }
 
 describe('轮询与解析', () => {
-  it('五类都解析入库、非订阅 uid 挡掉、锚点推到最新、第二轮不产新条目', async () => {
+  it('支持的类型都解析入库、非订阅 uid 挡掉、锚点推到最新、第二轮不产新条目', async () => {
     const items = [
       dyn('901', '111', 'DYNAMIC_TYPE_AV', pubAt(100)),
       dyn('902', '111', 'DYNAMIC_TYPE_DRAW', pubAt(200)),
@@ -116,7 +134,7 @@ describe('轮询与解析', () => {
       dyn('905', '222', 'DYNAMIC_TYPE_ARTICLE', pubAt(500)),
       // 没订阅的人，一条都不该入库。
       dyn('906', '999', 'DYNAMIC_TYPE_AV', pubAt(600)),
-      // 认不出的类型（直播推送之类）跳过，不该让整页作废。
+      // 直播默认不推，但仍入库并记录过滤原因。
       dyn('907', '111', 'DYNAMIC_TYPE_LIVE_RCMD', pubAt(700)),
     ]
     const fetch = bili(feed(items))
@@ -124,13 +142,14 @@ describe('轮询与解析', () => {
 
     const first = await h.server.services.poll.pollOnce()
     assert.equal(first.ok, true)
-    assert.equal(first.found, 5)
+    assert.equal(first.found, 6)
+    assert.equal(first.blocked, 1)
 
     const stored = h.core.repos.updates.list({ limit: 50, includeFiltered: true })
-    assert.equal(stored.length, 5)
+    assert.equal(stored.length, 6)
     assert.deepEqual(
       stored.map((u) => u.type).sort(),
-      ['AV', 'ARTICLE', 'DRAW', 'FORWARD', 'WORD'].sort(),
+      ['AV', 'ARTICLE', 'DRAW', 'FORWARD', 'LIVE', 'WORD'].sort(),
     )
     const av = stored.find((u) => u.dynId === '901')
     assert.equal(av?.title, '视频标题')
@@ -143,8 +162,10 @@ describe('轮询与解析', () => {
     assert.equal(draw?.text, '正文-902')
     assert.equal(draw?.cover, 'https://c/draw.jpg')
 
+    assert.match(stored.find((u) => u.dynId === '907')?.filterReason ?? '', /直播推送已关闭/)
+
     // 锚点推到各自的最新一条，且只推到自己的。
-    assert.equal(h.core.repos.anchors.get('111'), pubAt(300))
+    assert.equal(h.core.repos.anchors.get('111'), pubAt(700))
     assert.equal(h.core.repos.anchors.get('222'), pubAt(500))
     assert.equal(h.core.repos.anchors.get('999'), null)
 
@@ -153,7 +174,7 @@ describe('轮询与解析', () => {
     assert.equal(second.found, 0)
     // 确实又拉了一次全量（不是在心跳那步短路掉的），所以「不重复」是锚点和 dyn_id 挡住的。
     assert.equal(fetch.countOf('feed/all?'), 2)
-    assert.equal(h.core.repos.updates.list({ limit: 50, includeFiltered: true }).length, 5)
+    assert.equal(h.core.repos.updates.list({ limit: 50, includeFiltered: true }).length, 6)
 
     await h.close()
   })
@@ -283,6 +304,65 @@ describe('轮询与解析', () => {
 })
 
 describe('过滤规则', () => {
+  it('按基础类型和抽奖、充电类别开关过滤，直播可选择推送', async () => {
+    const fetch = bili(
+      feed([
+        dyn('901', '111', 'DYNAMIC_TYPE_AV', pubAt(100)),
+        dyn('902', '111', 'DYNAMIC_TYPE_LIVE_RCMD', pubAt(200)),
+        dyn('903', '111', 'DYNAMIC_TYPE_WORD', pubAt(300), '抽奖动态', { lottery: true }),
+        dyn('904', '111', 'DYNAMIC_TYPE_DRAW', pubAt(400), '充电动态', { charge: true }),
+      ]),
+    )
+    const h = await rig(fetch, ['111'])
+    h.core.config.setSection('filter', {
+      ...h.core.config.getSection('filter'),
+      kinds: {
+        ...h.core.config.getSection('filter').kinds,
+        video: false,
+        live: true,
+        lottery: false,
+        charge: false,
+      },
+    })
+
+    const result = await h.server.services.poll.pollOnce()
+    assert.equal(result.found, 4)
+    assert.equal(result.blocked, 3)
+
+    const stored = h.core.repos.updates.list({ limit: 10, includeFiltered: true })
+    assert.match(stored.find((item) => item.dynId === '901')?.filterReason ?? '', /视频推送已关闭/)
+    assert.equal(stored.find((item) => item.dynId === '902')?.filtered, false)
+    assert.equal(stored.find((item) => item.dynId === '902')?.title, '直播标题')
+    assert.match(stored.find((item) => item.dynId === '903')?.filterReason ?? '', /抽奖推送已关闭/)
+    assert.match(stored.find((item) => item.dynId === '904')?.filterReason ?? '', /充电专属推送已关闭/)
+
+    await h.close()
+  })
+
+  it('UP 独立推送类别替代全局类别设置', async () => {
+    const fetch = bili(
+      feed([
+        dyn('911', '111', 'DYNAMIC_TYPE_AV', pubAt(100)),
+        dyn('912', '111', 'DYNAMIC_TYPE_LIVE_RCMD', pubAt(200)),
+      ]),
+    )
+    const h = await rig(fetch, ['111'])
+    const globalKinds = h.core.config.getSection('filter').kinds
+    h.core.repos.subscriptions.upsert({
+      ...h.core.repos.subscriptions.get('111')!,
+      pushKindMode: 'custom',
+      pushKinds: { ...globalKinds, video: false, live: true },
+    })
+
+    const result = await h.server.services.poll.pollOnce()
+    assert.equal(result.blocked, 1)
+    const stored = h.core.repos.updates.list({ limit: 10, includeFiltered: true })
+    assert.match(stored.find((item) => item.dynId === '911')?.filterReason ?? '', /视频推送已关闭/)
+    assert.equal(stored.find((item) => item.dynId === '912')?.filtered, false)
+
+    await h.close()
+  })
+
   it('黑名单命中的条目照样入库，但标成被过滤并带上原因', async () => {
     const fetch = bili(
       feed([

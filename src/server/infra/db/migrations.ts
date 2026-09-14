@@ -195,6 +195,36 @@ const MANUAL_UPDATE_ORIGIN = `
 ALTER TABLE updates ADD COLUMN in_feed INTEGER NOT NULL DEFAULT 1;
 `
 
+const SUBSCRIPTION_CUSTOMIZATION = `
+ALTER TABLE subscriptions ADD COLUMN filter_mode TEXT NOT NULL DEFAULT 'inherit';
+ALTER TABLE subscriptions ADD COLUMN prompt_template TEXT;
+
+-- 旧逻辑中，有 UP 规则就代表替换全局规则；显式迁移后行为保持不变。
+UPDATE subscriptions
+SET filter_mode = 'custom'
+WHERE uid IN (SELECT DISTINCT scope FROM filter_rules WHERE scope <> 'global');
+`
+
+const SUBSCRIPTION_PUSH_KINDS = `
+ALTER TABLE subscriptions ADD COLUMN push_kind_mode TEXT NOT NULL DEFAULT 'inherit';
+ALTER TABLE subscriptions ADD COLUMN push_kinds_json TEXT;
+
+-- 旧的动态/视频开关折算成独立类别配置，避免升级后重新打开已关闭的内容。
+UPDATE subscriptions
+SET push_kind_mode = 'custom',
+    push_kinds_json = json_object(
+      'video', enable_video = 1,
+      'draw', enable_dynamic = 1,
+      'word', enable_dynamic = 1,
+      'forward', enable_dynamic = 1,
+      'article', enable_dynamic = 1,
+      'live', 0,
+      'lottery', enable_dynamic = 1,
+      'charge', enable_dynamic = 1
+    )
+WHERE enable_dynamic = 0 OR enable_video = 0;
+`
+
 export const MIGRATIONS: Migration[] = [
   { version: 1, name: 'init', sql: INIT },
   { version: 2, name: 'runtime_state', sql: RUNTIME_STATE },
@@ -203,6 +233,8 @@ export const MIGRATIONS: Migration[] = [
   { version: 5, name: 'job_pipeline', sql: JOB_PIPELINE },
   { version: 6, name: 'summary_article', sql: SUMMARY_ARTICLE },
   { version: 7, name: 'manual_update_origin', sql: MANUAL_UPDATE_ORIGIN },
+  { version: 8, name: 'subscription_customization', sql: SUBSCRIPTION_CUSTOMIZATION },
+  { version: 9, name: 'subscription_push_kinds', sql: SUBSCRIPTION_PUSH_KINDS },
 ]
 
 /** 幂等：已应用的版本跳过。每个版本一个事务，中途失败不会留半张表。 `list` 只为测试预留（往里塞一个会失败的迁移，验证回滚）；生产永远走默认的 MIGRATIONS */

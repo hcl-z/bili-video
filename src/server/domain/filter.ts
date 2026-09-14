@@ -24,9 +24,15 @@ export interface QuietHours {
 export type RegexMatcher = (pattern: string, text: string) => boolean | 'timeout'
 
 
-export function resolveRules(uid: string, all: readonly FilterRule[]): FilterRule[] {
+export function resolveRules(
+  uid: string,
+  all: readonly FilterRule[],
+  mode: 'inherit' | 'custom' | 'legacy' = 'legacy',
+): FilterRule[] {
   const enabled = all.filter((r) => r.enabled)
+  if (mode === 'inherit') return enabled.filter((r) => r.scope === 'global')
   const mine = enabled.filter((r) => r.scope === uid)
+  if (mode === 'custom') return mine
   return mine.length > 0 ? mine : enabled.filter((r) => r.scope === 'global')
 }
 

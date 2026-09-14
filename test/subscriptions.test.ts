@@ -12,13 +12,11 @@ import { createHarness, type Harness } from './support/harness.ts'
  * 风控高危面，多发一次就是白冒一次风险。
  */
 
-/** 三个开关的默认形状，直接往库里塞订阅时用。 */
+/** 订阅默认形状，直接往库里塞订阅时用。 */
 const row = (uid: string, name: string) => ({
   uid,
   name,
   face: null,
-  enableDynamic: true,
-  enableVideo: true,
   enableAi: true,
 })
 
@@ -215,22 +213,57 @@ describe('订阅与自动关注', () => {
     await h.close()
   })
 
-  it('三个开关改完就落库，下一次读到的就是新值', async () => {
+  it('AI、推送类别来源和 Prompt 改完就落库', async () => {
     const h = await rig()
     h.core.repos.subscriptions.upsert(row('33', 'C'))
+    const pushKinds = {
+      video: false,
+      draw: true,
+      word: true,
+      forward: false,
+      article: true,
+      live: true,
+      lottery: false,
+      charge: true,
+    }
 
     const res = await h.server.app.request('/api/subscriptions/33', {
       method: 'PATCH',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ enableAi: false, enableVideo: false }),
+      body: JSON.stringify({ enableAi: false, pushKindMode: 'custom', pushKinds }),
     })
     assert.equal(res.status, 200)
 
     const stored = h.core.repos.subscriptions.get('33')!
     assert.equal(stored.enableAi, false)
-    assert.equal(stored.enableVideo, false)
-    // 没提到的开关不动。
-    assert.equal(stored.enableDynamic, true)
+    assert.equal(stored.pushKindMode, 'custom')
+    assert.deepEqual(stored.pushKinds, pushKinds)
+
+    await h.close()
+  })
+
+  it('UP 的规则模式和 Prompt 可独立保存并恢复继承', async () => {
+    const h = await rig()
+    h.core.repos.subscriptions.upsert(row('34', 'D'))
+    const promptTemplate = '只写重点：{{text}}'
+
+    const custom = await h.server.app.request('/api/subscriptions/34', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ filterMode: 'custom', promptTemplate }),
+    })
+    assert.equal(custom.status, 200)
+    assert.equal(h.core.repos.subscriptions.get('34')?.filterMode, 'custom')
+    assert.equal(h.core.repos.subscriptions.get('34')?.promptTemplate, promptTemplate)
+
+    const inherit = await h.server.app.request('/api/subscriptions/34', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ filterMode: 'inherit', promptTemplate: null }),
+    })
+    assert.equal(inherit.status, 200)
+    assert.equal(h.core.repos.subscriptions.get('34')?.filterMode, 'inherit')
+    assert.equal(h.core.repos.subscriptions.get('34')?.promptTemplate, null)
 
     await h.close()
   })

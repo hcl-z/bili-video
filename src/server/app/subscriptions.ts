@@ -1,3 +1,4 @@
+import type { DynamicKindConfig } from '#shared/contract/config.ts'
 import type { UpSearchItem } from '#shared/contract/api.ts'
 import type { Subscription } from '#shared/contract/subscription.ts'
 import { fail, ok, type Result } from '#shared/contract/failure.ts'
@@ -23,9 +24,11 @@ export interface SubscriptionDeps {
 
 
 export interface TogglePatch {
-  enableDynamic?: boolean
-  enableVideo?: boolean
   enableAi?: boolean
+  pushKindMode?: Subscription['pushKindMode']
+  pushKinds?: DynamicKindConfig | null
+  filterMode?: Subscription['filterMode']
+  promptTemplate?: string | null
 }
 
 /** 添加订阅包含入库和关注；关注失败不回滚订阅，通过 notice 返回 */
@@ -101,9 +104,11 @@ export class SubscriptionService {
       uid,
       name: card.name,
       face: card.face,
-      enableDynamic: existing?.enableDynamic ?? true,
-      enableVideo: existing?.enableVideo ?? true,
       enableAi: existing?.enableAi ?? true,
+      pushKindMode: existing?.pushKindMode ?? 'inherit',
+      pushKinds: existing?.pushKinds ?? null,
+      filterMode: existing?.filterMode ?? 'inherit',
+      promptTemplate: existing?.promptTemplate ?? null,
     })
 
     const followed = await this.ensureFollowed([uid])
@@ -123,9 +128,11 @@ export class SubscriptionService {
       uid,
       name: cur.name,
       face: cur.face,
-      enableDynamic: patch.enableDynamic ?? cur.enableDynamic,
-      enableVideo: patch.enableVideo ?? cur.enableVideo,
       enableAi: patch.enableAi ?? cur.enableAi,
+      pushKindMode: patch.pushKindMode ?? cur.pushKindMode,
+      pushKinds: patch.pushKinds === undefined ? cur.pushKinds : patch.pushKinds,
+      filterMode: patch.filterMode ?? cur.filterMode,
+      promptTemplate: patch.promptTemplate === undefined ? cur.promptTemplate : patch.promptTemplate,
       followedAt: cur.followedAt,
     })
     // 开关不缓存在任何地方，轮询每轮从库里读，所以改完下一轮就生效，不用重启

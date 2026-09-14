@@ -502,6 +502,7 @@ export function buildServer(deps: ServerDeps, opts: BuildOptions = {}): Server {
   )
   const rules = new RuleService({
     rules: deps.repos.rules,
+    subscriptions: deps.repos.subscriptions,
     config: deps.config,
     clock: deps.clock,
     logger: deps.logger,
@@ -526,6 +527,7 @@ export function buildServer(deps: ServerDeps, opts: BuildOptions = {}): Server {
       // 走 AiService 而不是 deps.external.llm：总开关关着时它给 null
       llm: () => ai.llm(),
       chunkConfig: () => deps.config.getSection('ai').chunk,
+      promptConfig: () => deps.config.getSection('prompt'),
       asrConfig: () => deps.config.getSection('asr'),
       updates: deps.repos.updates,
       subs: deps.repos.subscriptions,

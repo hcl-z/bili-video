@@ -12,10 +12,11 @@ import {
 import type { Clock } from '../types/platform.ts'
 import type { ConfigStore } from '../types/persistence.ts'
 import type { Logger } from '../types/platform.ts'
-import type { FilterRuleRepo } from '../types/persistence.ts'
+import type { FilterRuleRepo, SubscriptionRepo } from '../types/persistence.ts'
 
 export interface RuleDeps {
   rules: FilterRuleRepo
+  subscriptions: SubscriptionRepo
   config: ConfigStore
   clock: Clock
   logger: Logger
@@ -78,7 +79,11 @@ export class RuleService {
 
 
   judge(uid: string, target: FilterTarget): Evaluation {
-    const rules = resolveRules(uid, this.deps.rules.listEffective(uid))
+    const rules = resolveRules(
+      uid,
+      this.deps.rules.listEffective(uid),
+      this.deps.subscriptions.get(uid)?.filterMode ?? 'inherit',
+    )
     const result = this.run(rules, target)
     for (const hit of result.hits) {
       if (!hit.timedOut) continue
@@ -94,7 +99,11 @@ export class RuleService {
     const used =
       input.uid === null
         ? this.deps.rules.list().filter((r) => r.enabled && r.scope === 'global')
-        : resolveRules(input.uid, this.deps.rules.listEffective(input.uid))
+        : resolveRules(
+            input.uid,
+            this.deps.rules.listEffective(input.uid),
+            this.deps.subscriptions.get(input.uid)?.filterMode ?? 'inherit',
+          )
     const result = this.run(used, { title: null, text: input.sample, desc: null })
     return {
       hits: result.hits.map((h) => ({
