@@ -63,9 +63,9 @@ export class SqliteDeliveryRepo implements DeliveryRepo {
       .map((r) => toDelivery(r as Row))
   }
 
-  retryable(limit: number): DeliveryRecord[] {
+  pending(limit: number): DeliveryRecord[] {
     return this.db
-      .prepare("SELECT * FROM deliveries WHERE status IN ('pending', 'failed') ORDER BY at, id LIMIT ?")
+      .prepare("SELECT * FROM deliveries WHERE status = 'pending' ORDER BY at, id LIMIT ?")
       .all(limit)
       .map((r) => toDelivery(r as Row))
   }

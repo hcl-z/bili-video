@@ -98,6 +98,62 @@ describe('通知推送适配器', () => {
     })
   })
 
+  it('飞书卡片正文里的外链图片被去掉，图片只认上传后的 img_key', async () => {
+    const requests: Request[] = []
+    const fetcher: typeof fetch = async (input, init) => {
+      const request = new Request(input, init)
+      requests.push(request)
+      if (request.url.includes('/auth/v3/tenant_access_token/internal')) {
+        return Response.json({ code: 0, tenant_access_token: 'tenant-token', expire: 7200 })
+      }
+      if (request.url === 'https://i0.hdslb.com/bfs/archive/cover.jpg') {
+        return new Response(new Uint8Array([1, 2, 3]), {
+          headers: { 'content-type': 'image/jpeg' },
+        })
+      }
+      if (request.url.includes('/im/v1/images')) {
+        return Response.json({ code: 0, data: { image_key: 'img_v2_cover' } })
+      }
+      return Response.json({ code: 0, data: { message_id: 'om_2' } })
+    }
+    const config = baseConfig()
+    config.webhook.enabled = false
+    config.feishu = {
+      enabled: true,
+      appId: 'cli_test',
+      receiveIdType: 'chat_id',
+      receiveId: 'oc_test',
+    }
+    const notifier = makePushNotifiers({
+      config: () => config,
+      wxpusherToken: () => null,
+      ntfyAuth: () => null,
+      feishuSecret: () => 'secret',
+      webhookAuthorization: () => null,
+      fetch: fetcher,
+      logger: new CollectingLogger(),
+    }).find((candidate) => candidate.channel === 'feishu')!
+
+    const result = await notifier.send({
+      kind: 'summary',
+      title: '只剩标题与链接',
+      body: '# 只剩标题与链接\n\n![封面](http://i0.hdslb.com/bfs/archive/cover.jpg)\n\n来源：没有语音内容',
+      url: 'https://www.bilibili.com/video/BV1x',
+      imageUrl: 'https://i0.hdslb.com/bfs/archive/cover.jpg',
+      group: '901',
+    })
+
+    assert.deepEqual(result, { ok: true, externalId: 'om_2', error: null })
+    const sent = (await requests[3]!.json()) as { content: string }
+    const card = JSON.parse(sent.content) as {
+      body: { elements: { tag: string; content?: string }[] }
+    }
+    const markdown = card.body.elements.find((element) => element.tag === 'markdown')
+    assert.equal(markdown?.content?.includes('!['), false)
+    assert.equal(markdown?.content?.includes('hdslb'), false)
+    assert.match(markdown?.content ?? '', /来源：没有语音内容/)
+  })
+
   it('PushPlus 使用 Markdown 模板发送正文、封面和原文链接', async () => {
     let request: Request | null = null
     const config = baseConfig()

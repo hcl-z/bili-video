@@ -62,16 +62,9 @@ export class DeliveryService {
 
   async flush(): Promise<void> {
     if (this.isQuiet()) return
-    for (const delivery of this.deps.deliveries.retryable(100)) {
+    for (const delivery of this.deps.deliveries.pending(100)) {
       if (delivery.kind !== 'discover' && delivery.kind !== 'summary') continue
       if (!this.channelEnabled(delivery.channel)) continue
-      const key = { updateId: delivery.updateId, channel: delivery.channel, kind: delivery.kind }
-      if (
-        delivery.status === 'failed' &&
-        !this.deps.deliveries.claim({ ...key, at: this.deps.clock.now() })
-      ) {
-        continue
-      }
       await this.sendClaimed(delivery, this.message(delivery.updateId, delivery.kind))
     }
   }

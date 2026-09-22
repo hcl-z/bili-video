@@ -169,8 +169,8 @@ export interface DeliveryRepo {
     at: number,
   ): void
   listForUpdate(updateId: string): DeliveryRecord[]
-  /** 静默时段结束后再推；失败投递由下一轮显式 claim 增加 attempts 后重试 */
-  retryable(limit: number): DeliveryRecord[]
+  /** 只捞静默时段里占位未发的：结束静默后补推。失败的投递不在这里重试 —— 坏内容重发多少次都是坏的 */
+  pending(limit: number): DeliveryRecord[]
   recent(limit: number): DeliveryRecord[]
 }
 

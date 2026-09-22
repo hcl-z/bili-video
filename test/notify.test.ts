@@ -111,6 +111,25 @@ describe('推送渠道', () => {
     }
   })
 
+  it('失败过的投递不再被 flush 重推', async () => {
+    const h = await rig()
+    try {
+      h.notifier.failWith = '通道挂了'
+      h.core.repos.updates.insertMany([update(h)])
+      h.events.emit({ type: 'update.new', dynId: '901', uid: '111' })
+      await h.server.services.delivery.drain()
+      assert.equal(h.core.repos.deliveries.listForUpdate('901')[0]?.status, 'failed')
+
+      h.notifier.failWith = null
+      await h.server.services.delivery.flush()
+      await h.server.services.delivery.flush()
+      assert.equal(h.notifier.sent.length, 0)
+      assert.equal(h.core.repos.deliveries.listForUpdate('901')[0]?.status, 'failed')
+    } finally {
+      await h.close()
+    }
+  })
+
   it('过滤条目与关闭的订阅开关都不推', async () => {
     const h = await rig()
     try {

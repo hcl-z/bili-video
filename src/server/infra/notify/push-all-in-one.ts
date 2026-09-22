@@ -383,7 +383,8 @@ function feishuCard(message: NotifyMessage, imageKey: string | null): FeishuCard
       alt: { tag: 'plain_text', content: message.title },
     })
   }
-  if (message.body !== '') elements.push({ tag: 'markdown', content: message.body })
+  const body = feishuBody(message.body)
+  if (body !== '') elements.push({ tag: 'markdown', content: body })
   if (message.url !== null) {
     elements.push({
       tag: 'button',
@@ -402,6 +403,11 @@ function feishuCard(message: NotifyMessage, imageKey: string | null): FeishuCard
     },
     body: { elements },
   }
+}
+
+/** 卡片 markdown 的图片只认上传换来的 img_key，外链 URL 会让整张卡片被拒（ErrCode 200570）。封面已作为卡片大图单独发，正文里的图直接去掉。 */
+function feishuBody(markdown: string): string {
+  return markdown.replace(/!\[[^\]]*\]\([^)]*\)/g, '').trim()
 }
 
 function imageFilename(url: string): string {
