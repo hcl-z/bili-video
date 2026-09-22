@@ -1,0 +1,30 @@
+test/notify.test.ts
+  s_c79c074d9ded4e::t_750625c97fc094 114-132
+src/server/types/persistence.ts
+  s_c79c074d9ded4e::t_cb65bcfe026ca0 172-173
+src/server/app/delivery.ts
+  s_c79c074d9ded4e::t_2da1eaa09852cd 65
+test/notify-adapters.test.ts
+  s_c79c074d9ded4e::t_fbf52056ea0c36 101-156
+src/server/infra/notify/push-all-in-one.ts
+  s_c79c074d9ded4e::t_67e2b300eaeef2 386-387
+  s_c79c074d9ded4e::t_db94417a6111e8 408-412
+src/server/infra/db/repo-delivery.ts
+  s_c79c074d9ded4e::t_819550f1436618 66,68
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.45-trip",
+  "base_commit_sha": "408c90d79d98bd71851304c53c17f2c685cca715",
+  "prompts": {},
+  "sessions": {
+    "s_c79c074d9ded4e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "73d28189-0c46-4bb7-b64c-01a4cf11b947",
+        "model": "deepseek-v4-1-flash-260910"
+      },
+      "human_author": "hcl-z <1401859664@qq.com>"
+    }
+  }
+}
