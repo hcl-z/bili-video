@@ -1,0 +1,23 @@
+test/retry.test.ts
+  s_b0e75f83ff3c1f::t_51b729ab90c914 217-247
+src/server/app/delivery.ts
+  s_b0e75f83ff3c1f::t_8c0d4ab13a9c0c 80-84,135,138,140-141,145-147,149-172
+  s_b0e75f83ff3c1f::t_8b3b27e3e8d717 97-98,106,182-192,239-240,244
+  s_b0e75f83ff3c1f::t_843bc96675802b 37-39,44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.45-trip",
+  "base_commit_sha": "2fdc47b44fa63b2376abe5f89a1d19f736b1a54c",
+  "prompts": {},
+  "sessions": {
+    "s_b0e75f83ff3c1f": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a0ec3b-742f-7728-a74b-f477c8225364",
+        "model": "flash4-1"
+      },
+      "human_author": "hcl-z <1401859664@qq.com>"
+    }
+  }
+}
