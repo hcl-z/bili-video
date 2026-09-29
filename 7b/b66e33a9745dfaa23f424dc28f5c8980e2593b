@@ -1,0 +1,30 @@
+src/server/app/delivery.ts
+  s_b0e75f83ff3c1f::t_836e6bd014cdd4 37
+src/server/infra/db/repo-summary.ts
+  s_b0e75f83ff3c1f::t_a0b7901348b405 145-146,149,151
+src/server/types/persistence.ts
+  s_b0e75f83ff3c1f::t_a93b8f3982a573 118
+test/retry.test.ts
+  s_b0e75f83ff3c1f::t_2623be7e53c59d 4,258-260,266
+  s_b0e75f83ff3c1f::t_585e1de0d2ef92 249-257,261-265,267-271
+src/server/app/queue-runner.ts
+  s_b0e75f83ff3c1f::t_75aa905015dbf9 170
+  s_b0e75f83ff3c1f::t_d3e267bceed62e 166,168-169,171
+  s_b0e75f83ff3c1f::t_39c936ebfee99e 209,212-213,227
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.45-trip",
+  "base_commit_sha": "7bb66e33a9745dfaa23f424dc28f5c8980e2593b",
+  "prompts": {},
+  "sessions": {
+    "s_b0e75f83ff3c1f": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a0ec3b-742f-7728-a74b-f477c8225364",
+        "model": "flash4-1"
+      },
+      "human_author": "hcl-z <1401859664@qq.com>"
+    }
+  }
+}
