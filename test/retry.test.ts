@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
+import type { AppEvent } from '#shared/contract/events.ts'
 import type { FakeFetch } from './fakes/bili-fetch.ts'
 import { avItem, bili, llmOk, player, rig, ZH_TRACK } from './support/queue-rig.ts'
 
@@ -240,6 +241,29 @@ describe('失败重试', () => {
       const alerts = h.notifier.sent.filter((m) => m.kind === 'alert')
       assert.equal(alerts.length, 1, '静默结束后应当补推错误提示')
       assert.match(alerts[0]?.body ?? '', /上游炸了/)
+    } finally {
+      await h.close()
+    }
+  })
+
+  it('推送失败时不先发一个假的 done 事件', async () => {
+    const fetch = bili()
+    fetch.on('player/wbi/v2', player([ZH_TRACK]))
+    const { h } = await rig(fetch)
+    try {
+      enablePush(h)
+      h.core.config.setSection('queue', { maxRetries: 0, retryIntervalMs: 60_000 })
+      h.notifier.failWith = '通道挂了'
+
+      const events: AppEvent[] = []
+      h.events.on((e) => events.push(e))
+
+      await h.server.services.poll.pollOnce()
+      await h.server.services.queue.drain()
+
+      // 任务最终是 failed，中间不该冒出 done —— 页面会据此闪一下假成功。
+      assert.equal(h.core.repos.jobs.getByBvid('BV1x')?.status, 'failed')
+      assert.equal(events.filter((e) => e.type === 'job.changed' && e.status === 'done').length, 0)
     } finally {
       await h.close()
     }

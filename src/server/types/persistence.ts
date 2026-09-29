@@ -115,7 +115,7 @@ export interface JobRepo {
   /** 取单条到期的 pending 置为 running（单进程内加锁即可，不需要 SKIP LOCKED）。 未到 next_attempt_at 的重试任务不会被取走 */
   claimNext(at: number): SummaryJob | null
   setStage(id: number, stage: JobStage, at: number): void
-  finish(id: number, outcome: { ok: true } | { ok: false; error: string }, at: number): void
+  finish(id: number, outcome: { ok: true; stage?: JobStage } | { ok: false; error: string }, at: number): void
   /** 排下一次重试：留在 pending 等 next_attempt_at 到期，并把重试计数加一。from 记下该从哪一步再跑 */
   scheduleRetry(
     id: number,

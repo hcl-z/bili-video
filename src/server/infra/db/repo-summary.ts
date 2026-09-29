@@ -142,13 +142,13 @@ export class SqliteJobRepo implements JobRepo {
       .run(stage, at, id)
   }
 
-  finish(id: number, outcome: { ok: true } | { ok: false; error: string }, at: number): void {
-    if (outcome.ok) {
+  finish(id: number, outcome: { ok: true; stage?: JobStage } | { ok: false; error: string }, at: number): void {
+    if ('ok' in outcome && outcome.ok) {
       this.db
         .prepare(
-          `UPDATE summary_jobs SET status = 'done', stage = 'persist', error = NULL, updated_at = ? WHERE id = ?`,
+          `UPDATE summary_jobs SET status = 'done', stage = ?, error = NULL, updated_at = ? WHERE id = ?`,
         )
-        .run(at, id)
+        .run(outcome.stage ?? 'persist', at, id)
     } else {
       this.db
         .prepare(`UPDATE summary_jobs SET status = 'failed', error = ?, updated_at = ? WHERE id = ?`)

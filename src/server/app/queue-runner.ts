@@ -161,13 +161,14 @@ export class SummaryQueue {
       const res = await this.llmLane.run(() => this.deps.summarize.summarize(job, t, from, hook))
       if (!res.ok) return this.fail(job, at, res.failure)
 
-      this.deps.jobs.finish(job.id, { ok: true }, this.deps.clock.now())
-      this.emit(job, 'done', 'persist')
-
       // 推送是流水线的最后一步：只有真生成了总结才走得到这里。
       // 它失败也进同一套重试 —— 从 push 重跑就是拿已有正文再发一次，不重调 LLM。
+      // 结论要等推送之后才落：先写 done 再改回 pending，页面会闪一下假成功。
       const outcome = await this.push(job, hook)
-      if (!outcome.ok) this.fail(job, 'push', fatalFailure(outcome.reason))
+      if (!outcome.ok) return this.fail(job, 'push', fatalFailure(outcome.reason))
+
+      this.deps.jobs.finish(job.id, { ok: true, stage: 'push' }, this.deps.clock.now())
+      this.emit(job, 'done', 'push')
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       this.fail(job, at, fatalFailure(message))
@@ -205,14 +206,11 @@ export class SummaryQueue {
    */
   private fail(job: SummaryJob, at: JobStage, failure: Failure): void {
     try {
-      const budget = this.deps.config.getSection('queue').maxRetries
+      const { maxRetries, retryIntervalMs } = this.deps.config.getSection('queue')
       // 从库里重读：scheduleRetry 会自增 retries，内存里那份是入队时的快照。
       const used = this.deps.jobs.get(job.id)?.retries ?? job.retries
-      if (used < budget) {
-        const wait = Math.max(
-          this.deps.config.getSection('queue').retryIntervalMs,
-          failure.retryAfterMs ?? 0,
-        )
+      if (used < maxRetries) {
+        const wait = Math.max(retryIntervalMs, failure.retryAfterMs ?? 0)
         const now = this.deps.clock.now()
         this.deps.jobs.scheduleRetry(job.id, {
           from: resumeStep(at),
@@ -226,7 +224,7 @@ export class SummaryQueue {
             bvid: job.bvid,
             stage: at,
             retry: used + 1,
-            budget,
+            budget: maxRetries,
             waitMs: wait,
             ...failureFields(failure),
           },

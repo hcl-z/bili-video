@@ -34,7 +34,7 @@ export interface DeliveryDeps {
   logger: Logger
 }
 
-/** 失败提示的正文不落库（deliveries 只存键和状态），静默期间先搁在内存里给 flush 用。 上限只为防无限增长：真实场景下同一时刻待补推的失败提示不会多 */
+/** 静默期间待补推的失败提示暂存上限，防无限增长 */
 const ALERT_CACHE_MAX = 200
 
 export class DeliveryService {
