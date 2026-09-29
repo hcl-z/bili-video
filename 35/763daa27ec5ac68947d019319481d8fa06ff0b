@@ -1,0 +1,100 @@
+test/retry.test.ts
+  s_b0e75f83ff3c1f::t_bf5f4d4ae03104 184-216
+  s_b0e75f83ff3c1f::t_6ec2d9636bd47e 147-152,155-157,159,161-170,172-183
+  s_b0e75f83ff3c1f::t_6900b9bf3d391c 153-154,158,160,171
+  s_b0e75f83ff3c1f::t_690e6e7cd2e39a 1-4,6,10-122,125-127,134,137-146,217-275,282-284,286-288,293-297
+  s_b0e75f83ff3c1f::t_2a3cf131e37d24 5,276-281,285,289-292
+  s_b0e75f83ff3c1f::t_e6998d0d9c8823 7-9
+  s_b0e75f83ff3c1f::t_1c5f3b03fbb7cb 123-124,128-133,135-136
+src/shared/contract/job.ts
+  s_b0e75f83ff3c1f::t_83cfda7b6011a8 71-74
+  s_b0e75f83ff3c1f::t_921dc069119460 15,27
+src/server/app/delivery.ts
+  s_b0e75f83ff3c1f::t_7097bbd994aab3 18-24,113-142
+  s_b0e75f83ff3c1f::t_c13766a456b63c 51-52,72-74,82-112,143-144,151-152,155,159,171,176,189
+src/web/pages/jobs.tsx
+  s_b0e75f83ff3c1f::t_9c3e0bf9a55af1 113-115
+src/server/types/persistence.ts
+  s_b0e75f83ff3c1f::t_6fb638ae345eae 115,119-125
+  s_b0e75f83ff3c1f::t_4de92e47ffb2fc 182
+  s_b0e75f83ff3c1f::t_04099406fafc47 183
+src/server/domain/degrade.ts
+  s_b0e75f83ff3c1f::t_a987693c0bae9b 3-4,6,47-49
+src/server/infra/db/repo-summary.ts
+  s_b0e75f83ff3c1f::t_0a26df54a781af 48-49,51-52,97,99,106-109,112,116-138,163,243-244
+src/server/app/summarize-video.ts
+  s_b0e75f83ff3c1f::t_7cf54948ff1700 56
+  s_b0e75f83ff3c1f::t_6b4ed63b88e9ff 148-149,162-163,168
+  s_b0e75f83ff3c1f::t_524eeec270fc63 291-292,457-459
+  s_b0e75f83ff3c1f::t_ce93417aa05460 261-262,269
+src/web/components/reader-row.tsx
+  s_b0e75f83ff3c1f::t_e965a40cb93b95 77-78
+src/web/components/summary-reader.tsx
+  s_b0e75f83ff3c1f::t_9d21ad621ff1fb 146
+  s_b0e75f83ff3c1f::t_6be0b7c9762750 66,268,271,309-312
+src/shared/contract/summary.ts
+  s_b0e75f83ff3c1f::t_a0033152a6ded6 42
+src/server/infra/clock/system-clock.ts
+  s_b0e75f83ff3c1f::t_6e23c9b957fd3d 19,43-54,59-60
+src/server/infra/db/migrations.ts
+  s_b0e75f83ff3c1f::t_4adab50b697db2 228-235,246
+src/server/domain/summary-format.ts
+  s_b0e75f83ff3c1f::t_544b1248c0be6f 272
+  s_b0e75f83ff3c1f::t_5e669398d500fd 267
+src/server/server.ts
+  s_b0e75f83ff3c1f::t_5f655156020351 520,524,526-527,579
+  s_b0e75f83ff3c1f::t_6c6dc9b8f8d337 525
+test/degrade-chain.test.ts
+  s_b0e75f83ff3c1f::t_dd37a35b016ef2 9-13,17
+  s_b0e75f83ff3c1f::t_4f47abc5902da4 70,78-81,87,95-97,103,108-109
+src/server/domain/pipeline.ts
+  s_b0e75f83ff3c1f::t_468aca69f64d10 16-17,27
+src/server/app/queue-runner.ts
+  s_b0e75f83ff3c1f::t_2d89efcf9f1e2b 12,21,97-98
+  s_b0e75f83ff3c1f::t_aca5fb95193ea0 166
+  s_b0e75f83ff3c1f::t_81744ab107c32b 248,250
+  s_b0e75f83ff3c1f::t_3d4393dec62d32 298
+  s_b0e75f83ff3c1f::t_ca86a6ef41a1a5 20,281
+  s_b0e75f83ff3c1f::t_15bf945008ee02 202-205,208,212-227,229-239,246-247,249,251-253,255-264,266-272,274-275
+  s_b0e75f83ff3c1f::t_8fba62831a3d08 3,13,23-24,95-96
+  s_b0e75f83ff3c1f::t_17a0a5c52da411 265,279-280,282-289,294-297
+  s_b0e75f83ff3c1f::t_d6248755df0f98 167-170,177-199
+src/server/config/store.ts
+  s_b0e75f83ff3c1f::t_9cbce36a7c0d11 63
+src/server/types/platform.ts
+  s_b0e75f83ff3c1f::t_3f14dd48b672d7 10-11
+src/shared/contract/config.ts
+  s_b0e75f83ff3c1f::t_8ed5317652a8b9 77-84,233,245,262
+src/server/infra/db/repo-delivery.ts
+  s_b0e75f83ff3c1f::t_fd3086795430c0 63-64
+  s_b0e75f83ff3c1f::t_a26ff6799567d2 59-62,65-66
+test/fakes/clock.ts
+  s_b0e75f83ff3c1f::t_0c2d5d762f469c 35-46,55,60-69
+test/notify.test.ts
+  s_b0e75f83ff3c1f::t_0584168b839a32 57,66,68-69,71-72
+test/domain/degrade.test.ts
+  s_b0e75f83ff3c1f::t_24bcda36288358 4,7,17,21-22,24,35-39
+test/pipeline.test.ts
+  s_b0e75f83ff3c1f::t_472e5b8af73079 8-9,33-34,111
+test/jobs.test.ts
+  s_b0e75f83ff3c1f::t_8c310081c85330 49-50,62-64
+  s_b0e75f83ff3c1f::t_ed4ac474b93596 23-24,54-55
+test/repos.test.ts
+  s_b0e75f83ff3c1f::t_179e587428ba18 216-259
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.45-trip",
+  "base_commit_sha": "35763daa27ec5ac68947d019319481d8fa06ff0b",
+  "prompts": {},
+  "sessions": {
+    "s_b0e75f83ff3c1f": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a0ec3b-742f-7728-a74b-f477c8225364",
+        "model": "flash4-1"
+      },
+      "human_author": "hcl-z <1401859664@qq.com>"
+    }
+  }
+}
