@@ -110,6 +110,9 @@ function JobRow(props: {
               <span>·</span>
               <span>{formatTime(job.updatedAt)}</span>
               {job.attempts > 1 && <span>· 第 {job.attempts} 次</span>}
+              {job.retries > 0 && job.status !== 'failed' && (
+                <span>· 重试 {job.retries}</span>
+              )}
               {props.video !== undefined && (
                 <a
                   href={props.video.url}

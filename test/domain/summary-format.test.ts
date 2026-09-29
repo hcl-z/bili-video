@@ -45,13 +45,10 @@ describe('domain/summary-format', () => {
     const md = renderMarkdown(META, {
       article: '## [01:23] 开场\n\n开场讲了背景。',
       transcriptSource: 'none',
-      confidence: 'low',
-      degradePath: 'meta-only',
       reasons: ['官方字幕：没有字幕'],
     })
     assert.match(md, /^# 视频标题/)
     assert.match(md, /<https:\/\/www\.bilibili\.com\/video\/BV1x>/)
-    assert.match(md, /低置信度/)
     assert.match(md, /> - 官方字幕：没有字幕/)
     assert.match(md, /开场讲了背景。/)
   })

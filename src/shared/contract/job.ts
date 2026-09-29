@@ -12,6 +12,7 @@ export const JobStageSchema = z.enum([
   'chunk',
   'reduce',
   'persist',
+  'push',
 ])
 export type JobStage = z.infer<typeof JobStageSchema>
 
@@ -23,6 +24,7 @@ export const JOB_STAGE_LABEL: Record<JobStage, string> = {
   chunk: '分段总结',
   reduce: '合并成文',
   persist: '落库',
+  push: '推送',
 }
 
 /** 流水线的六步，顺序固定。`queued` 不在里头 —— 那是「还没开始」，不是一步。 页面按这个顺序画一排圆点，点某一步就是「从此处重跑」 */
@@ -66,6 +68,10 @@ export const SummaryJobSchema = z.object({
   status: JobStatusSchema,
   stage: JobStageSchema,
   attempts: z.number().int(),
+  /** 自动重试已用次数。手动重跑把它清零，用户因此重新拿到完整重试预算 */
+  retries: z.number().int(),
+  /** 下次可取活的时刻。null = 立刻可取活 */
+  nextAttemptAt: z.number().int().nullable(),
   error: z.string().nullable(),
 
   resumeFrom: PipelineStepSchema.nullable(),

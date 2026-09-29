@@ -216,25 +216,6 @@ export function reducePrompt(
   }
 }
 
-/** 简介兜底提示词明确仅有标题和简介，避免模型补充未提供的细节。 */
-export function metaPrompt(
-  meta: VideoMeta,
-  brief: string,
-  parts: readonly string[] = [],
-): { system: string; user: string } {
-  return {
-    system:
-      '你只有标题和简介，没有正片内容。用一两段话写清这个视频大概在讲什么，' +
-      '不要编造视频里的细节、数字、结论；写不出来就说「简介没提」。不要小标题。',
-    user: lines([
-      `视频标题：${meta.title}`,
-      meta.upName === null ? '' : `UP 主：${meta.upName}`,
-      brief === '' ? '简介：（空）' : `简介：${brief}`,
-      parts.length <= 1 ? '' : `分 P 标题：${parts.join('、')}`,
-    ]),
-  }
-}
-
 const lines = (parts: readonly string[]): string => parts.filter((l) => l !== '').join('\n')
 
 /** 模型回的正文。空的算这次没成，重试同一个模型也不会变好，所以是 fatal。 */
@@ -283,27 +264,17 @@ const SOURCE_LABEL: Record<Summary['transcriptSource'], string> = {
   none: '没有语音内容',
 }
 
-export interface RenderParts
-  extends Pick<Summary, 'article' | 'transcriptSource' | 'confidence' | 'degradePath'> {
+export interface RenderParts extends Pick<Summary, 'article' | 'transcriptSource'> {
   /** 降级原因，每退一级一条。没降级就是空的。 */
   reasons?: readonly string[]
 }
 
-/** 渲染落盘 Markdown，补充标题、链接、来源和降级信息。 */
+/** 渲染落盘 Markdown，补充标题、链接、来源和降级信息。 只有拿到转写的成功路径会走到这里，所以不再有低置信度的分支。 */
 export function renderMarkdown(meta: VideoMeta, s: RenderParts): string {
   const out: string[] = [`# ${meta.title}`, '', `<${meta.url}>`, '']
   if (meta.upName !== null) out.push(`UP 主：${meta.upName}`, '')
-  // 全链路失败时封面是仅剩的内容之一，所以只在那一级贴图。
-  if (s.degradePath === 'link-only' && typeof meta.cover === 'string' && meta.cover !== '') {
-    out.push(`![封面](${meta.cover})`, '')
-  }
   out.push(`来源：${SOURCE_LABEL[s.transcriptSource]}`, '')
 
-  if (s.degradePath === 'link-only') {
-    out.push('> 这条没能生成总结，只剩标题与链接。', '')
-  } else if (s.confidence === 'low') {
-    out.push('> 低置信度：未获取到语音内容，以下基于标题与简介推测。', '')
-  }
   for (const r of s.reasons ?? []) out.push(`> - ${r}`)
   if ((s.reasons ?? []).length > 0) out.push('')
 

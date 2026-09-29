@@ -13,6 +13,8 @@ const PRODUCES: Record<PipelineStep, ArtifactKind | null> = {
   chunk: 'notes',
   reduce: 'draft',
   persist: null,
+  // 推送不产出中间产物：从 push 重跑就是拿已有的正文再发一次，前面什么都不用作废。
+  push: null,
 }
 
 const ORDER: Record<PipelineStep, number> = {
@@ -22,6 +24,7 @@ const ORDER: Record<PipelineStep, number> = {
   chunk: 3,
   reduce: 4,
   persist: 5,
+  push: 6,
 }
 
 export const stepIndex = (step: PipelineStep): number => ORDER[step]

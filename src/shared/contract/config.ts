@@ -74,6 +74,14 @@ export const ChunkConfigSchema = z.object({
   overlapTokens: z.number().int().min(0).default(400),
 })
 
+/** 流水线失败重试。作用于整条队列任务，与 AI 无关：AI 关着时任务照样会失败、照样该重试 */
+export const QueueConfigSchema = z.object({
+  /** 失败后的额外重试次数。1 = 首次失败后再来一次，共两次尝试。0 = 不重试 */
+  maxRetries: z.number().int().min(0).max(10).default(2),
+  /** 两次尝试之间的间隔。风控或限流自带 retryAfterMs 时取两者较大者 */
+  retryIntervalMs: z.number().int().min(0).max(3_600_000).default(60_000),
+})
+
 /** WBI 签名的 64 位混淆表：按表重排 `imgKey + subKey` 的 64 个字符，取前 32 位为密钥。 留空时需要 WBI 的接口明确报错，避免错误签名触发 -352 风控退避 */
 const MixinTableSchema = z
   .array(z.number().int().min(0).max(63))
@@ -222,6 +230,7 @@ export const AppConfigSchema = z.object({
   prompt: PromptConfigSchema.default({}),
   ai: AiConfigSchema.default({}),
   asr: AsrConfigSchema.default({}),
+  queue: QueueConfigSchema.default({}),
   output: OutputConfigSchema.default({}),
   notify: NotifyConfigSchema.default({}),
   catchup: CatchupConfigSchema.default({}),
@@ -233,6 +242,7 @@ export type AppConfig = z.infer<typeof AppConfigSchema>
 export type ConfigSection = keyof AppConfig
 export type AiConfig = z.infer<typeof AiConfigSchema>
 export type AsrConfig = z.infer<typeof AsrConfigSchema>
+export type QueueConfig = z.infer<typeof QueueConfigSchema>
 export type ChunkConfig = z.infer<typeof ChunkConfigSchema>
 export type OutputConfig = z.infer<typeof OutputConfigSchema>
 export type NotifyConfig = z.infer<typeof NotifyConfigSchema>
@@ -249,6 +259,7 @@ export const CONFIG_SECTIONS = {
   prompt: PromptConfigSchema,
   ai: AiConfigSchema,
   asr: AsrConfigSchema,
+  queue: QueueConfigSchema,
   output: OutputConfigSchema,
   notify: NotifyConfigSchema,
   catchup: CatchupConfigSchema,

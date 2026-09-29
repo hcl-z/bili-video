@@ -1,14 +1,13 @@
 import type { DegradePath, TranscriptSource } from '#shared/contract/summary.ts'
 
-/** 降级链的四级状态机：subtitle → asr → meta → link。 前三级是「内容从何处来」，link 是「什么都没来，只剩标题和链接」。每退一级都记下原因 —— 「绝不静默丢弃」的意思就是每条视频都能明确说明它为什么走到了这一级 */
-export type DegradeStep = 'subtitle' | 'asr' | 'meta' | 'link'
+/** 降级链的三级状态机：subtitle → asr → link。 前两级是「内容从何处来」，link 是「什么都没来」。每退一级都记下原因 —— 「绝不静默丢弃」的意思就是每条视频都能明确说明它为什么走到了这一级 */
+export type DegradeStep = 'subtitle' | 'asr' | 'link'
 
-const CHAIN: readonly DegradeStep[] = ['subtitle', 'asr', 'meta', 'link']
+const CHAIN: readonly DegradeStep[] = ['subtitle', 'asr', 'link']
 
 const STEP_LABEL: Record<DegradeStep, string> = {
   subtitle: '官方字幕',
   asr: '语音转写',
-  meta: '简介兜底',
   link: '仅给链接',
 }
 
@@ -38,8 +37,6 @@ export function levelFor(step: DegradeStep): DegradeLevel {
       return { degradePath: 'subtitle', confidence: 'high' }
     case 'asr':
       return { degradePath: 'asr', confidence: 'high' }
-    case 'meta':
-      return { degradePath: 'meta-only', confidence: 'low' }
     case 'link':
       return { degradePath: 'link-only', confidence: 'low' }
   }
@@ -47,3 +44,6 @@ export function levelFor(step: DegradeStep): DegradeLevel {
 
 export const sourceFor = (step: DegradeStep): TranscriptSource =>
   step === 'subtitle' || step === 'asr' ? step : 'none'
+
+/** 拿到转写内容才算这一条总结有内容可总结 —— 只有 link 级才是「什么都没拿到」。 */
+export const hasTranscript = (step: DegradeStep): boolean => step !== 'link'

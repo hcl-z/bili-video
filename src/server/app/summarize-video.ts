@@ -16,7 +16,6 @@ import {
   finalPrompt,
   leadLine,
   linkTimestamps,
-  metaPrompt,
   notesText,
   parseArticle,
   renderMarkdown,
@@ -54,7 +53,7 @@ export interface Transcript {
 /** 落盘的转写产物。cues 存原始形状：分段要的是时间戳，纯文本回不来 */
 const TranscriptArtifactSchema = z.object({
   cues: CueSchema.array(),
-  step: z.enum(['subtitle', 'asr', 'meta', 'link']),
+  step: z.enum(['subtitle', 'asr', 'link']),
   reasons: z.array(z.string()),
 })
 
@@ -146,7 +145,8 @@ export class SummarizeVideo {
     return this.remember(bvid, { cues: [], step: state.step, reasons: state.reasons })
   }
 
-  /** 第二段：调 LLM、落库落盘。from 在 reduce 之后就直接复用上次的正文。 */
+  /** 第二段：调 LLM、落库落盘。from 在 reduce 之后就直接复用上次的正文。
+   *  没拿到转写就是失败 —— 不再基于标题简介撑出一篇低置信度正文。 */
   async summarize(
     job: SummaryJob,
     t: Transcript,
@@ -159,14 +159,13 @@ export class SummarizeVideo {
     if (article !== null) {
       hook('reduce', 'reused', '复用上次生成的正文，只重跑落库')
     } else {
+      if (t.cues.length === 0) return this.linkOnly(job, t, fatalFailure(noContent(t)), hook)
+
       const llm = this.deps.llm()
       if (llm === null) {
         return await this.linkOnly(job, t, fatalFailure('AI 总结已关闭（ai.enabled=false）'), hook)
       }
-      const made =
-        t.step === 'meta'
-          ? await this.summarizeMeta(llm, job, meta, hook)
-          : await this.summarizeTranscript(llm, job, meta, t.cues, from, hook)
+      const made = await this.summarizeTranscript(llm, job, meta, t.cues, from, hook)
       if (!made.ok) return await this.linkOnly(job, t, made.failure, hook)
       article = made.value
       this.deps.artifacts.put(job.bvid, 'draft', {
@@ -259,50 +258,15 @@ export class SummarizeVideo {
     return fail(failure)
   }
 
-  /** 只有简介：写不出阅读版本，只能给一段「大概在讲什么」。 */
-  private async summarizeMeta(
-    llm: Llm,
-    job: SummaryJob,
-    meta: VideoMeta,
-    hook: StepHook,
-  ): Promise<Result<string>> {
-    hook('chunk', 'skipped', '没有语音内容，没什么可分段的')
-    hook('reduce', 'running')
-    const brief = this.deps.updates.get(job.updateId)?.text ?? ''
-    // 分 P 标题是这一级唯一还能拿到的「内容」，取不到就算了，别让兜底也失败。
-    const parts = await this.deps.subtitles?.parts(job.bvid)
-    const reply = await this.call(
-      llm,
-      job.bvid,
-      'reduce',
-      metaPrompt(meta, brief, parts?.ok === true ? parts.value : []),
-    )
-    if (!reply.ok) return this.reduceFailed(hook, reply.failure)
-    const article = parseArticle(reply.value)
-    if (!article.ok) return this.reduceFailed(hook, article.failure)
-    hook('reduce', 'done', '只有标题与简介，低置信度')
-    return article
-  }
-
-  /** 最终降级时保存标题、封面、链接和失败原因，但任务仍标记失败以支持重跑。 */
+  /** 最终降级时不再落任何内容 —— 失败原因由 job_steps 与 summary_jobs.error 回答，页面能直接看到。
+   *  这里只把这一步标为失败，不写 summaries 行、不发 summary.done。 */
   private async linkOnly(
     job: SummaryJob,
     t: Transcript,
     failure: Failure,
     hook: StepHook,
   ): Promise<Result<Summary>> {
-    // 已有总结就不动它 —— 一次 LLM 抖动不该把好总结覆盖成一行链接。
-    if (this.deps.summaries.get(job.bvid) === null) {
-      const reasons = [...t.reasons, `生成总结：${failure.message}`]
-      // 不算 persist 跑过了：这条任务卡在生成那一步，落的只是一条能推出去的最小记录。
-      hook('persist', 'skipped', '只落了一条最小记录：标题、封面、链接')
-      await this.persist(job, this.meta(job), {
-        article: reasons.map((r) => `- ${r}`).join('\n'),
-        transcript: transcriptText(t.cues),
-        step: 'link',
-        reasons,
-      })
-    }
+    hook('persist', 'skipped', '没拿到转写内容，不落库')
     return fail(failure)
   }
 
@@ -324,6 +288,8 @@ export class SummarizeVideo {
     this.deps.summaries.upsert(summary, parts.transcript)
     const path = await this.deps.markdown.write(summaryFileName(job.bvid), summary.fullMd)
 
+    // summary.done 只从这条路径发出：它代表「真的生成了一份可用的总结」。
+    // 失败路径不再发它，推送因此不会被无内容的结果触发。
     this.deps.events.emit({ type: 'summary.done', bvid: job.bvid })
     this.logger.info(
       {
@@ -487,5 +453,9 @@ const note = (c: TranscriptChunk, text: string): ChunkNote => ({
   endSec: c.endSec,
   text,
 })
+
+/** 转写失败的原始原因都在 reasons 里，这里把它们拼成一句能直接给用户看的失败说明。 */
+const noContent = (t: Transcript): string =>
+  t.reasons.length === 0 ? '没拿到语音内容' : t.reasons.join('；')
 
 const message = (err: unknown): string => (err instanceof Error ? err.message : String(err))

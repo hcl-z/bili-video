@@ -63,7 +63,7 @@ export function SummaryReader(props: { bvid: string }) {
     case 'failed':
       if (d.job === null) return <NotInDb bvid={d.bvid} />
       // 重跑挂了但库里还留着上一次的好总结：给文章，失败原因挂在顶上
-      return d.summary !== null && d.summary.degradePath !== 'link-only' ? (
+      return d.summary !== null ? (
         <Article detail={d} notice={<FailNotice job={d.job} />} />
       ) : (
         <Failed detail={d} job={d.job} />
@@ -141,17 +141,9 @@ function Article(props: { detail: SummaryDetailResponse; rerunning?: boolean; no
 
       {props.notice}
 
-      {summary.confidence === 'low' && (
-        <p className="border-destructive/40 bg-destructive/5 mb-6 rounded-lg border px-4 py-3 text-sm">
-          没拿到语音内容，以下是基于标题与简介的推测。
-        </p>
-      )}
-
       <Markdown text={summary.article} />
 
-      {summary.degradePath !== 'meta-only' && summary.degradePath !== 'link-only' && (
-        <Transcript bvid={bvid} />
-      )}
+      <Transcript bvid={bvid} />
 
       <dl className="bg-border grid grid-cols-2 gap-px overflow-hidden rounded-lg border md:grid-cols-4">
         <Cell label="处理路径" value={DEGRADE_LABEL[summary.degradePath]} />
@@ -273,13 +265,11 @@ function FailNotice(props: { job: SummaryJob }) {
   )
 }
 
-/** 失败也得留下能推出去的最小内容：封面、标题、链接、失败原因。 */
+/** 失败就不留任何内容了：这里只讲失败停在哪一步、为什么。 */
 function Failed(props: { detail: SummaryDetailResponse; job: SummaryJob }) {
   const { job } = props
-  const { summary, update, bvid } = props.detail
+  const { update, bvid } = props.detail
   const retry = useRetryJob(job.id)
-  // link-only 的那条最小记录里，正文就是每退一级的原因。
-  const trail = summary?.degradePath === 'link-only' ? summary.article : ''
 
   return (
     <Inner>
@@ -316,13 +306,10 @@ function Failed(props: { detail: SummaryDetailResponse; job: SummaryJob }) {
         </span>
       </p>
 
-      {trail !== '' && (
-        <>
-          <SectionLabel>一路退到哪儿了</SectionLabel>
-          <div className="mb-6">
-            <Markdown text={trail} />
-          </div>
-        </>
+      {job.retries > 0 && (
+        <p className="text-muted-foreground mb-5 text-sm">
+          自动重试了 {job.retries} 次仍未成功。
+        </p>
       )}
 
       <p className="text-muted-foreground text-sm">
@@ -398,10 +385,6 @@ const NotInDb = (props: { bvid: string }) => (
 
 const Inner = (props: { children: ReactNode }) => (
   <div className="mx-auto w-full max-w-[720px] px-5 pt-7 pb-24 md:px-7">{props.children}</div>
-)
-
-const SectionLabel = (props: { children: ReactNode }) => (
-  <p className="text-muted-foreground mb-3 text-xs font-bold tracking-wide">{props.children}</p>
 )
 
 function Cell(props: { label: string; value: string; hint?: string | null }) {

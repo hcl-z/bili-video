@@ -45,10 +45,11 @@ export class SqliteJobRepo implements JobRepo {
     this.db
       .prepare(
         `INSERT INTO summary_jobs
-           (bvid, update_id, status, stage, attempts, error, resume_from, created_at, updated_at)
-         VALUES (?, ?, 'pending', 'queued', 0, NULL, ?, ?, ?)
+           (bvid, update_id, status, stage, attempts, retries, error, resume_from, next_attempt_at, created_at, updated_at)
+         VALUES (?, ?, 'pending', 'queued', 0, 0, NULL, ?, NULL, ?, ?)
          ON CONFLICT(bvid) DO UPDATE SET
-           status = 'pending', stage = 'queued', error = NULL,
+           status = 'pending', stage = 'queued', error = NULL, retries = 0,
+           next_attempt_at = NULL,
            resume_from = excluded.resume_from, updated_at = excluded.updated_at`,
       )
       .run(job.bvid, job.updateId, from, job.at, job.at)
@@ -93,19 +94,46 @@ export class SqliteJobRepo implements JobRepo {
   }
 
   /**
-   * 取一条 pending 并原子置为 running。node:sqlite 是同步的、进程内单线程，
+   * 取一条到期的 pending 并原子置为 running。node:sqlite 是同步的、进程内单线程，
    * 一条 UPDATE ... WHERE id = (SELECT ...) 就够，不需要 SKIP LOCKED 那套。
+   * next_attempt_at 未到期的重试任务不参与竞争：它们还在等退避窗口。
    */
   claimNext(at: number): SummaryJob | null {
     const r = this.db
       .prepare(
         `UPDATE summary_jobs
             SET status = 'running', attempts = attempts + 1, updated_at = ?
-          WHERE id = (SELECT id FROM summary_jobs WHERE status = 'pending' ORDER BY id LIMIT 1)
+          WHERE id = (SELECT id FROM summary_jobs
+                       WHERE status = 'pending'
+                         AND (next_attempt_at IS NULL OR next_attempt_at <= ?)
+                       ORDER BY id LIMIT 1)
           RETURNING *`,
       )
-      .get(at)
+      .get(at, at)
     return r ? this.hydrate(r as Row) : null
+  }
+
+  /** 排下一次重试：留在 pending、记下下次可取活的时刻和该从哪一步再跑 */
+  scheduleRetry(
+    id: number,
+    input: { from: PipelineStep; nextAttemptAt: number; error: string; at: number },
+  ): void {
+    this.db
+      .prepare(
+        `UPDATE summary_jobs
+            SET status = 'pending', stage = 'queued', retries = retries + 1,
+                next_attempt_at = ?, resume_from = ?, error = ?, updated_at = ?
+          WHERE id = ?`,
+      )
+      .run(input.nextAttemptAt, input.from, input.error, input.at, id)
+  }
+
+  clearRetries(id: number, at: number): void {
+    this.db
+      .prepare(
+        `UPDATE summary_jobs SET retries = 0, next_attempt_at = NULL, updated_at = ? WHERE id = ?`,
+      )
+      .run(at, id)
   }
 
   setStage(id: number, stage: JobStage, at: number): void {
@@ -132,7 +160,7 @@ export class SqliteJobRepo implements JobRepo {
   resetRunning(at: number): number {
     const info = this.db
       .prepare(
-        `UPDATE summary_jobs SET status = 'pending', stage = 'queued', updated_at = ? WHERE status = 'running'`,
+        `UPDATE summary_jobs SET status = 'pending', stage = 'queued', next_attempt_at = NULL, updated_at = ? WHERE status = 'running'`,
       )
       .run(at)
     return Number(info.changes)
@@ -212,6 +240,8 @@ const toJob = (r: Row, steps: JobStep[]): SummaryJob => ({
   status: str(r['status']) as JobStatus,
   stage: str(r['stage']) as JobStage,
   attempts: num(r['attempts']),
+  retries: num(r['retries']),
+  nextAttemptAt: r['next_attempt_at'] === null ? null : num(r['next_attempt_at']),
   error: strOrNull(r['error']),
   resumeFrom: strOrNull(r['resume_from']) as PipelineStep | null,
   steps: steps.sort((a, b) => stepIndex(a.step) - stepIndex(b.step)),

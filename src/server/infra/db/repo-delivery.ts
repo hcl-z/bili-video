@@ -56,6 +56,14 @@ export class SqliteDeliveryRepo implements DeliveryRepo {
       .run(outcome.status, outcome.error, at, d.updateId, d.channel, d.kind)
   }
 
+  /**
+   * 重跑前把这条视频的总结投递记录打回可投状态：新生成的内容该能再推一次。
+   * 只删 summary 那几行，discover 保留 —— 发现通知不该因为总结重跑而重发。
+   */
+  reopenSummary(updateId: string): void {
+    this.db.prepare(`DELETE FROM deliveries WHERE update_id = ? AND kind = 'summary'`).run(updateId)
+  }
+
   listForUpdate(updateId: string): DeliveryRecord[] {
     return this.db
       .prepare('SELECT * FROM deliveries WHERE update_id = ? ORDER BY id')

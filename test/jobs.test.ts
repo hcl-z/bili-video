@@ -20,7 +20,8 @@ describe('总结队列', () => {
 
     const job = h.core.repos.jobs.getByBvid('BV1x')
     assert.equal(job?.status, 'done')
-    assert.equal(job?.stage, 'persist')
+    // 成功的任务停在最后一步：推送。
+    assert.equal(job?.stage, 'push')
     assert.equal(job?.error, null)
 
     const summary = h.core.repos.summaries.get('BV1x')
@@ -45,23 +46,22 @@ describe('总结队列', () => {
     await h.close()
   })
 
-  it('LLM 挂了：任务失败但留下最小可推送内容，重跑成功且不产生重复数据', async () => {
-    // 第一次鉴权就没过（不重试的那类错），重跑时正常
+  it('LLM 挂了：任务失败且不落任何内容，重跑成功且不产生重复数据', async () => {
+    // 第一次鉴权就没过，重跑时正常
     const fetch = bili([{ status: 401, raw: { error: { message: 'invalid api key' } } }, llmOk])
     fetch.on('player/wbi/v2', player([ZH_TRACK]))
     const { h, events } = await rig(fetch)
+    // 这条用例测的是「失败后手动重跑」，不让自动重试插进来。
+    h.core.config.setSection('queue', { maxRetries: 0, retryIntervalMs: 60_000 })
 
     await h.server.services.poll.pollOnce()
     await h.server.services.queue.drain()
 
     const failed = h.core.repos.jobs.getByBvid('BV1x')
     assert.equal(failed?.status, 'failed')
-
-    const minimal = h.core.repos.summaries.get('BV1x')
-    assert.equal(minimal?.degradePath, 'link-only')
-    assert.match(minimal?.fullMd ?? '', /# 视频标题/)
-    assert.match(minimal?.fullMd ?? '', /https:\/\/c\/av\.jpg/)
-    assert.match(minimal?.fullMd ?? '', /生成总结：/)
+    // 失败不再留下一份能推出去的最小内容 —— 没有总结就是没有总结。
+    assert.equal(h.core.repos.summaries.get('BV1x'), null)
+    assert.match(failed?.error ?? '', /invalid api key/)
     // 失败事件要明确说明卡在哪一步，不能报入队时的 queued
     const failedEvent = events.find((e) => e.type === 'job.changed' && e.status === 'failed')
     assert.equal(failedEvent?.type === 'job.changed' ? failedEvent.stage : null, 'reduce')
@@ -73,7 +73,6 @@ describe('总结队列', () => {
 
     const done = h.core.repos.jobs.getByBvid('BV1x')
     assert.equal(done?.status, 'done')
-    // 重跑要把那条最小内容换成真总结。
     assert.equal(h.core.repos.summaries.get('BV1x')?.degradePath, 'subtitle')
     // 同一个 bvid 始终一条任务、一份总结。
     assert.equal(done?.id, failed?.id)

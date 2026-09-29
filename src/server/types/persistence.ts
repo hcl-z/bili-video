@@ -112,10 +112,17 @@ export interface JobRepo {
   enqueue(job: { bvid: string; updateId: string; at: number; from?: PipelineStep | null }): SummaryJob
   get(id: number): SummaryJob | null
   getByBvid(bvid: string): SummaryJob | null
-  /** 取单条 pending 置为 running（单进程内加锁即可，不需要 SKIP LOCKED） */
+  /** 取单条到期的 pending 置为 running（单进程内加锁即可，不需要 SKIP LOCKED）。 未到 next_attempt_at 的重试任务不会被取走 */
   claimNext(at: number): SummaryJob | null
   setStage(id: number, stage: JobStage, at: number): void
   finish(id: number, outcome: { ok: true } | { ok: false; error: string }, at: number): void
+  /** 排下一次重试：留在 pending 等 next_attempt_at 到期，并把重试计数加一。from 记下该从哪一步再跑 */
+  scheduleRetry(
+    id: number,
+    input: { from: PipelineStep; nextAttemptAt: number; error: string; at: number },
+  ): void
+  /** 手动重跑时清零自动重试计数，让用户拿到完整预算 */
+  clearRetries(id: number, at: number): void
 
   resetRunning(at: number): number
   list(q: { status?: SummaryJob['status']; limit: number }): SummaryJob[]
@@ -172,6 +179,8 @@ export interface DeliveryRepo {
   /** 只捞静默时段里占位未发的：结束静默后补推。失败的投递不在这里重试 —— 坏内容重发多少次都是坏的 */
   pending(limit: number): DeliveryRecord[]
   recent(limit: number): DeliveryRecord[]
+  /** 重跑时把这条视频的总结投递记录作废：新生成的内容该能再推一次。 只动 summary，不动 discover —— 用户早就看过发现通知了，重发是纯噪音 */
+  reopenSummary(updateId: string): void
 }
 
 export interface DeliveryRecord {

@@ -7,6 +7,8 @@ export interface Clock {
   sleep(ms: number): Promise<void>
   /** 注册一个 cron 任务，返回取消函数 */
   schedule(cron: string, task: () => void | Promise<void>): Cancel
+  /** 一次性延时任务。重试排到未来时用它叫醒队列 —— 不用 setTimeout 是因为 测试里的时钟是假的，真定时器在假时钟下永远不会到点 */
+  after(ms: number, task: () => void | Promise<void>): Cancel
   /** 表达式合法吗。返回可读的错误，null = 合法。 归时钟管而不是单开一个接口：cron 的语义（六位含秒）本来就是调度器定的。 假时钟也必须真解析 —— 「非法表达式当场拒绝」正是要测的应项行为 */
   checkCron(cron: string): string | null
 }

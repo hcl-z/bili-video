@@ -54,7 +54,7 @@ async function rig(): Promise<Harness> {
 }
 
 describe('推送渠道', () => {
-  it('新更新立即推发现通知，总结完成再推完整正文，重复事件不重推', async () => {
+  it('新更新立即推发现通知，总结完成后推完整正文，重复推送不重发', async () => {
     const h = await rig()
     try {
       h.core.repos.updates.insertMany([
@@ -63,12 +63,13 @@ describe('推送渠道', () => {
       h.events.emit({ type: 'update.new', dynId: '901', uid: '111' })
       await h.server.services.delivery.drain()
 
+      // 总结推送是流水线的最后一步，不再走 summary.done 事件。
       h.core.repos.summaries.upsert(summary(h), '字幕')
-      h.events.emit({ type: 'summary.done', bvid: 'BV1x' })
-      await h.server.services.delivery.drain()
-      h.events.emit({ type: 'summary.done', bvid: 'BV1x' })
-      await h.server.services.delivery.drain()
+      const first = await h.server.services.delivery.pushSummary('BV1x')
+      const again = await h.server.services.delivery.pushSummary('BV1x')
 
+      assert.deepEqual(first, { sent: 1, failed: 0, skipped: false })
+      assert.deepEqual(again, { sent: 1, failed: 0, skipped: false })
       assert.equal(h.notifier.sent.length, 2)
       assert.equal(h.notifier.sent[0]?.kind, 'discover')
       assert.equal(h.notifier.sent[1]?.kind, 'summary')

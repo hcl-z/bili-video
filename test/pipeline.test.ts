@@ -5,7 +5,8 @@ import type { JobsResponse } from '#shared/contract/api.ts'
 import type { PipelineStep, StepStatus } from '#shared/contract/job.ts'
 import { bili, llmOk, player, rig, ZH_TRACK } from './support/queue-rig.ts'
 
-/** 六步流水线：每一步的状态落库，重跑能从任意一步起 —— 前面那几步的产物照用 */
+/** 七步流水线：每一步的状态落库，重跑能从任意一步起 —— 前面那几步的产物照用。
+ *  推送是最后一步：只有真生成了总结才走得到它 */
 
 const steps = (job: { steps: { step: PipelineStep; status: StepStatus }[] }) =>
   Object.fromEntries(job.steps.map((s) => [s.step, s.status]))
@@ -29,6 +30,8 @@ describe('任务流水线', () => {
       chunk: 'skipped',
       reduce: 'done',
       persist: 'done',
+      // 测试里没配任何推送渠道，推送这一步如实标「跳过」而不是假装成功。
+      push: 'skipped',
     })
     // 每一步的产物都留着，下一次重跑才能挑起点
     assert.notEqual(h.core.repos.artifacts.get('BV1x', 'transcript'), null)
@@ -105,7 +108,7 @@ describe('任务流水线', () => {
     assert.equal(h.core.repos.jobs.getByBvid('BV1x')?.status, 'done')
 
     const listed = (await (await h.server.app.request('/api/jobs')).json()) as JobsResponse
-    assert.equal(listed.jobs[0]?.steps.length, 6)
+    assert.equal(listed.jobs[0]?.steps.length, 7)
 
     await h.close()
   })

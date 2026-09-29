@@ -74,8 +74,8 @@ function StateBadge(props: { item: ReaderItem }) {
   // 非视频没有解析这件事，标一个「未解析」只会让人以为在等什么。
   if (bvid === null) return null
   if (state === 'done' && degradePath !== null) {
-    const weak = degradePath === 'meta-only' || degradePath === 'link-only'
-    return <Badge variant={weak ? 'destructive' : 'secondary'}>{DEGRADE_LABEL[degradePath]}</Badge>
+    // 能走到 done 的都是拿到过转写的高置信度总结，不再有弱降级这一说。
+    return <Badge variant="secondary">{DEGRADE_LABEL[degradePath]}</Badge>
   }
   if (state === 'running' && jobStage !== null) {
     return <Badge variant="secondary">{JOB_STAGE_LABEL[jobStage]}</Badge>

@@ -36,7 +36,7 @@ function rig(config: Partial<BiliHttpConfig> = {}, cookies: Record<string, strin
     clock: {
       now: () => now,
       sleep: async () => {},
-      schedule: () => () => {}, checkCron: () => null,
+      schedule: () => () => {}, checkCron: () => null, after: () => () => {},
     },
     logger,
     config: () => full,

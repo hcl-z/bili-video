@@ -517,9 +517,14 @@ export function buildServer(deps: ServerDeps, opts: BuildOptions = {}): Server {
     llm: deps.external.llm,
     probeAsr: deps.external.probeAsr,
   })
+  const deliveryRef: { value: DeliveryService | null } = { value: null }
   const queue = new SummaryQueue({
     jobs: deps.repos.jobs,
     artifacts: deps.repos.artifacts,
+    updates: deps.repos.updates,
+    deliveries: deps.repos.deliveries,
+    // delivery 在 queue 之后构造，所以用 getter 晚绑定。
+    delivery: () => deliveryRef.value,
     summarize: new SummarizeVideo({
       subtitles: deps.external.subtitles,
       audio: deps.external.audio,
@@ -571,6 +576,7 @@ export function buildServer(deps: ServerDeps, opts: BuildOptions = {}): Server {
     events: deps.events,
     logger: deps.logger,
   })
+  deliveryRef.value = delivery
   const notify = new NotifyService({
     config: deps.config,
     secrets: deps.secrets,

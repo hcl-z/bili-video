@@ -39,7 +39,7 @@ export const SummarySchema = z.object({
   fullMd: z.string(),
   transcriptSource: TranscriptSourceSchema,
   degradePath: DegradePathSchema,
-  /** meta-only 是低置信度，正文里必须写明「未获取语音内容，基于简介推测」 */
+  /** 新数据只有 high：拿到转写才落库。low 与 meta-only 是升级前留下的历史记录 */
   confidence: z.enum(['high', 'low']),
   createdAt: z.number().int(),
 })

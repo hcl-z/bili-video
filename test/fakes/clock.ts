@@ -32,6 +32,18 @@ export class FakeClock implements Clock {
     }
   }
 
+  /** 延时任务按到期时刻排队。`advance` 跨过到期时刻时触发，跟真实时钟的语义一致 */
+  after(ms: number, task: () => void | Promise<void>): Cancel {
+    const entry = { due: this.#now + ms, task }
+    this.timers.push(entry)
+    return () => {
+      const i = this.timers.indexOf(entry)
+      if (i >= 0) this.timers.splice(i, 1)
+    }
+  }
+
+  readonly timers: { due: number; task: () => void | Promise<void> }[] = []
+
   /** 排程不解析 cron，但校验必须是真的：非法表达式当场被拒是要测的行为之一 */
   checkCron(cron: string): string | null {
     return checkCronExpression(cron)
@@ -40,10 +52,21 @@ export class FakeClock implements Clock {
 
   advance(ms: number): void {
     this.#now += ms
+    this.fireDue()
   }
 
   set(at: number): void {
     this.#now = at
+    this.fireDue()
+  }
+
+  private fireDue(): void {
+    for (const entry of [...this.timers]) {
+      if (entry.due > this.#now) continue
+      const i = this.timers.indexOf(entry)
+      if (i >= 0) this.timers.splice(i, 1)
+      void entry.task()
+    }
   }
 
   /** 触发所有已注册的 cron 任务一轮 */

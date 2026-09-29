@@ -225,6 +225,14 @@ SET push_kind_mode = 'custom',
 WHERE enable_dynamic = 0 OR enable_video = 0;
 `
 
+/** 失败重试：retries 是「自动重试已用几次」，与 attempts（被取活几次）分开 —— 手动重跑要把它清零，
+ *  而 attempts 是事实计数不该被重试逻辑劫持。next_attempt_at 是下次可取活的时刻，
+ *  落库而不是进程内定时器：重启不该把待重试的任务弄丢 */
+const JOB_RETRY = `
+ALTER TABLE summary_jobs ADD COLUMN retries INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE summary_jobs ADD COLUMN next_attempt_at INTEGER;
+`
+
 export const MIGRATIONS: Migration[] = [
   { version: 1, name: 'init', sql: INIT },
   { version: 2, name: 'runtime_state', sql: RUNTIME_STATE },
@@ -235,6 +243,7 @@ export const MIGRATIONS: Migration[] = [
   { version: 7, name: 'manual_update_origin', sql: MANUAL_UPDATE_ORIGIN },
   { version: 8, name: 'subscription_customization', sql: SUBSCRIPTION_CUSTOMIZATION },
   { version: 9, name: 'subscription_push_kinds', sql: SUBSCRIPTION_PUSH_KINDS },
+  { version: 10, name: 'job_retry', sql: JOB_RETRY },
 ]
 
 /** 幂等：已应用的版本跳过。每个版本一个事务，中途失败不会留半张表。 `list` 只为测试预留（往里塞一个会失败的迁移，验证回滚）；生产永远走默认的 MIGRATIONS */

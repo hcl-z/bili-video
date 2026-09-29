@@ -18,7 +18,7 @@ function rig(): { client: BiliSubtitleClient; fetch: FakeFetch } {
     fetch: fetch.fetch,
     identity: createBrowserIdentity(() => 0.5),
     cookies: new MemoryCookieJar({ SESSDATA: 'sess' }),
-    clock: { now: () => 1_700_000_000_000, sleep: async () => {}, schedule: () => () => {}, checkCron: () => null },
+    clock: { now: () => 1_700_000_000_000, sleep: async () => {}, schedule: () => () => {}, checkCron: () => null, after: () => () => {} },
     logger: new CollectingLogger(),
     config: () => ({
       wbiMixinTable: Array.from({ length: 64 }, (_, i) => i),

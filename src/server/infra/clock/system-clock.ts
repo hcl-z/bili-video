@@ -16,6 +16,7 @@ export function checkCronExpression(cron: string): string | null {
 /** 真时钟。cron 交给 croner —— 它支持 6 位含秒的表达式，轮询错峰到 :30 靠的就是这一位 */
 export class SystemClock implements Clock {
   readonly #jobs = new Set<Cron>()
+  readonly #timers = new Set<NodeJS.Timeout>()
 
   now(): number {
     return Date.now()
@@ -39,9 +40,23 @@ export class SystemClock implements Clock {
     return checkCronExpression(cron)
   }
 
+  after(ms: number, task: () => void | Promise<void>): Cancel {
+    const timer = setTimeout(() => {
+      this.#timers.delete(timer)
+      void task()
+    }, ms)
+    this.#timers.add(timer)
+    return () => {
+      clearTimeout(timer)
+      this.#timers.delete(timer)
+    }
+  }
+
   /** 进程退出前停掉所有定时任务，否则 Node 不会退 */
   stopAll(): void {
     for (const job of this.#jobs) job.stop()
     this.#jobs.clear()
+    for (const timer of this.#timers) clearTimeout(timer)
+    this.#timers.clear()
   }
 }

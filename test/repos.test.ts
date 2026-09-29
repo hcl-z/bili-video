@@ -213,6 +213,50 @@ describe('summary jobs', () => {
     assert.equal(c.repos.jobs.getByBvid('BVa')?.stage, 'asr')
     c.close()
   })
+
+  it('重试窗口未到期时取不到，到期后照常取到', () => {
+    const c = freshCore()
+    c.repos.updates.insertMany([update('a')])
+    const job = c.repos.jobs.enqueue({ bvid: 'BVa', updateId: 'a', at: 1_000 })
+    c.repos.jobs.claimNext(1_100)
+
+    c.repos.jobs.scheduleRetry(job.id, {
+      from: 'asr',
+      nextAttemptAt: 61_000,
+      error: 'ASR 挂了',
+      at: 1_200,
+    })
+    const back = c.repos.jobs.get(job.id)
+    assert.equal(back?.status, 'pending')
+    assert.equal(back?.retries, 1)
+    assert.equal(back?.resumeFrom, 'asr')
+    assert.equal(back?.nextAttemptAt, 61_000)
+
+    assert.equal(c.repos.jobs.claimNext(60_999), null, '还没到重试时刻')
+    assert.equal(c.repos.jobs.claimNext(61_000)?.id, job.id, '到点就该被取走')
+    c.close()
+  })
+
+  it('手动重跑清零重试计数，用户拿到完整预算', () => {
+    const c = freshCore()
+    c.repos.updates.insertMany([update('a')])
+    const job = c.repos.jobs.enqueue({ bvid: 'BVa', updateId: 'a', at: 1_000 })
+    c.repos.jobs.claimNext(1_100)
+    c.repos.jobs.scheduleRetry(job.id, {
+      from: 'reduce',
+      nextAttemptAt: 61_000,
+      error: 'LLM 挂了',
+      at: 1_200,
+    })
+    assert.equal(c.repos.jobs.get(job.id)?.retries, 1)
+
+    c.repos.jobs.clearRetries(job.id, 1_300)
+    const cleared = c.repos.jobs.get(job.id)
+    assert.equal(cleared?.retries, 0)
+    assert.equal(cleared?.nextAttemptAt, null, '手动重跑不等退避窗口')
+    assert.equal(c.repos.jobs.claimNext(1_301)?.id, job.id)
+    c.close()
+  })
 })
 
 describe('summaries', () => {

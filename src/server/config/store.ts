@@ -60,6 +60,7 @@ export const INITIAL_CONFIG: AppConfig = AppConfigSchema.parse({
     segmentSec: 120,
   },
   output: { markdownDir: 'summaries' },
+  queue: { maxRetries: 2, retryIntervalMs: 60_000 },
   notify: {
     wxpusher: { enabled: false, uids: [] },
     pushplus: { enabled: false, channel: 'wechat', topic: '' },

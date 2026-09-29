@@ -6,11 +6,15 @@ import type { FakeFetch } from './fakes/bili-fetch.ts'
 import type { Harness, HarnessOptions } from './support/harness.ts'
 import { avItem, bili, DEFAULT_SUB, llmOk, player, rig, ZH_TRACK } from './support/queue-rig.ts'
 
-/** 四级降级链走一次。字幕、音频、转写都是测试替身，队列、状态机、落库落盘是真的 */
-
+/**
+ * 三级降级链走一次。字幕、音频、转写都是测试替身，队列、状态机、落库落盘是真的。
+ * 失败用例把 maxRetries 关掉：要断言的是「这一步失败会怎样」，不是重试编排
+ * （重试有自己的用例）。开着重试的话任务会停在 pending 等下一轮。
+ */
 
 async function run(fetch: FakeFetch, extra: Partial<HarnessOptions> = {}): Promise<{ h: Harness }> {
   const { h } = await rig(fetch, extra)
+  h.core.config.setSection('queue', { maxRetries: 0, retryIntervalMs: 60_000 })
   await h.server.services.poll.pollOnce()
   await h.server.services.queue.drain()
   return { h }
@@ -63,7 +67,7 @@ describe('降级链', () => {
     await h.close()
   })
 
-  it('字幕缺失 + 转写失败 → 简介兜底，低置信度，音频保留待重试', async () => {
+  it('字幕缺失 + 转写失败 → 任务失败，不落 summary 也不推', async () => {
     const fetch = bili()
     fetch.on('player/wbi/v2', player([]))
     const audio = new FakeAudioDownloader()
@@ -71,20 +75,16 @@ describe('降级链', () => {
     asr.fails = true
     const { h } = await run(fetch, { audio, asr })
 
-    const s = h.core.repos.summaries.get('BV1x')
-    assert.equal(s?.degradePath, 'meta-only')
-    assert.equal(s?.transcriptSource, 'none')
-    assert.equal(s?.confidence, 'low')
-
-    assert.match(s?.article ?? '', /讲清了一件事/)
-    assert.match(s?.fullMd ?? '', /未获取到语音内容/)
-    assert.match(s?.fullMd ?? '', /语音转写：/)
+    const job = h.core.repos.jobs.getByBvid('BV1x')
+    assert.equal(job?.status, 'failed')
+    assert.match(job?.error ?? '', /语音转写/)
+    assert.equal(h.core.repos.summaries.get('BV1x'), null)
     assert.deepEqual(audio.cleaned, [])
 
     await h.close()
   })
 
-  it('下载失败 → 同样落到简介兜底，转写一次都没调', async () => {
+  it('下载失败 → 任务失败，转写一次都没调', async () => {
     const fetch = bili()
     fetch.on('player/wbi/v2', player([]))
     const audio = new FakeAudioDownloader()
@@ -92,20 +92,21 @@ describe('降级链', () => {
     const asr = new FakeAsr()
     const { h } = await run(fetch, { audio, asr })
 
-    assert.equal(h.core.repos.summaries.get('BV1x')?.degradePath, 'meta-only')
+    assert.equal(h.core.repos.jobs.getByBvid('BV1x')?.status, 'failed')
+    assert.match(h.core.repos.jobs.getByBvid('BV1x')?.error ?? '', /下载音频失败|语音转写/)
+    assert.equal(h.core.repos.summaries.get('BV1x'), null)
     assert.equal(asr.calls, 0)
-    assert.match(h.core.repos.summaries.get('BV1x')?.fullMd ?? '', /下载音频失败/)
 
     await h.close()
   })
 
-  it('没接转写适配器时直接退到简介兜底，任务不算失败', async () => {
+  it('没接转写适配器时任务失败，而不是退成一篇简介摘要', async () => {
     const fetch = bili()
     fetch.on('player/wbi/v2', player([]))
     const { h } = await run(fetch)
 
-    assert.equal(h.core.repos.jobs.getByBvid('BV1x')?.status, 'done')
-    assert.equal(h.core.repos.summaries.get('BV1x')?.degradePath, 'meta-only')
+    assert.equal(h.core.repos.jobs.getByBvid('BV1x')?.status, 'failed')
+    assert.equal(h.core.repos.summaries.get('BV1x'), null)
 
     await h.close()
   })

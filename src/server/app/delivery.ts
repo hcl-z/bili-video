@@ -15,6 +15,13 @@ import type {
 import type { DeliveryKind } from '#shared/contract/job.ts'
 import type { Update } from '#shared/contract/update.ts'
 
+export interface PushOutcome {
+  sent: number
+  failed: number
+  /** 没发也没失败：静默时段占位、没有启用渠道、或这条不该推 */
+  skipped: boolean
+}
+
 export interface DeliveryDeps {
   updates: UpdateRepo
   summaries: SummaryRepo
@@ -41,9 +48,10 @@ export class DeliveryService {
 
   start(): void {
     if (this.cancelEvents !== null) return
+    // 总结推送不在这里订阅事件：它是流水线的最后一步（push），由队列同步调 pushSummary。
+    // 发现通知不在流水线里，仍然走事件。
     this.cancelEvents = this.deps.events.on((event) => {
       if (event.type === 'update.new') this.spawn(this.offerDiscover(event.dynId))
-      if (event.type === 'summary.done') this.spawn(this.offerSummary(event.bvid))
     })
     this.cancelCron = this.deps.clock.schedule('0 * * * * *', () => this.flush())
     this.spawn(this.flush())
@@ -61,11 +69,76 @@ export class DeliveryService {
   }
 
   async flush(): Promise<void> {
-    if (this.isQuiet()) return
+    // 静默与不静默只在这里判一次：循环中途跨过静默边界不该让同一次 flush 里的后半段行为不一致。
+    const quiet = this.isQuiet()
+    if (quiet) return
     for (const delivery of this.deps.deliveries.pending(100)) {
       if (delivery.kind !== 'discover' && delivery.kind !== 'summary') continue
       if (!this.channelEnabled(delivery.channel)) continue
       await this.sendClaimed(delivery, this.message(delivery.updateId, delivery.kind))
+    }
+  }
+
+  /**
+   * 流水线最后一步调的同步推送。返回实际发送结果，调用方据此标 job_steps。
+   * 静默时段不出网，只占位（deliveries 落 pending），由 flush 在静默结束后补推。
+   */
+  async pushSummary(bvid: string): Promise<PushOutcome> {
+    const update = this.deps.updates.getByBvid(bvid)
+    const summary = this.deps.summaries.get(bvid)
+    if (update === null || summary === null || !this.shouldNotify(update)) {
+      return { sent: 0, failed: 0, skipped: true }
+    }
+
+    const enabled = this.enabledNotifiers()
+    if (enabled.length === 0) return { sent: 0, failed: 0, skipped: true }
+
+    const quiet = this.isQuiet()
+    const message = this.summaryMessage(update, bvid, summary.fullMd)
+    let sent = 0
+    let failed = 0
+    for (const notifier of enabled) {
+      const key = { updateId: update.dynId, channel: notifier.channel, kind: 'summary' as const }
+      if (!this.deps.deliveries.claim({ ...key, at: this.deps.clock.now() })) {
+        // 已发过的不再发：它上次成功了，重发是同一条内容。
+        sent += 1
+        continue
+      }
+      if (quiet) continue
+      const ok = await this.sendClaimed(key, message)
+      if (ok) sent += 1
+      else failed += 1
+    }
+    return { sent, failed, skipped: quiet && sent === 0 && failed === 0 }
+  }
+
+  /**
+   * 重试耗尽后的错误提示。键用 `job:${updateId}` 而不是视频的 dynId：
+   * 它和这条视频的 discover / summary 是三条互不覆盖的记录，且同一视频反复失败只会推一条。
+   */
+  async notifyJobFailure(input: {
+    updateId: string
+    title: string
+    reason: string
+    retries: number
+  }): Promise<void> {
+    const update = this.deps.updates.get(input.updateId)
+    const url = update?.url ?? null
+    const group = update?.dynId ?? `job:${input.updateId}`
+    const body = `${input.reason}\n\n已重试 ${input.retries} 次仍未成功。`
+
+    for (const notifier of this.enabledNotifiers()) {
+      const key = { updateId: `job:${input.updateId}`, channel: notifier.channel, kind: 'alert' as const }
+      if (!this.deps.deliveries.claim({ ...key, at: this.deps.clock.now() })) continue
+      if (this.isQuiet()) continue
+      await this.sendClaimed(key, {
+        kind: 'alert',
+        title: input.title,
+        body,
+        url,
+        imageUrl: update?.cover ?? null,
+        group,
+      })
     }
   }
 
@@ -75,18 +148,15 @@ export class DeliveryService {
     await this.offer(update, 'discover', discoverMessage(update, this.upName(update.uid)))
   }
 
-  private async offerSummary(bvid: string): Promise<void> {
-    const update = this.deps.updates.getByBvid(bvid)
-    const summary = this.deps.summaries.get(bvid)
-    if (update === null || summary === null || !this.shouldNotify(update)) return
-    await this.offer(update, 'summary', {
+  private summaryMessage(update: Update, bvid: string, fullMd: string): NotifyMessage {
+    return {
       kind: 'summary',
       title: `${this.upName(update.uid)} · ${update.title ?? bvid}`,
-      body: summary.fullMd,
+      body: fullMd,
       url: update.url,
       imageUrl: update.cover,
       group: update.dynId,
-    })
+    }
   }
 
   private async offer(update: Update, kind: 'discover' | 'summary', message: NotifyMessage): Promise<void> {
@@ -98,12 +168,12 @@ export class DeliveryService {
     }
   }
 
-  private async sendClaimed(delivery: Pick<DeliveryRecord, 'updateId' | 'channel' | 'kind'>, message: NotifyMessage | null): Promise<void> {
+  private async sendClaimed(delivery: Pick<DeliveryRecord, 'updateId' | 'channel' | 'kind'>, message: NotifyMessage | null): Promise<boolean> {
     const key = { updateId: delivery.updateId, channel: delivery.channel, kind: delivery.kind }
     const notifier = this.deps.notifiers.find((candidate) => candidate.channel === delivery.channel)
     if (notifier === undefined || message === null) {
       this.deps.deliveries.settle(key, { status: 'failed', error: '投递内容或渠道不存在' }, this.deps.clock.now())
-      return
+      return false
     }
     const result = await notifier.send(message)
     this.deps.deliveries.settle(
@@ -116,6 +186,7 @@ export class DeliveryService {
     } else {
       this.logger.warn({ channel: notifier.channel, kind: delivery.kind, updateId: delivery.updateId, err: result.error }, '推送失败')
     }
+    return result.ok
   }
 
   private message(updateId: string, kind: DeliveryKind): NotifyMessage | null {
