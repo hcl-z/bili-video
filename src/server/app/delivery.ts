@@ -34,10 +34,14 @@ export interface DeliveryDeps {
   logger: Logger
 }
 
+/** 失败提示的正文不落库（deliveries 只存键和状态），静默期间先搁在内存里给 flush 用。 上限只为防无限增长：真实场景下同一时刻待补推的失败提示不会多 */
+const ALERT_CACHE_MAX = 200
+
 export class DeliveryService {
   private readonly deps: DeliveryDeps
   private readonly logger: Logger
   private readonly running = new Set<Promise<void>>()
+  private readonly alerts = new Map<string, NotifyMessage>()
   private cancelEvents: Cancel | null = null
   private cancelCron: Cancel | null = null
 
@@ -73,6 +77,11 @@ export class DeliveryService {
     const quiet = this.isQuiet()
     if (quiet) return
     for (const delivery of this.deps.deliveries.pending(100)) {
+      if (delivery.kind === 'alert') {
+        // 静默期间占位的失败提示。它不依赖 update 行，单独补发。
+        await this.sendClaimed(delivery, this.alertMessage(delivery.updateId))
+        continue
+      }
       if (delivery.kind !== 'discover' && delivery.kind !== 'summary') continue
       if (!this.channelEnabled(delivery.channel)) continue
       await this.sendClaimed(delivery, this.message(delivery.updateId, delivery.kind))
@@ -85,8 +94,8 @@ export class DeliveryService {
    */
   async pushSummary(bvid: string): Promise<PushOutcome> {
     const update = this.deps.updates.getByBvid(bvid)
-    const summary = this.deps.summaries.get(bvid)
-    if (update === null || summary === null || !this.shouldNotify(update)) {
+    const fullMd = this.pushable(bvid)
+    if (update === null || fullMd === null || !this.shouldNotify(update)) {
       return { sent: 0, failed: 0, skipped: true }
     }
 
@@ -94,7 +103,7 @@ export class DeliveryService {
     if (enabled.length === 0) return { sent: 0, failed: 0, skipped: true }
 
     const quiet = this.isQuiet()
-    const message = this.summaryMessage(update, bvid, summary.fullMd)
+    const message = this.summaryMessage(update, bvid, fullMd)
     let sent = 0
     let failed = 0
     for (const notifier of enabled) {
@@ -122,23 +131,45 @@ export class DeliveryService {
     reason: string
     retries: number
   }): Promise<void> {
-    const update = this.deps.updates.get(input.updateId)
-    const url = update?.url ?? null
-    const group = update?.dynId ?? `job:${input.updateId}`
     const body = `${input.reason}\n\n已重试 ${input.retries} 次仍未成功。`
+    const keyId = `job:${input.updateId}`
 
     for (const notifier of this.enabledNotifiers()) {
-      const key = { updateId: `job:${input.updateId}`, channel: notifier.channel, kind: 'alert' as const }
+      const key = { updateId: keyId, channel: notifier.channel, kind: 'alert' as const }
       if (!this.deps.deliveries.claim({ ...key, at: this.deps.clock.now() })) continue
-      if (this.isQuiet()) continue
-      await this.sendClaimed(key, {
+      // 静默期间只占位：标题和正文能从备份里重建，所以丢了内容参数也不会丢这条提示。
+      this.rememberAlert(keyId, {
         kind: 'alert',
         title: input.title,
         body,
-        url,
-        imageUrl: update?.cover ?? null,
-        group,
+        url: null,
+        imageUrl: null,
+        group: keyId,
       })
+      if (this.isQuiet()) continue
+      await this.sendClaimed(key, this.alertMessage(keyId, input.title, body))
+    }
+  }
+
+  /** 失败提示的正文不落库，静默跨重启后重建成最小形式 —— 宁可少一句细节，也不能把提示弄丢。 */
+  private alertMessage(updateId: string, title?: string, body?: string): NotifyMessage {
+    const cached = this.alerts.get(updateId)
+    const fallbackTitle = title ?? `【失败】${updateId.replace(/^job:/, '')}`
+    return cached ?? {
+      kind: 'alert',
+      title: fallbackTitle,
+      body: body ?? '这条没能生成总结，去流水线页看失败原因。',
+      url: null,
+      imageUrl: null,
+      group: updateId,
+    }
+  }
+
+  private rememberAlert(updateId: string, message: NotifyMessage): void {
+    this.alerts.set(updateId, message)
+    if (this.alerts.size > ALERT_CACHE_MAX) {
+      const oldest = this.alerts.keys().next()
+      if (oldest.done !== true) this.alerts.delete(oldest.value)
     }
   }
 
@@ -146,6 +177,17 @@ export class DeliveryService {
     const update = this.deps.updates.get(dynId)
     if (update === null || !this.shouldNotify(update)) return
     await this.offer(update, 'discover', discoverMessage(update, this.upName(update.uid)))
+  }
+
+  /**
+   * 只有真拿到转写的总结才值得推。
+   * meta-only / link-only 是升级前的历史记录，它们不该因为清理旧 pending 记录而被翻出来发出去。
+   */
+  private pushable(bvid: string): string | null {
+    const summary = this.deps.summaries.get(bvid)
+    if (summary === null) return null
+    if (summary.degradePath === 'meta-only' || summary.degradePath === 'link-only') return null
+    return summary.fullMd
   }
 
   private summaryMessage(update: Update, bvid: string, fullMd: string): NotifyMessage {
@@ -194,12 +236,12 @@ export class DeliveryService {
     if (update === null) return null
     if (kind === 'discover') return discoverMessage(update, this.upName(update.uid))
     if (kind !== 'summary' || update.bvid === null) return null
-    const summary = this.deps.summaries.get(update.bvid)
-    if (summary === null) return null
+    const fullMd = this.pushable(update.bvid)
+    if (fullMd === null) return null
     return {
       kind,
       title: `${this.upName(update.uid)} · ${update.title ?? update.bvid}`,
-      body: summary.fullMd,
+      body: fullMd,
       url: update.url,
       imageUrl: update.cover,
       group: update.dynId,

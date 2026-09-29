@@ -214,6 +214,37 @@ describe('失败重试', () => {
     }
   })
 
+  it('静默期间耗尽重试，错误提示要挂住等静默结束补推', async () => {
+    const fetch = bili([llmFail])
+    fetch.on('player/wbi/v2', player([ZH_TRACK]))
+    const { h } = await rig(fetch)
+    try {
+      enablePush(h)
+      h.core.config.setSection('queue', { maxRetries: 0, retryIntervalMs: 60_000 })
+      h.core.config.setSection('filter', {
+        ...h.core.config.getSection('filter'),
+        quietHours: { enabled: true, start: '00:00', end: '23:59' },
+      })
+
+      await h.server.services.poll.pollOnce()
+      await h.server.services.queue.drain()
+      assert.equal(h.core.repos.jobs.getByBvid('BV1x')?.status, 'failed')
+      assert.equal(h.notifier.sent.length, 0, '静默期间不发')
+
+      // 静默结束：那条错误提示不能永远丢掉。
+      h.core.config.setSection('filter', {
+        ...h.core.config.getSection('filter'),
+        quietHours: { enabled: false, start: '00:00', end: '23:59' },
+      })
+      await h.server.services.delivery.flush()
+      const alerts = h.notifier.sent.filter((m) => m.kind === 'alert')
+      assert.equal(alerts.length, 1, '静默结束后应当补推错误提示')
+      assert.match(alerts[0]?.body ?? '', /上游炸了/)
+    } finally {
+      await h.close()
+    }
+  })
+
   it('推送失败也重试：只重发，不重新调 LLM', async () => {
     const fetch = bili()
     fetch.on('player/wbi/v2', player([ZH_TRACK]))
