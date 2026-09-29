@@ -36,6 +36,7 @@ export function SystemPage() {
         <div className="space-y-4">
           <AuthCard system={system.data} />
           <PollCard config={config.data} />
+          <RetryCard config={config.data} />
           <DataCard />
           <TruthCard />
         </div>
@@ -218,6 +219,88 @@ function PollCard(props: { config: AppConfig }) {
       </CardContent>
     </Card>
   )
+}
+
+/** 失败重试。作用于总结流水线的每一步，推送失败也算在内。 */
+function RetryCard(props: { config: AppConfig }) {
+  const qc = useQueryClient()
+  const queue = props.config.queue
+  const [maxRetries, setMaxRetries] = useState(String(queue.maxRetries))
+  const [seconds, setSeconds] = useState(String(Math.round(queue.retryIntervalMs / 1000)))
+
+  const save = useMutation({
+    mutationFn: (patch: { maxRetries?: number; retryIntervalMs?: number }) =>
+      api.patchConfig('queue', patch),
+    onSuccess: (data) => {
+      qc.setQueryData(keys.config, data)
+      setMaxRetries(String(data.queue.maxRetries))
+      setSeconds(String(Math.round(data.queue.retryIntervalMs / 1000)))
+      toast.success('已生效', { description: '下一次失败就按新的来' })
+    },
+    onError: (err: Error) => toast.error('没改成', { description: err.message }),
+  })
+
+  const retries = wholeNumber(maxRetries, queue.maxRetries)
+  const interval = wholeNumber(seconds, Math.round(queue.retryIntervalMs / 1000))
+  const dirty = retries !== queue.maxRetries || interval * 1000 !== queue.retryIntervalMs
+
+  return (
+    <Card>
+      <CardContent className="space-y-3 py-4">
+        <div>
+          <h2 className="text-sm font-medium">失败重试</h2>
+          <p className="text-muted-foreground mt-0.5 text-sm">
+            任务失败后从出错的那一步重跑，已有的转写和正文照用。次数用尽会推一条失败提示。
+          </p>
+        </div>
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="space-y-1">
+            <label className="text-muted-foreground text-xs" htmlFor="queue-retries">
+              重试次数
+            </label>
+            <Input
+              id="queue-retries"
+              inputMode="numeric"
+              value={maxRetries}
+              onChange={(e) => setMaxRetries(e.target.value)}
+              className="w-24 font-mono"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-muted-foreground text-xs" htmlFor="queue-interval">
+              间隔（秒）
+            </label>
+            <Input
+              id="queue-interval"
+              inputMode="numeric"
+              value={seconds}
+              onChange={(e) => setSeconds(e.target.value)}
+              className="w-24 font-mono"
+            />
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => save.mutate({ maxRetries: retries, retryIntervalMs: interval * 1000 })}
+            disabled={save.isPending || !dirty}
+          >
+            {save.isPending ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+            保存
+          </Button>
+        </div>
+        <p className="text-muted-foreground text-xs">
+          {retries === 0
+            ? '不重试：失败即定局。'
+            : `最多尝试 ${retries + 1} 次（首次加 ${retries} 次重试）。`}
+        </p>
+      </CardContent>
+    </Card>
+  )
+}
+
+/** 空串或非整数回退到当前值，避免把 NaN 提交给服务端。 */
+function wholeNumber(input: string, fallback: number): number {
+  const n = Number(input.trim())
+  return Number.isInteger(n) && n >= 0 ? n : fallback
 }
 
 /** 磁盘与条数，以及备份导出。备份走浏览器下载，不经过 JS 缓一份到内存。 */
