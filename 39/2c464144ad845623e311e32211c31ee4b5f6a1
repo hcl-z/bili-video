@@ -1,0 +1,19 @@
+src/web/pages/system.tsx
+  s_b0e75f83ff3c1f::t_fc6b3b38974638 39,224-303
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.45-trip",
+  "base_commit_sha": "392c464144ad845623e311e32211c31ee4b5f6a1",
+  "prompts": {},
+  "sessions": {
+    "s_b0e75f83ff3c1f": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a0ec3b-742f-7728-a74b-f477c8225364",
+        "model": "flash4-1"
+      },
+      "human_author": "hcl-z <1401859664@qq.com>"
+    }
+  }
+}
