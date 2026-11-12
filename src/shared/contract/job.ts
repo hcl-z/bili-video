@@ -61,10 +61,21 @@ export const JobStepSchema = z.object({
 })
 export type JobStep = z.infer<typeof JobStepSchema>
 
+/** 任务目标。`transcript` 跑到转写就停，不调 LLM —— 这是默认路径；
+ *  `summary` 才继续走分段与合并。转写是主产物，总结按需追加 */
+export const JobWantSchema = z.enum(['transcript', 'summary'])
+export type JobWant = z.infer<typeof JobWantSchema>
+
+export const JOB_WANT_LABEL: Record<JobWant, string> = {
+  transcript: '只取字幕/转写',
+  summary: '转写 + AI 总结',
+}
+
 export const SummaryJobSchema = z.object({
   id: z.number().int(),
   bvid: z.string(),
   updateId: z.string(),
+  want: JobWantSchema,
   status: JobStatusSchema,
   stage: JobStageSchema,
   attempts: z.number().int(),

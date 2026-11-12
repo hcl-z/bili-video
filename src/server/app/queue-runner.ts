@@ -1,6 +1,6 @@
 import type { Failure } from '#shared/contract/failure.ts'
 import type { JobStage, PipelineStep, SummaryJob } from '#shared/contract/job.ts'
-import { JOB_STAGE_LABEL } from '#shared/contract/job.ts'
+import { JOB_STAGE_LABEL, type JobWant } from '#shared/contract/job.ts'
 import { fatalFailure } from '../domain/bili-error.ts'
 import { staleArtifacts } from '../domain/pipeline.ts'
 import { errFields, failureFields } from '../log-fields.ts'
@@ -67,10 +67,24 @@ export class SummaryQueue {
     this.unsubscribe = null
   }
 
-  enqueue(v: { bvid: string; updateId: string }): SummaryJob {
+  enqueue(v: { bvid: string; updateId: string; want?: JobWant }): SummaryJob {
     const existing = this.deps.jobs.getByBvid(v.bvid)
 
     if (existing !== null && existing.status !== 'failed') {
+      // 目标变了就得先后退再重排：转写→总结从 chunk 起跑（产物还在，不重取字幕），
+      // 总结→只要转写从头跑到转写就停。目标没变就复用手上这条。
+      if (v.want !== undefined && v.want !== existing.want) {
+        // 还没开跑的直接改目标即可 —— 走 retry 会被 busy 挡回来，目标永远改不掉。
+        if (existing.status === 'pending') {
+          const job = this.deps.jobs.enqueue({ ...v, want: v.want, at: this.deps.clock.now() })
+          this.emit(job, 'pending', 'queued')
+          this.pump()
+          return job
+        }
+        const from: PipelineStep = v.want === 'summary' ? 'chunk' : 'subtitle'
+        this.retry(existing.id, from, v.want)
+        return this.deps.jobs.get(existing.id) ?? existing
+      }
       this.pump()
       return existing
     }
@@ -82,7 +96,7 @@ export class SummaryQueue {
   }
 
   /** 重跑 failed/done 任务；指定 from 时作废应步骤及后续产物，复用此前产物 */
-  retry(id: number, from?: PipelineStep): 'ok' | 'missing' | 'busy' {
+  retry(id: number, from?: PipelineStep, want?: JobWant): 'ok' | 'missing' | 'busy' {
     const job = this.deps.jobs.get(id)
     if (job === null) return 'missing'
     if (job.status === 'running' || job.status === 'pending') return 'busy'
@@ -101,6 +115,7 @@ export class SummaryQueue {
       updateId: job.updateId,
       at,
       from: from ?? null,
+      ...(want === undefined ? {} : { want }),
     })
     this.emit(job, 'pending', 'queued')
     this.pump()
@@ -122,12 +137,14 @@ export class SummaryQueue {
   /** 取活。在飞总数封在两条通道额度之和：取字幕不占额度，所以单条视频在等本机转写时， 有字幕的视频照样能取字幕、照样能进 LLM 通道 */
   private pump(): void {
     if (!this.started) return
-    if (this.deps.llm() === null) return // ★ 唯一的 AI 总开关闸门，见 AiService.llm
+    // AI 总开关只拦「要总结」的任务。只取转写不碰 LLM，关掉开关也该照跑 ——
+    // 否则拿字幕这件事会被一个跟它无关的开关挡住。
+    const aiOn = this.deps.llm() !== null
 
     const capacity =
       this.deps.config.getSection('asr').concurrency + this.deps.config.getSection('ai').llmConcurrency
     while (this.running.size < capacity) {
-      const job = this.deps.jobs.claimNext(this.deps.clock.now())
+      const job = this.deps.jobs.claimNext(this.deps.clock.now(), aiOn ? null : 'transcript')
       if (job === null) return
       this.emit(job, 'running', job.stage)
       const p = this.execute(job).finally(() => {
@@ -158,6 +175,13 @@ export class SummaryQueue {
       // 转写内部自己排队（并发 1），队列这层不拦，否则单条长视频会把有字幕的也堵住
       const t: Transcript = await this.deps.summarize.transcribe(job.bvid, from, hook)
 
+      // 只取转写：到这里就是终点。字幕/转写已经是落好的产物，
+      // 再往下走只会因为 LLM 不可用把一条成功的转写标成失败。
+      if (job.want === 'transcript') {
+        this.finishTranscript(job, t, hook)
+        return
+      }
+
       const res = await this.llmLane.run(() => this.deps.summarize.summarize(job, t, from, hook))
       if (!res.ok) return this.fail(job, at, res.failure)
 
@@ -173,6 +197,21 @@ export class SummaryQueue {
       const message = err instanceof Error ? err.message : String(err)
       this.fail(job, at, fatalFailure(message))
     }
+  }
+
+  /** 转写任务的收尾：有内容才算成功。空转写是失败，按普通失败进重试预算。 */
+  private finishTranscript(job: SummaryJob, t: Transcript, hook: StepHook): void {
+    if (t.cues.length === 0) {
+      const why = t.reasons.length === 0 ? '没拿到语音内容' : t.reasons.join('；')
+      this.fail(job, 'persist', fatalFailure(why))
+      return
+    }
+    hook('chunk', 'skipped', '只取转写，不做 AI 总结')
+    hook('reduce', 'skipped', '只取转写，不做 AI 总结')
+    hook('persist', 'skipped', '转写已落产物，不写总结')
+    hook('push', 'skipped', '只取转写，不推送')
+    this.deps.jobs.finish(job.id, { ok: true, stage: 'asr' }, this.deps.clock.now())
+    this.emit(job, 'done', 'asr')
   }
 
   /** 跑推送这一步，把结果写进 job_steps。没有接投递服务时算跳过，不算失败 */

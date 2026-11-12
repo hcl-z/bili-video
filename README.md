@@ -109,6 +109,41 @@ data/
 
 应用没有登录系统。本地模式默认监听 `127.0.0.1`，Docker 虽在容器内监听 `0.0.0.0`，Compose 和示例命令仍只暴露到宿主机 `127.0.0.1`。不要直接将 8788 端口暴露到公网；如需远程访问，请在反向代理层增加 HTTPS 和身份认证。
 
+## MCP 服务
+
+内置一个 MCP 端点，和网页共用同一个队列与数据库：MCP 排进来的任务与轮询抓到的走同一条流水线、同一个并发额度。端点挂在现有 HTTP 服务上，不需要另起进程。
+
+- 地址：`http://127.0.0.1:8788/api/mcp`（Streamable HTTP，无状态）
+- 鉴权：无。沿用「只监听回环地址」这条边界，对外暴露前必须自己在反向代理加认证
+
+转写是主产物，AI 总结是可选的追加步骤。两者分开，AI 不可用不影响拿字幕。
+
+| 工具 | 作用 |
+| --- | --- |
+| `bili_parse_video` | 按 BV 号排队取字幕/转写，立刻返回任务 id；`force=true` 作废重跑 |
+| `bili_transcript` | **取转写**：带时间戳的文本 + 原始 cues；`format` 选 text/cues/both |
+| `bili_job_status` | 查进度：任务状态、当前步骤、每步结果 |
+| `bili_queue_list` | 按状态列出队列与各状态计数 |
+| `bili_retry_job` | 重跑，`from` 指定从哪一步起跑 |
+| `bili_summarize` | 可选：对已有转写生成 AI 总结，复用转写产物不重取字幕 |
+| `bili_summary` | 取已生成的总结正文 |
+
+典型用法：`bili_parse_video` → 轮询 `bili_job_status` 到 done → `bili_transcript`。需要总结时再调 `bili_summarize`。
+
+AI 总开关关着时，`bili_parse_video` 和 `bili_transcript` 照常可用，只有 `bili_summarize` 会被拒绝。
+
+客户端配置：
+
+```json
+{
+  "mcpServers": {
+    "bili-video": { "url": "http://127.0.0.1:8788/api/mcp" }
+  }
+}
+```
+
+AI 总开关关着时 `bili_parse_video` 会直接返回失败，与网页「手动解析」的行为一致。
+
 ## 配置
 
 配置以 SQLite 的 `app_config` 为唯一真相。首次启动会写入内置默认值，之后在工作台修改并即时生效。环境变量只负责进程启动所需参数：

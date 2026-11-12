@@ -23,6 +23,7 @@ import { BiliProfileClient } from './infra/bili/profile.ts'
 import { BiliReaderClient } from './infra/bili/reader.ts'
 import { BiliRelationsClient } from './infra/bili/relations.ts'
 import { BiliSubtitleClient } from './infra/bili/subtitle.ts'
+import { BiliVideoClient } from './infra/bili/video.ts'
 import { ExecCommandRunner } from './infra/command/exec.ts'
 import { FsStorageStats } from './infra/fs/disk-usage.ts'
 import { FsMarkdownWriter } from './infra/fs/markdown-writer.ts'
@@ -88,6 +89,7 @@ import { SummaryQueue } from './app/queue-runner.ts'
 import { RuleService } from './app/rules.ts'
 import { SubscriptionService } from './app/subscriptions.ts'
 import { SummarizeVideo } from './app/summarize-video.ts'
+import { ManualParseService } from './app/manual-parse.ts'
 import { UpFeedService } from './app/up-feed.ts'
 import { createHttpApp } from './http/app.ts'
 import { LogBuffer } from './http/routes/logs.ts'
@@ -129,6 +131,7 @@ export interface Core {
   biliReader: BiliReader
   biliRelations: BiliRelationWriter
   biliProfile: BiliProfile
+  biliVideo: BiliVideoClient
   subtitles: SubtitleFetcher
   audio: AudioDownloader
   asr: Asr
@@ -252,6 +255,7 @@ export function openCore(opts: CoreOptions): Core {
   const biliProfile = new BiliProfileClient(http)
   const biliReader = new BiliReaderClient(http, logger)
   const subtitles = new BiliSubtitleClient(http, logger)
+  const biliVideo = new BiliVideoClient(http)
   const markdown = new FsMarkdownWriter({
     dataDir,
     dir: () => config.getSection('output').markdownDir,
@@ -318,6 +322,7 @@ export function openCore(opts: CoreOptions): Core {
     biliReader,
     biliRelations,
     biliProfile,
+    biliVideo,
     subtitles,
     audio,
     asr,
@@ -403,6 +408,7 @@ export async function openServer(env: NodeJS.ProcessEnv = process.env): Promise<
       biliReader: core.biliReader,
       biliRelations: core.biliRelations,
       biliProfile: core.biliProfile,
+      biliVideo: core.biliVideo,
       subtitles: core.subtitles,
       asr: core.asr,
       llm: core.llm,
@@ -478,6 +484,7 @@ export interface Services {
   delivery: DeliveryService
   queue: SummaryQueue
   ups: UpFeedService
+  manual: ManualParseService
   health: HealthMonitor
   backup: BackupService
 }
@@ -610,6 +617,16 @@ export function buildServer(deps: ServerDeps, opts: BuildOptions = {}): Server {
       clock: deps.clock,
       logger: deps.logger,
     }),
+    manual: new ManualParseService({
+      reader: deps.external.biliVideo,
+      updates: deps.repos.updates,
+      jobs: deps.repos.jobs,
+      summaries: deps.repos.summaries,
+      artifacts: deps.repos.artifacts,
+      queue,
+      clock: deps.clock,
+      logger: deps.logger,
+    }),
     health: new HealthMonitor({
       auth: () => auth?.snapshot() ?? null,
       poll: () => poll.snapshot(),
@@ -645,6 +662,7 @@ export function buildServer(deps: ServerDeps, opts: BuildOptions = {}): Server {
     notify: services.notify,
     queue: services.queue,
     ups: services.ups,
+    manual: services.manual,
     health: services.health,
     backup: services.backup,
   })

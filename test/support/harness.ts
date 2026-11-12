@@ -98,6 +98,7 @@ export async function createHarness(opts: HarnessOptions = {}): Promise<Harness>
       // 关注与名片都是实际适配器，只有 fetch 是假的 —— 限流和审计因此也是真在跑
       biliRelations: core.biliRelations,
       biliProfile: core.biliProfile,
+      biliVideo: core.biliVideo,
       subtitles: core.subtitles,
       asr: opts.asr ?? null,
       llm: core.llm,

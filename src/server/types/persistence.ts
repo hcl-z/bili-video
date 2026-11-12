@@ -1,6 +1,6 @@
 import type { VideoUsage } from '#shared/contract/api.ts'
 import type { AppConfig, ConfigSection } from '#shared/contract/config.ts'
-import type { DeliveryKind, DeliveryStatus, JobStage, PipelineStep, StepStatus, SummaryJob } from '#shared/contract/job.ts'
+import type { DeliveryKind, DeliveryStatus, JobStage, JobWant, PipelineStep, StepStatus, SummaryJob } from '#shared/contract/job.ts'
 import type { FilterRule, RuleKind, Subscription } from '#shared/contract/subscription.ts'
 import type { Summary } from '#shared/contract/summary.ts'
 import type { Update, UpdateWithRaw } from '#shared/contract/update.ts'
@@ -109,11 +109,19 @@ export interface UpdateRepo {
 
 export interface JobRepo {
 
-  enqueue(job: { bvid: string; updateId: string; at: number; from?: PipelineStep | null }): SummaryJob
+  enqueue(job: {
+    bvid: string
+    updateId: string
+    at: number
+    from?: PipelineStep | null
+    /** 不传就沿用已有那条的目标；新任务默认只取转写 */
+    want?: JobWant
+  }): SummaryJob
   get(id: number): SummaryJob | null
   getByBvid(bvid: string): SummaryJob | null
   /** 取单条到期的 pending 置为 running（单进程内加锁即可，不需要 SKIP LOCKED）。 未到 next_attempt_at 的重试任务不会被取走 */
-  claimNext(at: number): SummaryJob | null
+  /** `onlyWant` 限定只取某一类目标：AI 关着时队列仍能取「只取转写」的任务 */
+  claimNext(at: number, onlyWant?: JobWant | null): SummaryJob | null
   setStage(id: number, stage: JobStage, at: number): void
   finish(id: number, outcome: { ok: true; stage?: JobStage } | { ok: false; error: string }, at: number): void
   /** 排下一次重试：留在 pending 等 next_attempt_at 到期，并把重试计数加一。from 记下该从哪一步再跑 */

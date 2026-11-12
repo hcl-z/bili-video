@@ -1,6 +1,7 @@
 import type { ProbeResult } from '#shared/contract/probe.ts'
 import type { Asr, AudioDownloader, Llm } from './ai.ts'
 import type { BiliAuth, BiliProfile, BiliReader, BiliRelationWriter, CookieJar, SubtitleFetcher } from './bili.ts'
+import type { BiliVideoClient } from '../infra/bili/video.ts'
 import type { MarkdownWriter, Notifier, StorageStats } from './delivery.ts'
 import type {
   AnchorRepo,
@@ -44,6 +45,8 @@ export interface ExternalDeps {
   biliReader: BiliReader | null
   biliRelations: BiliRelationWriter | null
   biliProfile: BiliProfile | null
+  /** MCP 手动排解析要按 bvid 现拉元信息；null = 这个进程没装读接口 */
+  biliVideo: BiliVideoClient | null
   subtitles: SubtitleFetcher | null
   asr: Asr | null
   llm: Llm | null

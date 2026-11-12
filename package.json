@@ -41,6 +41,7 @@
   },
   "dependencies": {
     "@hono/node-server": "1.14.4",
+    "@modelcontextprotocol/sdk": "1.32.2",
     "croner": "9.0.0",
     "gpt-tokenizer": "3.0.1",
     "hono": "4.9.10",

@@ -4,6 +4,7 @@ import type {
   JobStage,
   JobStatus,
   JobStep,
+  JobWant,
   PipelineStep,
   StepStatus,
   SummaryJob,
@@ -40,19 +41,25 @@ export class SqliteJobRepo implements JobRepo {
     updateId: string
     at: number
     from?: PipelineStep | null
+    want?: JobWant
   }): SummaryJob {
     const from = job.from ?? null
+    // 不指定目标时沿用已有那条：重跑一条「只要转写」的任务不该因为它突然升级成要总结，
+    // 反过来也一样。轮询抓到的视频从来没指定过目标，沿用失败态的旧值会把它降级，
+    // 所以默认仍是 summary —— 只取转写必须显式要。
+    const existing = this.getByBvid(job.bvid)
+    const want = job.want ?? existing?.want ?? 'summary'
     this.db
       .prepare(
         `INSERT INTO summary_jobs
-           (bvid, update_id, status, stage, attempts, retries, error, resume_from, next_attempt_at, created_at, updated_at)
-         VALUES (?, ?, 'pending', 'queued', 0, 0, NULL, ?, NULL, ?, ?)
+           (bvid, update_id, want, status, stage, attempts, retries, error, resume_from, next_attempt_at, created_at, updated_at)
+         VALUES (?, ?, ?, 'pending', 'queued', 0, 0, NULL, ?, NULL, ?, ?)
          ON CONFLICT(bvid) DO UPDATE SET
            status = 'pending', stage = 'queued', error = NULL, retries = 0,
-           next_attempt_at = NULL,
+           next_attempt_at = NULL, want = excluded.want,
            resume_from = excluded.resume_from, updated_at = excluded.updated_at`,
       )
-      .run(job.bvid, job.updateId, from, job.at, job.at)
+      .run(job.bvid, job.updateId, want, from, job.at, job.at)
     const created = this.getByBvid(job.bvid)
     if (created === null) throw new Error(`enqueue failed for ${job.bvid}`)
     return created
@@ -98,7 +105,8 @@ export class SqliteJobRepo implements JobRepo {
    * 一条 UPDATE ... WHERE id = (SELECT ...) 就够，不需要 SKIP LOCKED 那套。
    * next_attempt_at 未到期的重试任务不参与竞争：它们还在等退避窗口。
    */
-  claimNext(at: number): SummaryJob | null {
+  claimNext(at: number, onlyWant?: JobWant | null): SummaryJob | null {
+    const want = onlyWant ?? null
     const r = this.db
       .prepare(
         `UPDATE summary_jobs
@@ -106,10 +114,11 @@ export class SqliteJobRepo implements JobRepo {
           WHERE id = (SELECT id FROM summary_jobs
                        WHERE status = 'pending'
                          AND (next_attempt_at IS NULL OR next_attempt_at <= ?)
+                         AND (? IS NULL OR want = ?)
                        ORDER BY id LIMIT 1)
           RETURNING *`,
       )
-      .get(at, at)
+      .get(at, at, want, want)
     return r ? this.hydrate(r as Row) : null
   }
 
@@ -237,6 +246,7 @@ const toJob = (r: Row, steps: JobStep[]): SummaryJob => ({
   id: num(r['id']),
   bvid: str(r['bvid']),
   updateId: str(r['update_id']),
+  want: (strOrNull(r['want']) ?? 'summary') as JobWant,
   status: str(r['status']) as JobStatus,
   stage: str(r['stage']) as JobStage,
   attempts: num(r['attempts']),

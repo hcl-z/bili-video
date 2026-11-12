@@ -233,6 +233,13 @@ ALTER TABLE summary_jobs ADD COLUMN retries INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE summary_jobs ADD COLUMN next_attempt_at INTEGER;
 `
 
+
+/** 任务目标：transcript 只跑到转写就收工，summary 才继续调 LLM。
+ *  默认 summary 保持升级前的行为 —— 轮询抓到的视频仍然要出总结。 */
+const JOB_KIND = `
+ALTER TABLE summary_jobs ADD COLUMN want TEXT NOT NULL DEFAULT 'summary';
+`
+
 export const MIGRATIONS: Migration[] = [
   { version: 1, name: 'init', sql: INIT },
   { version: 2, name: 'runtime_state', sql: RUNTIME_STATE },
@@ -244,6 +251,7 @@ export const MIGRATIONS: Migration[] = [
   { version: 8, name: 'subscription_customization', sql: SUBSCRIPTION_CUSTOMIZATION },
   { version: 9, name: 'subscription_push_kinds', sql: SUBSCRIPTION_PUSH_KINDS },
   { version: 10, name: 'job_retry', sql: JOB_RETRY },
+  { version: 11, name: 'job_kind', sql: JOB_KIND },
 ]
 
 /** 幂等：已应用的版本跳过。每个版本一个事务，中途失败不会留半张表。 `list` 只为测试预留（往里塞一个会失败的迁移，验证回滚）；生产永远走默认的 MIGRATIONS */

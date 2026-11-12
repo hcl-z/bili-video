@@ -23,3 +23,6 @@ ref/
 
 .pi/
 .playwright-mcp/
+.agents/
+.claude/
+skills-lock.json

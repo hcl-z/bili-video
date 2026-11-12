@@ -12,6 +12,7 @@ import type { Poller } from '../app/poller.ts'
 import type { SummaryQueue } from '../app/queue-runner.ts'
 import type { RuleService } from '../app/rules.ts'
 import type { SubscriptionService } from '../app/subscriptions.ts'
+import type { ManualParseService } from '../app/manual-parse.ts'
 import type { UpFeedService } from '../app/up-feed.ts'
 import type { ServerDeps } from '../types/index.ts'
 import { errorBody, makeErrorHandler } from './errors.ts'
@@ -29,6 +30,7 @@ import { summaryRoutes } from './routes/summaries.ts'
 import { systemRoutes } from './routes/system.ts'
 import { updateRoutes } from './routes/updates.ts'
 import { upRoutes } from './routes/ups.ts'
+import { createMcpFetchHandler } from './mcp.ts'
 import { eventRoutes } from './sse.ts'
 
 export interface HttpOptions {
@@ -45,6 +47,7 @@ export interface HttpOptions {
   notify: NotifyService
   queue: SummaryQueue
   ups: UpFeedService
+  manual: ManualParseService
   health: HealthMonitor
   backup: BackupService
 
@@ -85,6 +88,9 @@ export function createHttpApp(deps: ServerDeps, opts: HttpOptions): Hono {
   api.route('/jobs', jobRoutes(deps, opts.queue))
   api.route('/summaries', summaryRoutes(deps, opts.queue))
   api.route('/ups', upRoutes(deps, opts.ups))
+  // MCP 走同一个 Hono 实例与同一个队列：另起进程会和这个进程抢同一个 SQLite 文件
+  const mcp = createMcpFetchHandler({ deps: { deps, queue: opts.queue, manual: opts.manual }, path: '/api/mcp' })
+  api.all('/mcp', (c) => mcp(c.req.raw))
   api.route('/ai', aiRoutes(opts.ai))
   api.route('/notify', notifyRoutes(opts.notify))
   api.route('/events', eventRoutes(deps))
