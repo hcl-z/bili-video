@@ -1,0 +1,24 @@
+docker-entrypoint.sh
+  s_5db48118406313::t_3671f48b8d2023 1,4-8,10-13
+  s_5db48118406313::t_2b861cb83b802f 2-3,9
+Dockerfile
+  s_5db48118406313::t_9bea8b7ad2c9d0 51,58
+  s_5db48118406313::t_2135c86f92c315 50
+  s_5db48118406313::t_e43fa66aad41cf 34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "f298f87cd94b992a3ba74a9955df71d41618bab1",
+  "prompts": {},
+  "sessions": {
+    "s_5db48118406313": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0bb65e21-2528-4cb6-82a6-f678ed04357b",
+        "model": "ada-cli-golang-ctripcorp-com/claude-deepseek-v4.1-flash"
+      },
+      "human_author": "hcl-z <1401859664@qq.com>"
+    }
+  }
+}
