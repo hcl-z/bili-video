@@ -31,7 +31,7 @@ ENV NODE_ENV=production \
 WORKDIR /app
 
 RUN apt-get update \
-    && apt-get install --no-install-recommends -y ca-certificates curl ffmpeg python3 \
+    && apt-get install --no-install-recommends -y ca-certificates curl ffmpeg python3 util-linux \
     && curl --fail --location --retry 3 \
       "https://github.com/yt-dlp/yt-dlp/releases/download/${YT_DLP_VERSION}/yt-dlp" \
       --output /usr/local/bin/yt-dlp \
@@ -47,13 +47,13 @@ COPY --from=build --chown=app:app /app/package.json ./package.json
 COPY --from=build --chown=app:app /app/node_modules ./node_modules
 COPY --from=build --chown=app:app /app/src ./src
 COPY --from=build --chown=app:app /app/dist ./dist
-
-USER app
+COPY --chown=root:root docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod 0755 /usr/local/bin/docker-entrypoint.sh
 
 EXPOSE 8788
-VOLUME ["/app/data"]
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD ["node", "-e", "fetch('http://127.0.0.1:8788/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
 
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["node", "src/server/main.ts"]
